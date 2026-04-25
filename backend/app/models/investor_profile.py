@@ -50,3 +50,6 @@ class InvestorProfile(Base, UUIDMixin, TimestampMixin):
     strategy_recommendations: Mapped[list["StrategyRecommendation"]] = relationship(
         "StrategyRecommendation", back_populates="investor", cascade="all, delete-orphan"
     )
+    backtest_runs: Mapped[list["BacktestRun"]] = relationship(
+        "BacktestRun", back_populates="investor", cascade="all, delete-orphan"
+    )
