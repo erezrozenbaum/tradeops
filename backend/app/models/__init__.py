@@ -14,6 +14,7 @@ from app.models.risk_model import RiskModel
 from app.models.audit_event import AuditEvent
 from app.models.strategy_template import StrategyTemplate, StrategyType
 from app.models.strategy_recommendation import StrategyRecommendation
+from app.models.backtest import BacktestRun, BacktestPeriod
 
 __all__ = [
     "InvestorProfile",
@@ -36,4 +37,6 @@ __all__ = [
     "StrategyTemplate",
     "StrategyType",
     "StrategyRecommendation",
+    "BacktestRun",
+    "BacktestPeriod",
 ]
