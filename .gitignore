@@ -26,3 +26,8 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Claude local/private instructions
+CLAUDE.local.md
+**/CLAUDE.local.md
+.claude/

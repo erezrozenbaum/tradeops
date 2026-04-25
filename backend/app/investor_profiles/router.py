@@ -17,12 +17,12 @@ from app.schemas.investor_profile import (
 router = APIRouter()
 
 
-@router.post("/", response_model=InvestorProfileOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=InvestorProfileOut, status_code=status.HTTP_201_CREATED)
 def create_investor(data: InvestorProfileCreate, db: Session = Depends(get_db)):
     return service.create(db, data)
 
 
-@router.get("/", response_model=list[InvestorProfileOut])
+@router.get("", response_model=list[InvestorProfileOut])
 def list_investors(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return service.get_all(db, skip=skip, limit=limit)
 

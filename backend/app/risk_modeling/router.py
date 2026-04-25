@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/",
+    "",
     response_model=RiskModelOut,
     status_code=status.HTTP_201_CREATED,
     summary="Generate a new risk model snapshot",
@@ -26,7 +26,7 @@ def generate_risk_model(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     return rm
 
 
-@router.get("/", response_model=RiskModelOut, summary="Get the latest risk model")
+@router.get("", response_model=RiskModelOut, summary="Get the latest risk model")
 def get_latest_risk_model(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     rm = service.get_latest(db, investor_id)
     if not rm:

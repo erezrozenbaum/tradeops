@@ -17,7 +17,7 @@ from app.schemas.family_profile import (
 router = APIRouter()
 
 
-@router.post("/", response_model=FamilyProfileOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=FamilyProfileOut, status_code=status.HTTP_201_CREATED)
 def create_family_profile(data: FamilyProfileCreate, db: Session = Depends(get_db)):
     family = service.create(db, data)
     if not family:
@@ -25,7 +25,7 @@ def create_family_profile(data: FamilyProfileCreate, db: Session = Depends(get_d
     return family
 
 
-@router.get("/", response_model=list[FamilyProfileOut])
+@router.get("", response_model=list[FamilyProfileOut])
 def list_family_profiles(
     investor_id: uuid.UUID = Query(..., description="Filter by primary investor"),
     db: Session = Depends(get_db),
