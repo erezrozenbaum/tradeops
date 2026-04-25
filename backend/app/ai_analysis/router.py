@@ -11,7 +11,7 @@ from app.schemas.ai_analysis import AnalysisReportOut
 router = APIRouter()
 
 
-@router.post("/", response_model=AnalysisReportOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=AnalysisReportOut, status_code=status.HTTP_201_CREATED)
 def generate_report(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     if not settings.ANTHROPIC_API_KEY:
         raise HTTPException(

@@ -8,6 +8,6 @@ from app.strategy_library import service
 router = APIRouter()
 
 
-@router.get("/", response_model=list[StrategyTemplateOut])
+@router.get("", response_model=list[StrategyTemplateOut])
 def list_templates(db: Session = Depends(get_db)):
     return service.get_all_active(db)

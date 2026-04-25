@@ -7,6 +7,7 @@ from app.api.v1.router import api_router
 app = FastAPI(
     title="TradeOps AI",
     version="0.1.0",
+    redirect_slashes=False,
     docs_url="/docs" if not settings.is_production else None,
     redoc_url="/redoc" if not settings.is_production else None,
 )
