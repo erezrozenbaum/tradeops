@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.ai_analysis.router import router as ai_analysis_router
+from app.audit.router import router as audit_router
 from app.backtesting.router import router as backtesting_router
 from app.paper_trading.router import router as paper_trading_router
 from app.dashboard.router import router as dashboard_router
@@ -25,3 +26,4 @@ api_router.include_router(ai_analysis_router, prefix="/investors/{investor_id}/a
 api_router.include_router(dashboard_router, prefix="/investors", tags=["dashboard"])
 api_router.include_router(family_profile_router, prefix="/family-profiles", tags=["family-profiles"])
 api_router.include_router(strategy_library_router, prefix="/strategies/templates", tags=["strategy-templates"])
+api_router.include_router(audit_router, prefix="/investors", tags=["audit"])
