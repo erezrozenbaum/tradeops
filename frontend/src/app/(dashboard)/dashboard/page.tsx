@@ -13,7 +13,18 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { AlertCircle, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { AlertCircle, TrendingUp, TrendingDown, Minus, ShieldCheck, ShieldAlert, ShieldX, GraduationCap } from "lucide-react";
+
+interface InvestmentDecision {
+  can_invest: boolean;
+  readiness_classification: "ready" | "ready_with_limits" | "not_ready" | "education_only";
+  recommended_investment_pct: number;
+  max_high_risk_pct: number;
+  blocked_actions: string[];
+  required_actions: string[];
+  warnings: string[];
+  explanation: string;
+}
 
 interface DashboardData {
   investor: {
@@ -83,20 +94,55 @@ const MODIFIER_LABEL: Record<string, string> = {
 
 const RISK_PIE_COLORS = ["#22c55e", "#3b82f6", "#ef4444"];
 
+const READINESS_CONFIG = {
+  ready: {
+    label: "Ready",
+    variant: "success" as const,
+    Icon: ShieldCheck,
+    color: "text-green-500",
+  },
+  ready_with_limits: {
+    label: "Ready with limits",
+    variant: "warning" as const,
+    Icon: ShieldAlert,
+    color: "text-amber-500",
+  },
+  not_ready: {
+    label: "Not ready",
+    variant: "danger" as const,
+    Icon: ShieldX,
+    color: "text-red-500",
+  },
+  education_only: {
+    label: "Education only",
+    variant: "default" as const,
+    Icon: GraduationCap,
+    color: "text-blue-500",
+  },
+};
+
 export default function DashboardPage() {
   const investorId = useInvestorId();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [decision, setDecision] = useState<InvestmentDecision | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!investorId) return;
-    fetch(`/api/v1/investors/${investorId}/dashboard`)
-      .then((r) => {
+    Promise.all([
+      fetch(`/api/v1/investors/${investorId}/dashboard`).then((r) => {
         if (!r.ok) throw new Error("Failed to load dashboard");
         return r.json();
+      }),
+      fetch(`/api/v1/investors/${investorId}/decision`).then((r) =>
+        r.ok ? r.json() : null
+      ),
+    ])
+      .then(([dashData, decisionData]) => {
+        setData(dashData);
+        setDecision(decisionData);
       })
-      .then(setData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [investorId]);
@@ -277,6 +323,9 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* Investment Readiness */}
+      <ReadinessCard decision={decision} hasFinancialData={!!data.net_worth} />
+
       {/* Goals */}
       {goals.length > 0 && (
         <div>
@@ -326,6 +375,120 @@ export default function DashboardPage() {
         </Card>
       )}
     </div>
+  );
+}
+
+function ReadinessCard({
+  decision,
+  hasFinancialData,
+}: {
+  decision: InvestmentDecision | null;
+  hasFinancialData: boolean;
+}) {
+  if (!hasFinancialData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Investment Readiness</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Complete your financial profile to see your investment readiness assessment.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!decision) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Investment Readiness</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Loading readiness assessment…</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const config = READINESS_CONFIG[decision.readiness_classification];
+  const { Icon } = config;
+  const formatAction = (s: string) => s.replace(/_/g, " ");
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Investment Readiness</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-5">
+          {/* Badge + recommended pct */}
+          <div className="flex items-center gap-4">
+            <Icon className={`h-8 w-8 ${config.color} shrink-0`} />
+            <div>
+              <Badge variant={config.variant} className="text-sm px-3 py-1 mb-1">
+                {config.label}
+              </Badge>
+              {decision.can_invest && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Recommended investable capital:{" "}
+                  <span className="font-medium text-foreground">
+                    {decision.recommended_investment_pct.toFixed(1)}%
+                  </span>
+                  {decision.max_high_risk_pct > 0 && (
+                    <> · Max high-risk: <span className="font-medium text-foreground">{decision.max_high_risk_pct.toFixed(0)}%</span></>
+                  )}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Explanation */}
+          <p className="text-sm text-muted-foreground">{decision.explanation}</p>
+
+          {/* Warnings */}
+          {decision.warnings.length > 0 && (
+            <div className="space-y-1.5 pt-3 border-t border-border">
+              <p className="text-xs font-semibold text-amber-500 uppercase tracking-wide">Warnings</p>
+              {decision.warnings.map((w, i) => (
+                <p key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                  <span className="mt-0.5 text-amber-500">•</span>
+                  {w}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* Required actions */}
+          {decision.required_actions.length > 0 && (
+            <div className="space-y-1.5 pt-3 border-t border-border">
+              <p className="text-xs font-semibold text-foreground uppercase tracking-wide">Required actions</p>
+              {decision.required_actions.map((a, i) => (
+                <p key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                  <span className="mt-0.5 text-primary">→</span>
+                  <span className="capitalize">{formatAction(a)}</span>
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* Blocked actions */}
+          {decision.blocked_actions.length > 0 && (
+            <div className="space-y-1.5 pt-3 border-t border-border">
+              <p className="text-xs font-semibold text-red-500 uppercase tracking-wide">Blocked</p>
+              {decision.blocked_actions.map((a, i) => (
+                <p key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                  <span className="mt-0.5 text-red-500">✕</span>
+                  <span className="capitalize">{formatAction(a)}</span>
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

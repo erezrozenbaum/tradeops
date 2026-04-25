@@ -9,6 +9,7 @@ class RiskModelOut(BaseModel):
     investor_profile_id: uuid.UUID
     stability_score: int
     stability_classification: str
+    age_tier: str
     total_net_worth: float
     liquid_capital: float
     investable_capital: float
@@ -18,6 +19,14 @@ class RiskModelOut(BaseModel):
     max_drawdown_pct: float
     currency: str
     generated_at: datetime
+
+    # Enforcement fields
+    allowed_strategy_families: list[str]
+    blocked_strategy_families: list[str]
+    live_trading_allowed: bool
+    requires_paper_trading: bool
+    max_trade_size_pct: float
+    max_open_positions: int
 
     @computed_field
     @property
