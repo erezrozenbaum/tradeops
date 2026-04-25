@@ -318,11 +318,43 @@ ports:
 
 ### GitHub Actions
 
-The workflow at `.github/workflows/ci.yml` runs on every push to `main`:
+The workflow at `.github/workflows/ci.yml` runs on every push to `main` and on pull requests:
 
-1. **Backend tests** — `pytest` with a test PostgreSQL instance
-2. **Backend Docker image build**
-3. **Frontend Docker image build**
+| Job | Trigger | Description |
+|-----|---------|-------------|
+| `version` | always | Reads latest version from `CHANGELOG.md`, checks if a GitHub release for that version already exists |
+| `backend-test` | always | Runs `pytest` |
+| `frontend-check` | always | Runs `npm run type-check` |
+| `backend-docker` | push to main only | Builds and pushes backend image to GHCR tagged `latest`, `sha-*`, and the version number |
+| `frontend-docker` | push to main only | Builds and pushes frontend image to GHCR tagged `latest`, `sha-*`, and the version number |
+| `release` | push to main, after both Docker jobs, only if version is new | Creates git tag and GitHub release with notes extracted from `CHANGELOG.md` |
+
+### How releases are created
+
+**The CI creates releases automatically.** The contract is:
+
+1. Add your changes to the `## [Unreleased]` section in `CHANGELOG.md` as you work
+2. When ready to release, rename `## [Unreleased]` → `## [X.Y.Z] — YYYY-MM-DD` and add a new empty `## [Unreleased]` above it
+3. Commit and push to `main`
+4. CI detects the new version, builds pass → release is created automatically with notes from that version's CHANGELOG block
+5. Docker images are tagged with the version number
+
+Pushing to `main` without bumping the version is safe — the CI detects the release already exists and skips release creation.
+
+**To bump and release:**
+
+```bash
+# Edit CHANGELOG.md: move [Unreleased] content to a new version block
+# Example:
+#   ## [0.9.0] — 2026-05-01
+#   ### Added
+#   - My new feature
+
+git add CHANGELOG.md
+git commit -m "Release v0.9.0: <brief description>"
+git push origin main
+# CI runs → tests pass → Docker images built → release created automatically
+```
 
 ### Running tests locally
 
@@ -343,7 +375,7 @@ docker build -t tradeops-backend ./backend
 docker build -t tradeops-frontend ./frontend
 ```
 
-The frontend Dockerfile produces a standalone Next.js image (optimised for production). The `public/` directory must contain at least a `.gitkeep` file so the Docker `COPY` step does not fail on an empty directory.
+The frontend Dockerfile produces a standalone Next.js image. The `public/` directory must contain at least a `.gitkeep` file so the Docker `COPY` step does not fail on an empty directory.
 
 ---
 
@@ -354,5 +386,5 @@ When making changes to the platform:
 - [ ] If DB schema changed: create an Alembic migration and test `upgrade` + `downgrade`
 - [ ] If a new API endpoint added: update `docs/architecture.md` API table
 - [ ] If a new frontend page added: update the frontend structure section in `docs/architecture.md`
-- [ ] Update `CHANGELOG.md` with the change under `[Unreleased]`
-- [ ] Run the CI workflow (push to `main` or open a PR)
+- [ ] Add changes to `CHANGELOG.md` under `## [Unreleased]`
+- [ ] When ready to release: promote `[Unreleased]` to a dated version block and push to `main` — CI creates the release automatically
