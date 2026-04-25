@@ -1,0 +1,21 @@
+from fastapi import APIRouter
+
+from app.dashboard.router import router as dashboard_router
+from app.family_profiles.router import router as family_profile_router
+from app.financial_profiles.router import router as financial_profile_router
+from app.goals.router import router as goals_router
+from app.investor_profiles.router import router as investor_router
+from app.risk_modeling.router import router as risk_model_router
+from app.strategy_library.router import router as strategy_library_router
+from app.strategy_selection.router import router as strategy_selection_router
+
+api_router = APIRouter()
+
+api_router.include_router(investor_router, prefix="/investors", tags=["investors"])
+api_router.include_router(financial_profile_router, prefix="/investors", tags=["financial-profiles"])
+api_router.include_router(goals_router, prefix="/investors/{investor_id}/goals", tags=["goals"])
+api_router.include_router(risk_model_router, prefix="/investors/{investor_id}/risk-model", tags=["risk-model"])
+api_router.include_router(strategy_selection_router, prefix="/investors/{investor_id}/strategies", tags=["strategies"])
+api_router.include_router(dashboard_router, prefix="/investors", tags=["dashboard"])
+api_router.include_router(family_profile_router, prefix="/family-profiles", tags=["family-profiles"])
+api_router.include_router(strategy_library_router, prefix="/strategies/templates", tags=["strategy-templates"])
