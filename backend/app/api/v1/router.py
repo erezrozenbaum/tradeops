@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.backtesting.router import router as backtesting_router
 from app.dashboard.router import router as dashboard_router
 from app.family_profiles.router import router as family_profile_router
 from app.financial_profiles.router import router as financial_profile_router
@@ -16,6 +17,7 @@ api_router.include_router(financial_profile_router, prefix="/investors", tags=["
 api_router.include_router(goals_router, prefix="/investors/{investor_id}/goals", tags=["goals"])
 api_router.include_router(risk_model_router, prefix="/investors/{investor_id}/risk-model", tags=["risk-model"])
 api_router.include_router(strategy_selection_router, prefix="/investors/{investor_id}/strategies", tags=["strategies"])
+api_router.include_router(backtesting_router, prefix="/investors/{investor_id}/backtests", tags=["backtesting"])
 api_router.include_router(dashboard_router, prefix="/investors", tags=["dashboard"])
 api_router.include_router(family_profile_router, prefix="/family-profiles", tags=["family-profiles"])
 api_router.include_router(strategy_library_router, prefix="/strategies/templates", tags=["strategy-templates"])
