@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
-from app.models.investor_profile import ExperienceLevel
+from app.models.investor_profile import ExperienceLevel, RiskTolerance, TimeHorizon, TradingFrequency
 
 
 class InvestorProfileCreate(BaseModel):
@@ -16,6 +16,12 @@ class InvestorProfileCreate(BaseModel):
     local_currency: str = Field(..., min_length=3, max_length=3)
     experience_level: ExperienceLevel = ExperienceLevel.beginner
     is_minor: bool = False
+    investment_goal: str | None = None
+    risk_tolerance: RiskTolerance | None = None
+    time_horizon: TimeHorizon | None = None
+    preferred_assets: list[str] | None = None
+    trading_frequency: TradingFrequency | None = None
+    guardian_required: bool = False
 
 
 class InvestorProfileUpdate(BaseModel):
@@ -27,6 +33,12 @@ class InvestorProfileUpdate(BaseModel):
     local_currency: str | None = Field(None, min_length=3, max_length=3)
     experience_level: ExperienceLevel | None = None
     is_minor: bool | None = None
+    investment_goal: str | None = None
+    risk_tolerance: RiskTolerance | None = None
+    time_horizon: TimeHorizon | None = None
+    preferred_assets: list[str] | None = None
+    trading_frequency: TradingFrequency | None = None
+    guardian_required: bool | None = None
 
 
 class InvestorProfileOut(BaseModel):
@@ -40,6 +52,12 @@ class InvestorProfileOut(BaseModel):
     local_currency: str
     experience_level: ExperienceLevel
     is_minor: bool
+    investment_goal: str | None
+    risk_tolerance: RiskTolerance | None
+    time_horizon: TimeHorizon | None
+    preferred_assets: list[str] | None
+    trading_frequency: TradingFrequency | None
+    guardian_required: bool
     created_at: datetime
     updated_at: datetime
 

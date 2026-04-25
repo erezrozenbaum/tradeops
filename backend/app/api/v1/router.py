@@ -6,6 +6,7 @@ from app.backtesting.router import router as backtesting_router
 from app.paper_trading.router import router as paper_trading_router
 from app.dashboard.router import router as dashboard_router
 from app.family_profiles.router import router as family_profile_router
+from app.financial_decision.router import router as decision_router
 from app.financial_profiles.router import router as financial_profile_router
 from app.goals.router import router as goals_router
 from app.investor_profiles.router import router as investor_router
@@ -23,6 +24,7 @@ api_router.include_router(strategy_selection_router, prefix="/investors/{investo
 api_router.include_router(backtesting_router, prefix="/investors/{investor_id}/backtests", tags=["backtesting"])
 api_router.include_router(paper_trading_router, prefix="/investors/{investor_id}/paper-portfolios", tags=["paper-trading"])
 api_router.include_router(ai_analysis_router, prefix="/investors/{investor_id}/ai-report", tags=["ai-analysis"])
+api_router.include_router(decision_router, prefix="/investors/{investor_id}/decision", tags=["decision"])
 api_router.include_router(dashboard_router, prefix="/investors", tags=["dashboard"])
 api_router.include_router(family_profile_router, prefix="/family-profiles", tags=["family-profiles"])
 api_router.include_router(strategy_library_router, prefix="/strategies/templates", tags=["strategy-templates"])

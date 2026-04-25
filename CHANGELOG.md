@@ -8,10 +8,27 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+---
+
+## [0.9.0] — 2026-04-25
+
+### Added
+- **Routing fix** — changed all collection route decorators from `"/"` to `""` across 9 routers; `redirect_slashes=False` on FastAPI now works correctly end-to-end (investor profile creation no longer returns 404)
+- **Investor profile extended fields** (migration 0005) — `investment_goal`, `risk_tolerance`, `time_horizon`, `preferred_assets`, `trading_frequency`, `guardian_required`; all nullable for backward compatibility
+- **Age-based safety rules** in risk model engine — derives age tier from `date_of_birth`; minors (<18) get education-only allocation; retirement (60+) gets conservative tilt; pre-retirement (46–60) gets moderate conservative tilt
+- **Risk model enforcement fields** (migration 0006) — `allowed_strategy_families`, `blocked_strategy_families`, `live_trading_allowed`, `requires_paper_trading`, `max_trade_size_pct`, `max_open_positions`, `age_tier`; computed deterministically from stability score + age + experience level
+- **`financial_decision` module** — `GET /api/v1/investors/{id}/decision`; deterministic investment readiness engine; outputs `can_invest`, `readiness_classification` (ready / ready\_with\_limits / not\_ready / education\_only), `recommended_investment_pct`, `blocked_actions`, `required_actions`, `warnings`, `explanation`; stateless; logs `decision.evaluated` audit event
+- **Investment Readiness card** on dashboard — readiness badge with icon, recommended capital %, warnings, required actions, blocked actions; empty state if no financial profile
+- **14 unit tests** for the financial decision engine covering all readiness classifications, enforcement fields, and edge cases
+
 ### Changed
 - CI workflow now automatically creates a GitHub release when all jobs pass and the version in `CHANGELOG.md` has not been released yet
 - Docker images are now tagged with the explicit version number in addition to `latest` and `sha-*`
 - Release creation is idempotent — pushing to `main` without bumping the version number does not create a duplicate release
+
+### Documentation
+- Created `docs/execution_plan.md` — Decision Engine Hardening phase plan with task status tracking
+- Created `CLAUDE.md` and `docs/project_spec.md` — engineering rules and full product specification
 
 ---
 
@@ -151,7 +168,8 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
-[Unreleased]: https://github.com/erezrozenbaum/tradeops/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/erezrozenbaum/tradeops/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.5.0...v0.6.0

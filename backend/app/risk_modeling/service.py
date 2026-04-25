@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 
 from sqlalchemy.orm import Session
 
@@ -25,14 +26,123 @@ _ALLOCATION_TABLE: dict[tuple[str, str], tuple[float, float, float, float]] = {
 _MINOR_ALLOCATION: tuple[float, float, float, float] = (100.0, 0.0, 0.0, 0.0)
 
 
+def _get_age_tier(dob: date) -> tuple[int, str]:
+    today = date.today()
+    age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+    if age < 18:
+        return age, "minor"
+    if age <= 25:
+        return age, "young_adult"
+    if age <= 45:
+        return age, "adult"
+    if age <= 60:
+        return age, "pre_retirement"
+    return age, "retirement"
+
+
 def _compute_allocation(
     risk_modifier: str,
     experience_level: ExperienceLevel,
-    is_minor: bool,
+    age_tier: str,
 ) -> tuple[float, float, float, float]:
-    if is_minor:
+    if age_tier == "minor":
         return _MINOR_ALLOCATION
-    return _ALLOCATION_TABLE[(risk_modifier, experience_level.value)]
+
+    low_pct, growth_pct, high_pct, max_drawdown_pct = _ALLOCATION_TABLE[
+        (risk_modifier, experience_level.value)
+    ]
+
+    # Age 60+ bias: shift 10% from growth/high-risk to low-risk
+    if age_tier == "retirement":
+        shift = min(10.0, growth_pct + high_pct)
+        growth_reduction = min(shift, growth_pct)
+        high_reduction = min(shift - growth_reduction, high_pct)
+        low_pct += growth_reduction + high_reduction
+        growth_pct -= growth_reduction
+        high_pct -= high_reduction
+        max_drawdown_pct = max(5.0, max_drawdown_pct - 5.0)
+
+    # Age 46-60: moderate conservative tilt
+    elif age_tier == "pre_retirement":
+        shift = min(5.0, high_pct)
+        low_pct += shift
+        high_pct -= shift
+
+    return (low_pct, growth_pct, high_pct, max_drawdown_pct)
+
+
+def _compute_enforcement(
+    stability_score: int,
+    risk_modifier: str,
+    experience_level: ExperienceLevel,
+    age_tier: str,
+) -> dict:
+    if age_tier == "minor":
+        return {
+            "allowed_strategy_families": ["education"],
+            "blocked_strategy_families": ["conservative", "balanced", "growth", "aggressive", "crypto"],
+            "live_trading_allowed": False,
+            "requires_paper_trading": True,
+            "max_trade_size_pct": 0.0,
+            "max_open_positions": 0,
+        }
+
+    if risk_modifier == "reduce" or stability_score < 30:
+        allowed = ["conservative", "education"]
+        blocked = ["growth", "aggressive", "crypto"]
+    elif risk_modifier == "neutral":
+        if age_tier in ("retirement", "pre_retirement"):
+            allowed = ["conservative", "balanced"]
+            blocked = ["aggressive", "crypto"]
+        else:
+            allowed = ["conservative", "balanced", "growth"]
+            blocked = ["aggressive", "crypto"]
+    else:  # allow_growth
+        if age_tier in ("retirement", "pre_retirement"):
+            allowed = ["conservative", "balanced", "growth"]
+            blocked = ["aggressive", "crypto"]
+        elif experience_level == ExperienceLevel.advanced:
+            allowed = ["conservative", "balanced", "growth", "aggressive"]
+            blocked = ["crypto"]
+        else:
+            allowed = ["conservative", "balanced", "growth"]
+            blocked = ["aggressive", "crypto"]
+
+    live_trading_allowed = (
+        age_tier != "minor"
+        and stability_score >= 50
+        and experience_level != ExperienceLevel.beginner
+        and risk_modifier != "reduce"
+    )
+
+    requires_paper_trading = (
+        experience_level == ExperienceLevel.beginner
+        or stability_score < 60
+        or risk_modifier == "reduce"
+    )
+
+    if stability_score >= 70:
+        max_trade_size_pct = 10.0
+    elif stability_score >= 50:
+        max_trade_size_pct = 5.0
+    else:
+        max_trade_size_pct = 2.0
+
+    if experience_level == ExperienceLevel.advanced and stability_score >= 60:
+        max_open_positions = 10
+    elif experience_level == ExperienceLevel.intermediate and stability_score >= 50:
+        max_open_positions = 5
+    else:
+        max_open_positions = 3
+
+    return {
+        "allowed_strategy_families": allowed,
+        "blocked_strategy_families": blocked,
+        "live_trading_allowed": live_trading_allowed,
+        "requires_paper_trading": requires_paper_trading,
+        "max_trade_size_pct": max_trade_size_pct,
+        "max_open_positions": max_open_positions,
+    }
 
 
 def get_latest(db: Session, investor_id: uuid.UUID) -> RiskModel | None:
@@ -62,6 +172,11 @@ def generate(db: Session, investor_id: uuid.UUID) -> RiskModel | None:
     if not fp:
         return None
 
+    age, age_tier = _get_age_tier(investor.date_of_birth)
+
+    # Age < 18 overrides the stored is_minor flag
+    effective_is_minor = investor.is_minor or age_tier == "minor"
+
     total_assets = sum(a.current_value for a in fp.assets)
     total_liabilities = sum(l.outstanding_balance for l in fp.liabilities)
     total_net_worth = total_assets - total_liabilities
@@ -86,13 +201,21 @@ def generate(db: Session, investor_id: uuid.UUID) -> RiskModel | None:
     low_risk_pct, growth_pct, high_risk_pct, max_drawdown_pct = _compute_allocation(
         risk_modifier=score_result.risk_modifier,
         experience_level=investor.experience_level,
-        is_minor=investor.is_minor,
+        age_tier=age_tier,
+    )
+
+    enforcement = _compute_enforcement(
+        stability_score=score_result.score,
+        risk_modifier=score_result.risk_modifier,
+        experience_level=investor.experience_level,
+        age_tier=age_tier,
     )
 
     rm = RiskModel(
         investor_profile_id=investor_id,
         stability_score=score_result.score,
         stability_classification=score_result.classification,
+        age_tier=age_tier,
         total_net_worth=total_net_worth,
         liquid_capital=liquid_capital,
         investable_capital=investable_capital,
@@ -101,6 +224,7 @@ def generate(db: Session, investor_id: uuid.UUID) -> RiskModel | None:
         high_risk_pct=high_risk_pct,
         max_drawdown_pct=max_drawdown_pct,
         currency=fp.currency,
+        **enforcement,
     )
     db.add(rm)
     db.flush()
@@ -109,7 +233,7 @@ def generate(db: Session, investor_id: uuid.UUID) -> RiskModel | None:
         event_type="risk_model.generated",
         description=(
             f"Risk model generated: score={score_result.score} "
-            f"({score_result.classification}), "
+            f"({score_result.classification}), age_tier={age_tier}, "
             f"investable={investable_capital} {fp.currency}"
         ),
         investor_profile_id=investor_id,
@@ -117,9 +241,12 @@ def generate(db: Session, investor_id: uuid.UUID) -> RiskModel | None:
             "risk_model_id": str(rm.id),
             "stability_score": score_result.score,
             "risk_modifier": score_result.risk_modifier,
+            "age_tier": age_tier,
             "low_risk_pct": low_risk_pct,
             "growth_pct": growth_pct,
             "high_risk_pct": high_risk_pct,
+            "live_trading_allowed": enforcement["live_trading_allowed"],
+            "requires_paper_trading": enforcement["requires_paper_trading"],
         },
     )
     db.commit()
