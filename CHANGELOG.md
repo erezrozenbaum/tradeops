@@ -8,6 +8,11 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+### Changed
+- CI workflow now automatically creates a GitHub release when all jobs pass and the version in `CHANGELOG.md` has not been released yet
+- Docker images are now tagged with the explicit version number in addition to `latest` and `sha-*`
+- Release creation is idempotent — pushing to `main` without bumping the version number does not create a duplicate release
+
 ---
 
 ## [0.8.0] — 2026-04-25
