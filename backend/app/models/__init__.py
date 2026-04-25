@@ -15,6 +15,7 @@ from app.models.audit_event import AuditEvent
 from app.models.strategy_template import StrategyTemplate, StrategyType
 from app.models.strategy_recommendation import StrategyRecommendation
 from app.models.backtest import BacktestRun, BacktestPeriod
+from app.models.paper_trade import PaperPortfolio, PaperTick, PortfolioStatus
 
 __all__ = [
     "InvestorProfile",
@@ -39,4 +40,7 @@ __all__ = [
     "StrategyRecommendation",
     "BacktestRun",
     "BacktestPeriod",
+    "PaperPortfolio",
+    "PaperTick",
+    "PortfolioStatus",
 ]
