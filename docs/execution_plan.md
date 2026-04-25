@@ -160,72 +160,50 @@ Not changed (no collection routes):
 
 ---
 
-### TASK 1 — Add missing investor profile fields
+### TASK 1 — Add missing investor profile fields ✅ DONE
 
 **Type:** DB schema change  
 **Risk:** 🔴 Risky — requires Alembic migration  
 
-Add to `investor_profiles` table:
-
-```python
-investment_goal: Mapped[str | None]      # nullable for backward compat
-risk_tolerance: Mapped[str | None]       # very_low | low | medium | high | very_high
-time_horizon: Mapped[str | None]         # short_term | medium_term | long_term
-preferred_assets: Mapped[list | None]    # JSONB
-trading_frequency: Mapped[str | None]    # none | low | medium | high
-guardian_required: Mapped[bool]          # default False
-```
-
-All new fields nullable or with defaults — existing rows must not break.
-
-Migration: `0005_investor_profile_extended.py`
-
-Update: `schemas/investor_profile.py`, `investor_profiles/router.py`
+Added to `investor_profiles` table via migration `0005_investor_profile_extended.py`:
+- `investment_goal`, `risk_tolerance`, `time_horizon`, `preferred_assets` (JSONB), `trading_frequency`, `guardian_required`
+- All nullable / defaulted — no existing rows broken
+- Updated `models/investor_profile.py` with enums `RiskTolerance`, `TimeHorizon`, `TradingFrequency`
+- Updated `schemas/investor_profile.py` — exposed in Create, Update, and Out schemas
 
 ---
 
-### TASK 2 — Add age-based safety rules to risk model engine
+### TASK 2 — Add age-based safety rules to risk model engine ✅ DONE
 
 **Type:** Logic change  
 **Risk:** 🟡 Moderate  
 
-In `risk_modeling/service.py` (or a dedicated helper):
-
-- Derive investor age from `date_of_birth`
-- Apply age-tier rules:
-  - Under 18: force `is_minor=True`, `guardian_required=True`, restrict to education strategies
-  - 60+: bias toward capital preservation, reduce growth/high-risk allocation
-- These rules must override user-stated risk_tolerance
-
-No DB change required. Output is computed, not stored.
+Implemented in `risk_modeling/service.py`:
+- `_get_age_tier(dob)` → returns `(age, tier)` where tier is `minor / young_adult / adult / pre_retirement / retirement`
+- Minor (<18): education-only allocation (100% low-risk, 0% everything else)
+- Retirement (60+): shift 10% from growth/high-risk to low-risk; reduce max drawdown by 5%
+- Pre-retirement (46–60): shift 5% from high-risk to low-risk
+- Age tier stored on `RiskModel` (added via migration 0006)
 
 ---
 
-### TASK 3 — Enrich risk model with enforcement fields
+### TASK 3 — Enrich risk model with enforcement fields ✅ DONE
 
 **Type:** Schema change + logic  
 **Risk:** 🟡 Moderate  
 
-Add to `risk_models` table:
-
-```python
-allowed_strategy_families: Mapped[list]   # JSONB
-blocked_strategy_families: Mapped[list]   # JSONB
-live_trading_allowed: Mapped[bool]        # default False
-requires_paper_trading: Mapped[bool]      # default True
-max_trade_size_pct: Mapped[float]
-max_open_positions: Mapped[int]
-```
-
-Migration: `0006_risk_model_enforcement_fields.py`
-
-Update `risk_modeling/service.py` to populate these based on stability score, age tier, and experience level.
-
-Update `schemas/risk_model.py` to expose these fields in API responses.
+Added to `risk_models` table via migration `0006_risk_model_enforcement_fields.py`:
+- `allowed_strategy_families`, `blocked_strategy_families` (JSONB lists)
+- `live_trading_allowed` (bool, default False)
+- `requires_paper_trading` (bool, default True)
+- `max_trade_size_pct` (float), `max_open_positions` (int), `age_tier` (str)
+- `_compute_enforcement()` in service.py populates all fields deterministically
+- Enforcement logic: minors blocked from everything; stability/age/experience gate live trading and aggressive strategies
+- Exposed in `schemas/risk_model.py` → `RiskModelOut`
 
 ---
 
-### TASK 4 — Build `financial_decision` module (core of this phase)
+### TASK 4 — Build `financial_decision` module (core of this phase) ✅ DONE
 
 **Type:** New module  
 **Risk:** 🟡 Moderate  
@@ -291,9 +269,11 @@ api_router.include_router(decision_router, prefix="/investors/{investor_id}/deci
 
 Add audit event: `decision_evaluated`.
 
+**Implemented:** `backend/app/financial_decision/` — `engine.py` (pure logic), `service.py` (data assembly), `router.py` (GET endpoint), `schemas.py` (output model). Registered in `api/v1/router.py`.
+
 ---
 
-### TASK 5 — Investment Readiness card on dashboard
+### TASK 5 — Investment Readiness card on dashboard ✅ DONE
 
 **Type:** Frontend  
 **Risk:** 🟢 Safe  
@@ -309,6 +289,8 @@ Add a card fetching `GET /api/v1/investors/{id}/decision` that shows:
 - Warning messages
 
 Empty state: if financial profile is missing, prompt to complete it.
+
+**Implemented:** `ReadinessCard` component added to `dashboard/page.tsx`; fetches decision endpoint in parallel with dashboard data; shows badge+icon, explanation, warnings, required actions, blocked actions.
 
 ---
 
@@ -330,7 +312,7 @@ These fields are nullable — existing profiles work without them. The decision 
 
 ---
 
-### TASK 7 — Add tests for financial_decision engine
+### TASK 7 — Add tests for financial_decision engine ✅ DONE
 
 **Type:** Tests  
 **Risk:** 🟢 Safe  
@@ -344,6 +326,8 @@ Required test cases:
 4. Stable investor with good metrics → `can_invest = True`, `readiness_classification = "ready"`
 5. Moderate stability with high debt → `readiness_classification = "ready_with_limits"`
 6. Investor with goal = education → `readiness_classification = "education_only"`
+
+**Implemented:** `backend/tests/test_financial_decision.py` — 14 tests, all passing. Uses `SimpleNamespace` mocks; no DB required.
 
 ---
 
@@ -360,7 +344,7 @@ TASK 6 (profile fields UI) → depends on TASK 1
 TASK 7 (tests)         → depends on TASK 4
 ```
 
-Recommended execution order: **~~0~~(done) → 1 → 2 → 3 → 4 → 7 → 5 → 6**
+Recommended execution order: **~~0~~(done) → ~~1~~(done) → ~~2~~(done) → ~~3~~(done) → ~~4~~(done) → ~~7~~(done) → ~~5~~(done) → 6(next)**
 
 ---
 

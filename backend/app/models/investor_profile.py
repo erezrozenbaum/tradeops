@@ -1,9 +1,10 @@
 import enum
 import uuid
 from datetime import date, datetime
+from typing import Any
 
 from sqlalchemy import Boolean, Date, Enum, ForeignKey, String
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -14,6 +15,27 @@ class ExperienceLevel(str, enum.Enum):
     beginner = "beginner"
     intermediate = "intermediate"
     advanced = "advanced"
+
+
+class RiskTolerance(str, enum.Enum):
+    very_low = "very_low"
+    low = "low"
+    medium = "medium"
+    high = "high"
+    very_high = "very_high"
+
+
+class TimeHorizon(str, enum.Enum):
+    short_term = "short_term"
+    medium_term = "medium_term"
+    long_term = "long_term"
+
+
+class TradingFrequency(str, enum.Enum):
+    none = "none"
+    low = "low"
+    medium = "medium"
+    high = "high"
 
 
 class InvestorProfile(Base, UUIDMixin, TimestampMixin):
@@ -30,6 +52,14 @@ class InvestorProfile(Base, UUIDMixin, TimestampMixin):
         Enum(ExperienceLevel), nullable=False, default=ExperienceLevel.beginner
     )
     is_minor: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # Decision engine inputs — nullable for backward compatibility
+    investment_goal: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    risk_tolerance: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    time_horizon: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    preferred_assets: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    trading_frequency: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    guardian_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # Relationships
     financial_profile: Mapped["FinancialProfile | None"] = relationship(
