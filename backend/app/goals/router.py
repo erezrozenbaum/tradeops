@@ -10,7 +10,7 @@ from app.schemas.financial_goal import FinancialGoalCreate, FinancialGoalOut, Fi
 router = APIRouter()
 
 
-@router.post("/", response_model=FinancialGoalOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=FinancialGoalOut, status_code=status.HTTP_201_CREATED)
 def create_goal(
     investor_id: uuid.UUID, data: FinancialGoalCreate, db: Session = Depends(get_db)
 ):
@@ -20,7 +20,7 @@ def create_goal(
     return goal
 
 
-@router.get("/", response_model=list[FinancialGoalOut])
+@router.get("", response_model=list[FinancialGoalOut])
 def list_goals(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     return service.get_by_investor(db, investor_id)
 

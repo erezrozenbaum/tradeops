@@ -15,7 +15,7 @@ from app.schemas.paper_trade import (
 router = APIRouter()
 
 
-@router.post("/", response_model=PaperPortfolioOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=PaperPortfolioOut, status_code=status.HTTP_201_CREATED)
 def create_portfolio(
     investor_id: uuid.UUID,
     body: PaperPortfolioCreate,
@@ -38,7 +38,7 @@ def create_portfolio(
     return portfolio
 
 
-@router.get("/", response_model=list[PaperPortfolioSummaryOut])
+@router.get("", response_model=list[PaperPortfolioSummaryOut])
 def list_portfolios(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     return service.list_for_investor(db, investor_id)
 

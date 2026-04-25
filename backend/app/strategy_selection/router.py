@@ -10,7 +10,7 @@ from app.strategy_selection import service
 router = APIRouter()
 
 
-@router.post("/", response_model=list[StrategyRecommendationOut], status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=list[StrategyRecommendationOut], status_code=status.HTTP_201_CREATED)
 def generate_recommendations(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     result = service.generate(db, investor_id)
     if result is None:
@@ -21,6 +21,6 @@ def generate_recommendations(investor_id: uuid.UUID, db: Session = Depends(get_d
     return result
 
 
-@router.get("/", response_model=list[StrategyRecommendationOut])
+@router.get("", response_model=list[StrategyRecommendationOut])
 def get_recommendations(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     return service.get_latest(db, investor_id)

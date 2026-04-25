@@ -10,7 +10,7 @@ from app.schemas.backtest import BacktestRequest, BacktestRunOut, BacktestRunSum
 router = APIRouter()
 
 
-@router.post("/", response_model=BacktestRunOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=BacktestRunOut, status_code=status.HTTP_201_CREATED)
 def create_backtest(
     investor_id: uuid.UUID,
     body: BacktestRequest,
@@ -34,7 +34,7 @@ def create_backtest(
     return run
 
 
-@router.get("/", response_model=list[BacktestRunSummaryOut])
+@router.get("", response_model=list[BacktestRunSummaryOut])
 def list_backtests(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     return service.list_for_investor(db, investor_id)
 
