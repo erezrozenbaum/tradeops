@@ -12,13 +12,14 @@ Personal Financial Intelligence Platform — AI-assisted financial analysis, str
 Investor Profile → Financial Context → Risk Model → Strategy → Backtest → Paper Trade → AI Report
 ```
 
-1. **Investor & financial profiling** — personal data, income/expenses, assets, debts, goals
+1. **Investor & financial profiling** — personal data, income/expenses, assets, debts, goals, investment preferences
 2. **Financial stability scoring** — deterministic engine assessing readiness to invest
-3. **Risk allocation model** — percentage-based capital allocation tied to the stability score
-4. **Strategy recommendations** — ranked list from a curated template library
-5. **Backtesting** — deterministic simulation of strategy performance over configurable periods
-6. **Paper trading** — month-by-month portfolio simulation without real capital
-7. **AI financial report** — Claude-powered 7-section narrative analysis
+3. **Risk allocation model** — percentage-based capital allocation with age-based safety rules and enforcement fields
+4. **Investment decision engine** — deterministic readiness assessment: ready / ready with limits / not ready / education only
+5. **Strategy recommendations** — ranked list from a curated template library
+6. **Backtesting** — deterministic simulation of strategy performance over configurable periods
+7. **Paper trading** — month-by-month portfolio simulation without real capital
+8. **AI financial report** — Claude-powered 7-section narrative analysis
 
 ---
 
@@ -129,6 +130,7 @@ tradeops/
 │   │   ├── strategy_selection/
 │   │   ├── backtesting/             # Simulation engine
 │   │   ├── paper_trading/
+│   │   ├── financial_decision/      # Investment readiness engine
 │   │   ├── ai_analysis/             # Claude integration
 │   │   ├── audit/
 │   │   └── dashboard/
@@ -138,7 +140,11 @@ tradeops/
 │   └── src/app/
 │       ├── (auth)/login/            # Login + profile creation
 │       └── (dashboard)/
-│           ├── page.tsx             # Dashboard overview
+│           ├── dashboard/           # Overview + Investment Readiness card
+│           ├── financial/           # Financial profile + assets/liabilities
+│           ├── goals/
+│           ├── family/
+│           ├── profile/             # Investor profile + investment preferences
 │           ├── risk/
 │           ├── strategies/
 │           ├── backtesting/
@@ -164,10 +170,11 @@ Key endpoints:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET/POST | `/api/v1/investors/` | List / create investor profiles |
-| GET | `/api/v1/investors/{id}` | Get investor profile |
-| GET/POST | `/api/v1/investors/{id}/financial-profile` | Financial profile |
+| GET/POST | `/api/v1/investors` | List / create investor profiles |
+| GET/PUT | `/api/v1/investors/{id}` | Get / update investor profile |
+| GET/POST/PUT | `/api/v1/investors/{id}/financial-profile` | Financial profile |
 | GET/POST | `/api/v1/investors/{id}/risk-model` | Risk allocation model |
+| GET | `/api/v1/investors/{id}/decision` | Investment readiness decision |
 | GET/POST | `/api/v1/investors/{id}/strategies` | Strategy recommendations |
 | GET/POST | `/api/v1/investors/{id}/backtests` | Backtest runs |
 | GET/POST | `/api/v1/investors/{id}/paper-portfolios` | Paper trading portfolios |

@@ -10,6 +10,23 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.10.0] — 2026-04-26
+
+### Added
+- **Investor profile new fields in creation form** — login page now includes optional "Investment Preferences" section with: `investment_goal` (select), `risk_tolerance` (select), `time_horizon` (select), `trading_frequency` (select), `preferred_assets` (chip toggles); all optional, sent as null if not selected
+- **Investor profile edit page extended** — `/profile` page now displays and edits all 5 new fields; view mode shows them in a dedicated "Investment Preferences" section; edit mode uses selects + chip toggles for preferred assets
+
+### Fixed
+- Login page fetch URLs changed from `/api/v1/investors/` (trailing slash) to `/api/v1/investors` — fixes 404 regression under `redirect_slashes=False`
+- Financial profile page blank screen when clicking "Create financial profile" — the create form was inside a `!showCreateProfile` guard, making it unreachable; restructured to a proper ternary
+- `test_risk_modeling.py` updated to use new `age_tier` parameter (replacing removed `is_minor` kwarg) — all 122 tests now pass
+
+### Documentation
+- `docs/architecture.md` updated to v0.10.0: added `financial_decision` module, migration table (0005–0006), enforcement fields on risk model, decision engine section, full frontend page list, CI/CD pipeline steps
+- `README.md` updated: added decision engine to feature list, added `/decision` endpoint to API reference, fixed trailing slash in investor collection URL, added `financial_decision` to project structure
+
+---
+
 ## [0.9.0] — 2026-04-25
 
 ### Added
@@ -168,7 +185,8 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
-[Unreleased]: https://github.com/erezrozenbaum/tradeops/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/erezrozenbaum/tradeops/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.6.0...v0.7.0

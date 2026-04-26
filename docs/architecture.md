@@ -1,7 +1,7 @@
 # TradeOps AI — Architecture
 
-**Version:** 0.8.0  
-**Last updated:** 2026-04-25
+**Version:** 0.10.0  
+**Last updated:** 2026-04-26
 
 ---
 
@@ -68,6 +68,12 @@ backend/app/
 │   ├── service.py              # Data aggregation for report context
 │   └── router.py
 │
+├── financial_decision/
+│   ├── engine.py               # Pure deterministic decision function (no DB)
+│   ├── service.py              # Data aggregation + engine call
+│   ├── schemas.py              # InvestmentDecision output model
+│   └── router.py               # GET /investors/{id}/decision
+│
 ├── audit/                      # Event log for all significant actions
 ├── dashboard/                  # Aggregated summary endpoint
 └── workers/                    # Reserved for background jobs (not yet implemented)
@@ -86,6 +92,7 @@ All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`:
 | `/investors/{id}/backtests` | backtesting | backtesting |
 | `/investors/{id}/paper-portfolios` | paper_trading | paper-trading |
 | `/investors/{id}/ai-report` | ai_analysis | ai-analysis |
+| `/investors/{id}/decision` | financial_decision | decision |
 | `/family-profiles` | family_profiles | family-profiles |
 | `/strategies/templates` | strategy_library | strategy-templates |
 
@@ -103,11 +110,13 @@ Managed by Alembic. Migrations in `backend/alembic/versions/`.
 | `0002_strategy_tables.py` | Strategy templates + seed data (6 templates) |
 | `0003_paper_trading.py` | Paper portfolio and tick tables |
 | `0004_audit_events.py` | Audit event table |
+| `0005_investor_profile_extended.py` | Added `investment_goal`, `risk_tolerance`, `time_horizon`, `preferred_assets`, `trading_frequency`, `guardian_required` to investor_profiles |
+| `0006_risk_model_enforcement_fields.py` | Added `age_tier`, `allowed_strategy_families`, `blocked_strategy_families`, `live_trading_allowed`, `requires_paper_trading`, `max_trade_size_pct`, `max_open_positions` to risk_models |
 
 ### Core tables
 
 ```
-investor_profiles          — personal data, currency, experience, minor flag
+investor_profiles          — personal data, currency, experience, minor flag; + investment_goal, risk_tolerance, time_horizon, preferred_assets, trading_frequency, guardian_required
 financial_profiles         — income/expenses/savings/debts per investor
 financial_assets           — individual assets linked to financial_profile
 financial_liabilities      — individual liabilities linked to financial_profile
@@ -115,7 +124,7 @@ financial_goals            — goals with target amounts and dates
 family_profiles            — household profiles
 family_members             — members linked to family_profile
 
-risk_models                — generated risk allocation models per investor
+risk_models                — generated risk allocation models per investor; + enforcement fields (age_tier, allowed/blocked strategy families, live_trading_allowed, etc.)
 strategy_templates         — curated strategy definitions (seeded)
 strategy_recommendations   — ranked strategies generated for an investor
 
@@ -141,7 +150,11 @@ frontend/src/
 │   │   └── login/page.tsx          # Login + investor profile creation
 │   ├── (dashboard)/
 │   │   ├── layout.tsx              # Sidebar navigation shell
-│   │   ├── page.tsx                # Dashboard overview
+│   │   ├── dashboard/page.tsx      # Dashboard overview + Investment Readiness card
+│   │   ├── financial/page.tsx      # Financial profile CRUD + assets/liabilities
+│   │   ├── goals/page.tsx          # Financial goals
+│   │   ├── family/page.tsx         # Family profile
+│   │   ├── profile/page.tsx        # Investor profile view + edit (incl. investment preferences)
 │   │   ├── risk/page.tsx           # Risk model view and generation
 │   │   ├── strategies/page.tsx     # Strategy recommendations
 │   │   ├── backtesting/page.tsx    # Run and view backtests
@@ -212,6 +225,46 @@ Percentage-based, not a vague low/medium/high label. Example output:
 
 The model is recalculated on demand and stored in the `risk_models` table. Each investor may have multiple historical models.
 
+v0.9.0 additions — enforcement fields computed alongside allocation:
+- `age_tier` — minor / young_adult / adult / pre_retirement / retirement (derived from DOB)
+- `allowed_strategy_families` / `blocked_strategy_families` — JSONB lists
+- `live_trading_allowed` — gated on stability score ≥ 50 + intermediate+ experience
+- `requires_paper_trading` — true for beginners or low-stability investors
+- `max_trade_size_pct`, `max_open_positions` — position-level risk limits
+
+---
+
+## Financial decision engine
+
+Location: `backend/app/financial_decision/`
+
+Stateless, deterministic. Called via `GET /api/v1/investors/{id}/decision`. Not persisted.
+
+Output:
+
+```json
+{
+  "can_invest": true,
+  "readiness_classification": "ready | ready_with_limits | not_ready | education_only",
+  "recommended_investment_pct": 35,
+  "max_high_risk_pct": 5,
+  "blocked_actions": ["live_trading"],
+  "required_actions": ["maintain_emergency_fund"],
+  "warnings": ["High debt ratio detected"],
+  "explanation": "..."
+}
+```
+
+Decision rules (in priority order):
+1. No financial profile → `not_ready`
+2. `is_minor` or `age_tier == "minor"` → `education_only`
+3. `investment_goal == "education"` → `education_only`
+4. `stability_score < 30` or `emergency_fund_months < 1` → `not_ready`
+5. `stability_score 30–60` or `debt_to_income > 40%` or `emergency_fund < 3mo` → `ready_with_limits`
+6. Otherwise → `ready`
+
+Blocked/required actions sourced from the investor's latest risk model enforcement fields.
+
 ---
 
 ## Strategy library
@@ -278,6 +331,7 @@ All significant actions emit an audit event:
 - Backtest run executed
 - Paper portfolio created / ticked / closed
 - AI report generated
+- Investment decision evaluated (`decision.evaluated`)
 
 Events are queryable per investor with pagination: `GET /api/v1/investors/{id}/audit-events?skip=N&limit=50`
 
@@ -286,11 +340,14 @@ Events are queryable per investor with pagination: `GET /api/v1/investors/{id}/a
 ## CI/CD
 
 GitHub Actions workflow (`.github/workflows/ci.yml`):
-1. Runs `pytest` against the backend
-2. Builds the backend Docker image
-3. Builds the frontend Docker image
+1. Detects version from `CHANGELOG.md`
+2. Runs `pytest` against the backend
+3. Runs TypeScript type check (`tsc --noEmit`) on the frontend
+4. Builds the backend Docker image
+5. Builds the frontend Docker image
+6. Creates a GitHub release if the detected version is new
 
-Triggered on every push to `main`.
+Triggered on every push to `main`. Release creation is idempotent — pushing without bumping the version creates no duplicate release.
 
 ---
 
