@@ -294,21 +294,17 @@ Empty state: if financial profile is missing, prompt to complete it.
 
 ---
 
-### TASK 6 — Update investor profile creation/edit with new fields
+### TASK 6 — Update investor profile creation/edit with new fields ✅ DONE
 
 **Type:** Frontend  
 **Risk:** 🟢 Safe (depends on TASK 1)  
 
-After TASK 1 lands:
-
-Update the login creation form and `/profile` edit page to include:
-- `investment_goal` (select)
-- `risk_tolerance` (select)
-- `time_horizon` (select)
-- `preferred_assets` (multi-select or checkboxes)
-- `trading_frequency` (select)
-
-These fields are nullable — existing profiles work without them. The decision engine uses them if present, falls back to defaults if absent.
+Updated `frontend/src/app/(auth)/login/page.tsx` and `frontend/src/app/(dashboard)/profile/page.tsx`:
+- Added `investment_goal` (select), `risk_tolerance` (select), `time_horizon` (select), `trading_frequency` (select), `preferred_assets` (chip toggles) to both creation form and edit page
+- Login page: fields appear under an "Investment preferences (optional)" divider
+- Profile page: view mode shows new fields in a dedicated section; edit mode uses selects + chip toggles
+- Also fixed login page fetch URLs (trailing slash 404 bug)
+- Also fixed `test_risk_modeling.py` to use new `age_tier` parameter (was still using removed `is_minor` kwarg)
 
 ---
 
@@ -344,7 +340,7 @@ TASK 6 (profile fields UI) → depends on TASK 1
 TASK 7 (tests)         → depends on TASK 4
 ```
 
-Recommended execution order: **~~0~~(done) → ~~1~~(done) → ~~2~~(done) → ~~3~~(done) → ~~4~~(done) → ~~7~~(done) → ~~5~~(done) → 6(next)**
+Recommended execution order: **~~0~~(done) → ~~1~~(done) → ~~2~~(done) → ~~3~~(done) → ~~4~~(done) → ~~7~~(done) → ~~5~~(done) → ~~6~~(done)**
 
 ---
 
