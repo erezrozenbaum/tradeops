@@ -10,6 +10,13 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.11.0] — 2026-04-26
+
+### Fixed
+- CI "Create Release" job — CHANGELOG release notes were interpolated directly into the shell script, causing backticks and special characters in the notes text to be executed as shell commands; fixed by passing notes via `RELEASE_NOTES` env var and using `gh release create --notes-file` instead of `--notes`
+
+---
+
 ## [0.10.0] — 2026-04-26
 
 ### Added
@@ -185,7 +192,8 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
-[Unreleased]: https://github.com/erezrozenbaum/tradeops/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/erezrozenbaum/tradeops/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.7.0...v0.8.0
