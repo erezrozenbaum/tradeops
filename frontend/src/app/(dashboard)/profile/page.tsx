@@ -20,6 +20,12 @@ interface InvestorProfile {
   local_currency: string;
   experience_level: string;
   is_minor: boolean;
+  investment_goal: string | null;
+  risk_tolerance: string | null;
+  time_horizon: string | null;
+  preferred_assets: string[] | null;
+  trading_frequency: string | null;
+  guardian_required: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -37,6 +43,48 @@ const STABILITY_COLORS: Record<string, "success" | "warning" | "danger" | "defau
   stable: "success",
   strong: "success",
 };
+
+const INVESTMENT_GOAL_LABELS: Record<string, string> = {
+  growth: "Capital Growth",
+  income: "Passive Income",
+  preservation: "Capital Preservation",
+  education: "Education / Learning",
+  retirement: "Retirement Planning",
+  debt_reduction: "Debt Reduction",
+};
+
+const RISK_TOLERANCE_OPTIONS = [
+  { value: "very_low", label: "Very Low" },
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "very_high", label: "Very High" },
+];
+
+const TIME_HORIZON_OPTIONS = [
+  { value: "short_term", label: "Short Term (< 2 years)" },
+  { value: "medium_term", label: "Medium Term (2–7 years)" },
+  { value: "long_term", label: "Long Term (7+ years)" },
+];
+
+const TRADING_FREQUENCY_OPTIONS = [
+  { value: "none", label: "None — passive only" },
+  { value: "low", label: "Low — occasionally" },
+  { value: "medium", label: "Medium — monthly" },
+  { value: "high", label: "High — weekly or more" },
+];
+
+const INVESTMENT_GOAL_OPTIONS = Object.entries(INVESTMENT_GOAL_LABELS).map(([value, label]) => ({
+  value,
+  label,
+}));
+
+const ASSET_OPTIONS = ["stocks", "bonds", "etf", "crypto", "real_estate", "forex", "commodities"];
+
+function formatLabel(value: string | null): string {
+  if (!value) return "—";
+  return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export default function ProfilePage() {
   const investorId = useInvestorId();
@@ -77,6 +125,16 @@ export default function ProfilePage() {
       .finally(() => setStabilityLoading(false));
   }
 
+  function toggleAsset(asset: string) {
+    const current = form.preferred_assets ?? [];
+    setForm({
+      ...form,
+      preferred_assets: current.includes(asset)
+        ? current.filter((a) => a !== asset)
+        : [...current, asset],
+    });
+  }
+
   async function saveProfile() {
     if (!investorId) return;
     setSaving(true);
@@ -87,12 +145,20 @@ export default function ProfilePage() {
         body: JSON.stringify({
           full_name: form.full_name,
           country: form.country,
-          nationality: form.nationality,
-          tax_residency: form.tax_residency,
+          nationality: form.nationality || null,
+          tax_residency: form.tax_residency || null,
           base_currency: form.base_currency,
           local_currency: form.local_currency,
           experience_level: form.experience_level,
           is_minor: form.is_minor,
+          investment_goal: form.investment_goal || null,
+          risk_tolerance: form.risk_tolerance || null,
+          time_horizon: form.time_horizon || null,
+          preferred_assets:
+            form.preferred_assets && form.preferred_assets.length > 0
+              ? form.preferred_assets
+              : null,
+          trading_frequency: form.trading_frequency || null,
         }),
       });
       const updated = await res.json();
@@ -151,31 +217,102 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent>
             {!editing ? (
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-5">
-                {[
-                  { label: "Full Name", value: profile.full_name },
-                  { label: "Date of Birth", value: new Date(profile.date_of_birth).toLocaleDateString() },
-                  { label: "Country", value: profile.country },
-                  { label: "Nationality", value: profile.nationality ?? "—" },
-                  { label: "Tax Residency", value: profile.tax_residency ?? "—" },
-                  { label: "Base Currency", value: profile.base_currency },
-                  { label: "Local Currency", value: profile.local_currency },
-                  { label: "Experience Level", value: <span className="capitalize">{profile.experience_level}</span> },
-                  {
-                    label: "Minor",
-                    value: (
-                      <Badge variant={profile.is_minor ? "warning" : "muted"}>
-                        {profile.is_minor ? "Yes — education only" : "No"}
-                      </Badge>
-                    ),
-                  },
-                ].map(({ label, value }) => (
-                  <div key={label}>
-                    <dt className="text-xs text-muted-foreground font-medium mb-0.5">{label}</dt>
-                    <dd className="text-sm">{value}</dd>
-                  </div>
-                ))}
-              </dl>
+              <div className="space-y-6">
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-5">
+                  {[
+                    { label: "Full Name", value: profile.full_name },
+                    {
+                      label: "Date of Birth",
+                      value: new Date(profile.date_of_birth).toLocaleDateString(),
+                    },
+                    { label: "Country", value: profile.country },
+                    { label: "Nationality", value: profile.nationality ?? "—" },
+                    { label: "Tax Residency", value: profile.tax_residency ?? "—" },
+                    { label: "Base Currency", value: profile.base_currency },
+                    { label: "Local Currency", value: profile.local_currency },
+                    {
+                      label: "Experience Level",
+                      value: (
+                        <span className="capitalize">{profile.experience_level}</span>
+                      ),
+                    },
+                    {
+                      label: "Minor",
+                      value: (
+                        <Badge variant={profile.is_minor ? "warning" : "muted"}>
+                          {profile.is_minor ? "Yes — education only" : "No"}
+                        </Badge>
+                      ),
+                    },
+                  ].map(({ label, value }) => (
+                    <div key={label}>
+                      <dt className="text-xs text-muted-foreground font-medium mb-0.5">
+                        {label}
+                      </dt>
+                      <dd className="text-sm">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+
+                {/* Investment preferences section */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                    Investment Preferences
+                  </p>
+                  <dl className="grid grid-cols-2 gap-x-6 gap-y-5">
+                    <div>
+                      <dt className="text-xs text-muted-foreground font-medium mb-0.5">
+                        Investment Goal
+                      </dt>
+                      <dd className="text-sm">
+                        {profile.investment_goal
+                          ? INVESTMENT_GOAL_LABELS[profile.investment_goal] ??
+                            formatLabel(profile.investment_goal)
+                          : "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground font-medium mb-0.5">
+                        Risk Tolerance
+                      </dt>
+                      <dd className="text-sm">{formatLabel(profile.risk_tolerance)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground font-medium mb-0.5">
+                        Time Horizon
+                      </dt>
+                      <dd className="text-sm">{formatLabel(profile.time_horizon)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground font-medium mb-0.5">
+                        Trading Frequency
+                      </dt>
+                      <dd className="text-sm">{formatLabel(profile.trading_frequency)}</dd>
+                    </div>
+                    <div className="col-span-2">
+                      <dt className="text-xs text-muted-foreground font-medium mb-1.5">
+                        Preferred Assets
+                      </dt>
+                      <dd>
+                        {profile.preferred_assets && profile.preferred_assets.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {profile.preferred_assets.map((asset) => (
+                              <span
+                                key={asset}
+                                className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary capitalize"
+                              >
+                                {asset.replace(/_/g, " ")}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
             ) : (
               <div className="space-y-4">
                 <Field label="Full Name">
@@ -189,7 +326,9 @@ export default function ProfilePage() {
                     <Input
                       value={form.country ?? ""}
                       maxLength={3}
-                      onChange={(e) => setForm({ ...form, country: e.target.value.toUpperCase() })}
+                      onChange={(e) =>
+                        setForm({ ...form, country: e.target.value.toUpperCase() })
+                      }
                     />
                   </Field>
                   <Field label="Nationality">
@@ -202,14 +341,18 @@ export default function ProfilePage() {
                     <Input
                       value={form.base_currency ?? ""}
                       maxLength={3}
-                      onChange={(e) => setForm({ ...form, base_currency: e.target.value.toUpperCase() })}
+                      onChange={(e) =>
+                        setForm({ ...form, base_currency: e.target.value.toUpperCase() })
+                      }
                     />
                   </Field>
                   <Field label="Local Currency (3-letter code)">
                     <Input
                       value={form.local_currency ?? ""}
                       maxLength={3}
-                      onChange={(e) => setForm({ ...form, local_currency: e.target.value.toUpperCase() })}
+                      onChange={(e) =>
+                        setForm({ ...form, local_currency: e.target.value.toUpperCase() })
+                      }
                     />
                   </Field>
                 </div>
@@ -241,6 +384,100 @@ export default function ProfilePage() {
                     This investor is a minor (education-only mode)
                   </label>
                 </div>
+
+                {/* Investment preferences */}
+                <div className="pt-2 border-t border-border">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                    Investment Preferences
+                  </p>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <Field label="Investment Goal">
+                        <Select
+                          value={form.investment_goal ?? ""}
+                          onChange={(e) =>
+                            setForm({ ...form, investment_goal: e.target.value || null })
+                          }
+                        >
+                          <option value="">Not set</option>
+                          {INVESTMENT_GOAL_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                      <Field label="Risk Tolerance">
+                        <Select
+                          value={form.risk_tolerance ?? ""}
+                          onChange={(e) =>
+                            setForm({ ...form, risk_tolerance: e.target.value || null })
+                          }
+                        >
+                          <option value="">Not set</option>
+                          {RISK_TOLERANCE_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                      <Field label="Time Horizon">
+                        <Select
+                          value={form.time_horizon ?? ""}
+                          onChange={(e) =>
+                            setForm({ ...form, time_horizon: e.target.value || null })
+                          }
+                        >
+                          <option value="">Not set</option>
+                          {TIME_HORIZON_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                      <Field label="Trading Frequency">
+                        <Select
+                          value={form.trading_frequency ?? ""}
+                          onChange={(e) =>
+                            setForm({ ...form, trading_frequency: e.target.value || null })
+                          }
+                        >
+                          <option value="">Not set</option>
+                          {TRADING_FREQUENCY_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                    </div>
+
+                    <Field label="Preferred Assets">
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {ASSET_OPTIONS.map((asset) => {
+                          const selected = (form.preferred_assets ?? []).includes(asset);
+                          return (
+                            <button
+                              key={asset}
+                              type="button"
+                              onClick={() => toggleAsset(asset)}
+                              className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors capitalize ${
+                                selected
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                              }`}
+                            >
+                              {asset.replace(/_/g, " ")}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </Field>
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-3 pt-2">
                   <Button onClick={saveProfile} disabled={saving}>
                     {saving ? "Saving…" : "Save changes"}
@@ -272,7 +509,8 @@ export default function ProfilePage() {
             {!stability ? (
               <div className="text-center py-6">
                 <p className="text-xs text-muted-foreground mb-3">
-                  Click refresh to calculate your current stability score based on your financial profile.
+                  Click refresh to calculate your current stability score based on your financial
+                  profile.
                 </p>
                 <Button variant="outline" size="sm" onClick={loadStability} disabled={stabilityLoading}>
                   {stabilityLoading ? "Calculating…" : "Calculate score"}
@@ -300,7 +538,10 @@ export default function ProfilePage() {
                   <div className="space-y-2 pt-3 border-t border-border">
                     <p className="text-xs font-medium">Recommendations</p>
                     {stability.recommendations.map((rec, i) => (
-                      <p key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                      <p
+                        key={i}
+                        className="text-xs text-muted-foreground flex items-start gap-2"
+                      >
                         <span className="shrink-0 text-amber-500 mt-0.5">•</span>
                         {rec}
                       </p>

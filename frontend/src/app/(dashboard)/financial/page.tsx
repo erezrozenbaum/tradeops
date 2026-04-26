@@ -222,25 +222,26 @@ export default function FinancialPage() {
     );
   }
 
-  if (!profile && !showCreateProfile) {
+  if (!profile) {
     return (
       <div className="p-8 space-y-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Financial Profile</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Income, expenses, assets & liabilities</p>
         </div>
-        <Card>
-          <CardContent className="py-16 text-center">
-            <Wallet className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm font-medium">No financial profile yet</p>
-            <p className="text-xs text-muted-foreground mt-1 mb-5">
-              Add your income, expenses, and financial data to get started.
-            </p>
-            <Button onClick={() => setShowCreateProfile(true)}>Create financial profile</Button>
-          </CardContent>
-        </Card>
 
-        {showCreateProfile && (
+        {!showCreateProfile ? (
+          <Card>
+            <CardContent className="py-16 text-center">
+              <Wallet className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+              <p className="text-sm font-medium">No financial profile yet</p>
+              <p className="text-xs text-muted-foreground mt-1 mb-5">
+                Add your income, expenses, and financial data to get started.
+              </p>
+              <Button onClick={() => setShowCreateProfile(true)}>Create financial profile</Button>
+            </CardContent>
+          </Card>
+        ) : (
           <Card>
             <CardHeader>
               <CardTitle>Financial Profile Setup</CardTitle>
@@ -349,8 +350,6 @@ export default function FinancialPage() {
       </div>
     );
   }
-
-  if (!profile) return null;
 
   const surplus = profile.monthly_income - profile.monthly_expenses;
   const totalAssets = profile.assets.reduce((s, a) => s + a.current_value, 0);

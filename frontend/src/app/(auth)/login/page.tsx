@@ -15,6 +15,38 @@ interface Investor {
 
 const EXPERIENCE_OPTIONS = ["beginner", "intermediate", "advanced"] as const;
 
+const INVESTMENT_GOAL_OPTIONS = [
+  { value: "growth", label: "Capital Growth" },
+  { value: "income", label: "Passive Income" },
+  { value: "preservation", label: "Capital Preservation" },
+  { value: "education", label: "Education / Learning" },
+  { value: "retirement", label: "Retirement Planning" },
+  { value: "debt_reduction", label: "Debt Reduction" },
+];
+
+const RISK_TOLERANCE_OPTIONS = [
+  { value: "very_low", label: "Very Low" },
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "very_high", label: "Very High" },
+];
+
+const TIME_HORIZON_OPTIONS = [
+  { value: "short_term", label: "Short Term (< 2 years)" },
+  { value: "medium_term", label: "Medium Term (2–7 years)" },
+  { value: "long_term", label: "Long Term (7+ years)" },
+];
+
+const TRADING_FREQUENCY_OPTIONS = [
+  { value: "none", label: "None — passive only" },
+  { value: "low", label: "Low — occasionally" },
+  { value: "medium", label: "Medium — monthly" },
+  { value: "high", label: "High — weekly or more" },
+];
+
+const ASSET_OPTIONS = ["stocks", "bonds", "etf", "crypto", "real_estate", "forex", "commodities"];
+
 const EMPTY_FORM = {
   full_name: "",
   date_of_birth: "",
@@ -23,6 +55,11 @@ const EMPTY_FORM = {
   local_currency: "",
   experience_level: "beginner" as (typeof EXPERIENCE_OPTIONS)[number],
   is_minor: false,
+  investment_goal: "",
+  risk_tolerance: "",
+  time_horizon: "",
+  preferred_assets: [] as string[],
+  trading_frequency: "",
 };
 
 export default function LoginPage() {
@@ -42,7 +79,7 @@ export default function LoginPage() {
       router.push("/dashboard");
       return;
     }
-    fetch("/api/v1/investors/")
+    fetch("/api/v1/investors")
       .then((r) => r.json())
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
@@ -61,15 +98,33 @@ export default function LoginPage() {
     router.push("/dashboard");
   }
 
+  function toggleAsset(asset: string) {
+    const current = form.preferred_assets;
+    setForm({
+      ...form,
+      preferred_assets: current.includes(asset)
+        ? current.filter((a) => a !== asset)
+        : [...current, asset],
+    });
+  }
+
   async function createInvestor(e: React.FormEvent) {
     e.preventDefault();
     setCreating(true);
     setCreateError(null);
     try {
-      const res = await fetch("/api/v1/investors/", {
+      const payload = {
+        ...form,
+        investment_goal: form.investment_goal || null,
+        risk_tolerance: form.risk_tolerance || null,
+        time_horizon: form.time_horizon || null,
+        preferred_assets: form.preferred_assets.length > 0 ? form.preferred_assets : null,
+        trading_frequency: form.trading_frequency || null,
+      };
+      const res = await fetch("/api/v1/investors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const body = await res.json();
@@ -84,7 +139,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 mb-4">
@@ -265,6 +320,95 @@ export default function LoginPage() {
                         Minor — education-only mode
                       </span>
                     </label>
+
+                    {/* Investment preferences */}
+                    <div className="pt-2">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="flex-1 h-px bg-border" />
+                        <span className="text-xs text-muted-foreground font-medium">
+                          Investment preferences <span className="opacity-60">(optional)</span>
+                        </span>
+                        <div className="flex-1 h-px bg-border" />
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Investment goal">
+                            <select
+                              value={form.investment_goal}
+                              onChange={(e) => setForm({ ...form, investment_goal: e.target.value })}
+                              className={inputClass}
+                            >
+                              <option value="">Select…</option>
+                              {INVESTMENT_GOAL_OPTIONS.map((o) => (
+                                <option key={o.value} value={o.value}>{o.label}</option>
+                              ))}
+                            </select>
+                          </Field>
+                          <Field label="Risk tolerance">
+                            <select
+                              value={form.risk_tolerance}
+                              onChange={(e) => setForm({ ...form, risk_tolerance: e.target.value })}
+                              className={inputClass}
+                            >
+                              <option value="">Select…</option>
+                              {RISK_TOLERANCE_OPTIONS.map((o) => (
+                                <option key={o.value} value={o.value}>{o.label}</option>
+                              ))}
+                            </select>
+                          </Field>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Time horizon">
+                            <select
+                              value={form.time_horizon}
+                              onChange={(e) => setForm({ ...form, time_horizon: e.target.value })}
+                              className={inputClass}
+                            >
+                              <option value="">Select…</option>
+                              {TIME_HORIZON_OPTIONS.map((o) => (
+                                <option key={o.value} value={o.value}>{o.label}</option>
+                              ))}
+                            </select>
+                          </Field>
+                          <Field label="Trading frequency">
+                            <select
+                              value={form.trading_frequency}
+                              onChange={(e) => setForm({ ...form, trading_frequency: e.target.value })}
+                              className={inputClass}
+                            >
+                              <option value="">Select…</option>
+                              {TRADING_FREQUENCY_OPTIONS.map((o) => (
+                                <option key={o.value} value={o.value}>{o.label}</option>
+                              ))}
+                            </select>
+                          </Field>
+                        </div>
+
+                        <Field label="Preferred assets">
+                          <div className="flex flex-wrap gap-1.5 pt-0.5">
+                            {ASSET_OPTIONS.map((asset) => {
+                              const selected = form.preferred_assets.includes(asset);
+                              return (
+                                <button
+                                  key={asset}
+                                  type="button"
+                                  onClick={() => toggleAsset(asset)}
+                                  className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors capitalize ${
+                                    selected
+                                      ? "bg-primary text-primary-foreground border-primary"
+                                      : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                                  }`}
+                                >
+                                  {asset.replace(/_/g, " ")}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </Field>
+                      </div>
+                    </div>
 
                     <button
                       type="submit"
