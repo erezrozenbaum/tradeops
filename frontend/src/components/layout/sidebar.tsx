@@ -16,6 +16,7 @@ import {
   FileText,
   Settings,
   LogOut,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,10 @@ const sections = [
       { label: "Backtesting", href: "/backtesting", icon: BarChart2 },
       { label: "Paper Trading", href: "/paper-trading", icon: TrendingUp },
     ],
+  },
+  {
+    label: "Portfolio",
+    items: [{ label: "Investments", href: "/investments", icon: Briefcase }],
   },
   {
     label: "Intelligence",

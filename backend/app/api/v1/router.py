@@ -13,6 +13,8 @@ from app.investor_profiles.router import router as investor_router
 from app.risk_modeling.router import router as risk_model_router
 from app.strategy_library.router import router as strategy_library_router
 from app.strategy_selection.router import router as strategy_selection_router
+from app.holdings.router import router as holdings_router
+from app.portfolio_analysis.router import router as portfolio_router
 
 api_router = APIRouter()
 
@@ -25,6 +27,8 @@ api_router.include_router(backtesting_router, prefix="/investors/{investor_id}/b
 api_router.include_router(paper_trading_router, prefix="/investors/{investor_id}/paper-portfolios", tags=["paper-trading"])
 api_router.include_router(ai_analysis_router, prefix="/investors/{investor_id}/ai-report", tags=["ai-analysis"])
 api_router.include_router(decision_router, prefix="/investors/{investor_id}/decision", tags=["decision"])
+api_router.include_router(portfolio_router, prefix="/investors/{investor_id}/portfolio", tags=["portfolio"])
+api_router.include_router(holdings_router, prefix="/investors", tags=["holdings"])
 api_router.include_router(dashboard_router, prefix="/investors", tags=["dashboard"])
 api_router.include_router(family_profile_router, prefix="/family-profiles", tags=["family-profiles"])
 api_router.include_router(strategy_library_router, prefix="/strategies/templates", tags=["strategy-templates"])
