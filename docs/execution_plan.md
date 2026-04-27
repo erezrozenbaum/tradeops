@@ -1,6 +1,6 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.13.0
+**Version:** 0.14.0
 **Last updated:** 2026-04-27
 
 ---
@@ -25,7 +25,7 @@ Summary of what was built:
 
 **Goal:** Bridge the gap between the financial decision engine and real investing intelligence.
 
-**Version target:** 0.12.0 (TASK 8–10), 0.13.0 (TASK 11), 0.14.0+ (TASK 12)
+**Version target:** 0.12.0 (TASK 8–10), 0.13.0 (TASK 11), 0.14.0 (TASK 12)
 
 **Framing:** This is NOT live trading. It is Portfolio & Market Intelligence — tracking existing investments, computing portfolio health, and scanning markets for context.
 
@@ -126,16 +126,21 @@ POST /api/v1/investors/{id}/portfolio/refresh-prices     — bulk refresh all po
 
 ---
 
-### TASK 12 — Market scanner (DEFERRED — depends on TASK 11)
+### TASK 12 — Market scanner ✅ DONE
 
 **Type:** New module  
 **Risk:** 🟡 Moderate  
-**Status:** ❌ DEFERRED
+**Status:** ✅ DONE
 
 **Scope:**
-- Scan ETFs, stocks, crypto filtered by: investor country, base currency, risk model, decision result, goals, time horizon, preferred assets, existing portfolio exposure
-- Output: ranked suggestion list with rationale — not guaranteed returns
-- Requires TASK 11 (market data) to be complete first
+- Curated catalog of 25 instruments (ETFs, stocks, crypto) across 4 asset families and 4 markets
+- Filters by: risk model enforcement, readiness classification, preferred assets, age tier
+- Ranks by: risk alignment, portfolio diversification gap, time horizon match, experience suitability
+- Output: ranked `InstrumentSuggestion` list with per-instrument rationale and scan notes
+- Frontend: `/market-scan` page with ranked instrument cards
+
+**Endpoint:** `GET /api/v1/investors/{id}/market-scan`  
+**Tests:** 23 unit tests (4 scoring helpers + 10 full scan scenarios)
 
 ---
 

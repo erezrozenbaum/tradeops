@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 0.13.0  
+**Version:** 0.14.0  
 **Last updated:** 2026-04-27
 
 ---
@@ -92,6 +92,13 @@ backend/app/
 │   ├── schemas.py              # PortfolioSummary, AccountAnalysis, HoldingAnalysis
 │   └── router.py               # GET /investors/{id}/portfolio
 │
+├── market_scanner/
+│   ├── catalog.py              # Curated 25-instrument catalog (ETFs, stocks, crypto)
+│   ├── engine.py               # Pure filter + rank function (no DB)
+│   ├── service.py              # Data assembly + engine call
+│   ├── schemas.py              # InstrumentSuggestion, MarketScanResult
+│   └── router.py               # GET /investors/{id}/market-scan
+│
 ├── audit/                      # Event log for all significant actions
 ├── dashboard/                  # Aggregated summary endpoint
 └── workers/                    # Reserved for background jobs (not yet implemented)
@@ -113,6 +120,7 @@ All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`:
 | `/investors/{id}/decision` | financial_decision | decision |
 | `/investors/{id}/portfolio` | portfolio_analysis | portfolio |
 | `/investors/{id}/portfolio/refresh-prices` | portfolio_analysis | portfolio |
+| `/investors/{id}/market-scan` | market_scanner | market-scan |
 | `/market` | market_data | market-data |
 | `/investors/{id}/accounts` | holdings | holdings |
 | `/investors/{id}/accounts/{id}/holdings` | holdings | holdings |
@@ -192,7 +200,8 @@ frontend/src/
 │   │   ├── strategies/page.tsx     # Strategy recommendations
 │   │   ├── backtesting/page.tsx    # Run and view backtests
 │   │   ├── paper-trading/page.tsx  # Paper portfolio simulation
-│   │   ├── reports/page.tsx        # AI financial report
+│   │   ├── market-scan/page.tsx    # Market scanner — curated instrument suggestions
+│   ├── reports/page.tsx        # AI financial report
 │   │   ├── audit/page.tsx          # Audit event log
 │   │   └── settings/page.tsx       # Account and platform info
 │   └── page.tsx                    # Root redirect → /dashboard
