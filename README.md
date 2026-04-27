@@ -9,17 +9,19 @@ Personal Financial Intelligence Platform — AI-assisted financial analysis, str
 ## What it does
 
 ```
-Investor Profile → Financial Context → Risk Model → Strategy → Backtest → Paper Trade → AI Report
+Investor Profile → Financial Context → Risk Model → Portfolio Tracking → Strategy → Backtest → Paper Trade → AI Report
 ```
 
 1. **Investor & financial profiling** — personal data, income/expenses, assets, debts, goals, investment preferences
 2. **Financial stability scoring** — deterministic engine assessing readiness to invest
 3. **Risk allocation model** — percentage-based capital allocation with age-based safety rules and enforcement fields
 4. **Investment decision engine** — deterministic readiness assessment: ready / ready with limits / not ready / education only
-5. **Strategy recommendations** — ranked list from a curated template library
-6. **Backtesting** — deterministic simulation of strategy performance over configurable periods
-7. **Paper trading** — month-by-month portfolio simulation without real capital
-8. **AI financial report** — Claude-powered 7-section narrative analysis
+5. **Portfolio tracking** — manually add existing investment accounts and holdings; track P&L, asset allocation, and currency exposure across all accounts
+6. **Multi-currency support** — FX rates cached from open.er-api.com; all values normalised to investor's base currency
+7. **Strategy recommendations** — ranked list from a curated template library
+8. **Backtesting** — deterministic simulation of strategy performance over configurable periods
+9. **Paper trading** — month-by-month portfolio simulation without real capital
+10. **AI financial report** — Claude-powered 7-section narrative analysis
 
 ---
 
@@ -131,6 +133,9 @@ tradeops/
 │   │   ├── backtesting/             # Simulation engine
 │   │   ├── paper_trading/
 │   │   ├── financial_decision/      # Investment readiness engine
+│   │   ├── holdings/                # Investment accounts + holdings CRUD
+│   │   ├── currency_engine/         # FX rate fetch + conversion
+│   │   ├── portfolio_analysis/      # P&L, allocation, currency exposure
 │   │   ├── ai_analysis/             # Claude integration
 │   │   ├── audit/
 │   │   └── dashboard/
@@ -140,7 +145,8 @@ tradeops/
 │   └── src/app/
 │       ├── (auth)/login/            # Login + profile creation
 │       └── (dashboard)/
-│           ├── dashboard/           # Overview + Investment Readiness card
+│           ├── dashboard/           # Overview + Investment Readiness + Portfolio widget
+│           ├── investments/         # Account + holdings tracking, portfolio summary
 │           ├── financial/           # Financial profile + assets/liabilities
 │           ├── goals/
 │           ├── family/
@@ -175,6 +181,11 @@ Key endpoints:
 | GET/POST/PUT | `/api/v1/investors/{id}/financial-profile` | Financial profile |
 | GET/POST | `/api/v1/investors/{id}/risk-model` | Risk allocation model |
 | GET | `/api/v1/investors/{id}/decision` | Investment readiness decision |
+| GET | `/api/v1/investors/{id}/portfolio` | Portfolio analysis (P&L, allocation, exposure) |
+| GET/POST | `/api/v1/investors/{id}/accounts` | Investment accounts |
+| GET/PUT/DELETE | `/api/v1/investors/{id}/accounts/{id}` | Manage account |
+| GET/POST | `/api/v1/investors/{id}/accounts/{id}/holdings` | Holdings per account |
+| PUT/DELETE | `/api/v1/investors/{id}/accounts/{id}/holdings/{id}` | Manage holding |
 | GET/POST | `/api/v1/investors/{id}/strategies` | Strategy recommendations |
 | GET/POST | `/api/v1/investors/{id}/backtests` | Backtest runs |
 | GET/POST | `/api/v1/investors/{id}/paper-portfolios` | Paper trading portfolios |

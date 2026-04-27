@@ -10,6 +10,20 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.12.0] — 2026-04-27
+
+### Added
+- **Holdings module** (`backend/app/holdings/`) — investors can manually add investment accounts (provider, account type, currency) and holdings (ticker, ISIN, name, asset type, quantity, avg buy price, currency, fees, purchase date, current value); full CRUD via REST API; audit-logged
+- **Currency engine** (`backend/app/currency_engine/`) — FX rate fetching from `open.er-api.com` (free tier, no API key); cached in `currency_rates` DB table with 24-hour TTL; `convert(db, amount, from, to)` helper used by portfolio analysis
+- **Portfolio analysis module** (`backend/app/portfolio_analysis/`) — stateless engine computing total value, unrealized P&L, asset allocation (%), and currency exposure (%) across all accounts; all holding values converted to investor's base currency via the currency engine
+- **Investments page** (`/investments`) — account cards with collapsible holdings tables; add account + add holding inline forms; per-holding P&L badges; portfolio summary grid at top
+- **Portfolio widget on dashboard** — shows total portfolio value + unrealized P&L + allocation breakdown when holdings exist
+- **Sidebar "Portfolio" section** with Investments link
+- **Alembic migrations** `0007_holdings` and `0008_currency_rates`
+- **14 unit tests** for portfolio analysis engine (136 total passing)
+
+---
+
 ## [0.11.0] — 2026-04-26
 
 ### Fixed
@@ -192,7 +206,8 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
-[Unreleased]: https://github.com/erezrozenbaum/tradeops/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/erezrozenbaum/tradeops/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.8.0...v0.9.0
