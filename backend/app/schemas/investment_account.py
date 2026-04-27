@@ -1,0 +1,89 @@
+import uuid
+from datetime import date, datetime
+
+from pydantic import BaseModel, Field
+
+from app.models.investment_account import AccountType, HoldingAssetType
+
+
+# ── Holdings ────────────────────────────────────────────────────────────────
+
+class InvestmentHoldingCreate(BaseModel):
+    ticker: str | None = Field(None, max_length=20)
+    isin: str | None = Field(None, max_length=20)
+    name: str = Field(..., min_length=1, max_length=200)
+    asset_type: HoldingAssetType
+    quantity: float = Field(..., gt=0)
+    avg_buy_price: float = Field(..., ge=0)
+    currency: str = Field(..., min_length=3, max_length=3)
+    fees: float = Field(0.0, ge=0)
+    purchase_date: date | None = None
+    current_value: float | None = Field(None, ge=0)
+    notes: str | None = None
+
+
+class InvestmentHoldingUpdate(BaseModel):
+    ticker: str | None = Field(None, max_length=20)
+    isin: str | None = Field(None, max_length=20)
+    name: str | None = Field(None, min_length=1, max_length=200)
+    asset_type: HoldingAssetType | None = None
+    quantity: float | None = Field(None, gt=0)
+    avg_buy_price: float | None = Field(None, ge=0)
+    currency: str | None = Field(None, min_length=3, max_length=3)
+    fees: float | None = Field(None, ge=0)
+    purchase_date: date | None = None
+    current_value: float | None = Field(None, ge=0)
+    notes: str | None = None
+
+
+class InvestmentHoldingOut(BaseModel):
+    id: uuid.UUID
+    account_id: uuid.UUID
+    ticker: str | None
+    isin: str | None
+    name: str
+    asset_type: str
+    quantity: float
+    avg_buy_price: float
+    currency: str
+    fees: float
+    purchase_date: date | None
+    current_value: float | None
+    notes: str | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ── Accounts ─────────────────────────────────────────────────────────────────
+
+class InvestmentAccountCreate(BaseModel):
+    provider_name: str = Field(..., min_length=1, max_length=100)
+    account_type: AccountType
+    account_name: str | None = Field(None, max_length=200)
+    currency: str = Field(..., min_length=3, max_length=3)
+    notes: str | None = None
+
+
+class InvestmentAccountUpdate(BaseModel):
+    provider_name: str | None = Field(None, min_length=1, max_length=100)
+    account_type: AccountType | None = None
+    account_name: str | None = Field(None, max_length=200)
+    currency: str | None = Field(None, min_length=3, max_length=3)
+    notes: str | None = None
+
+
+class InvestmentAccountOut(BaseModel):
+    id: uuid.UUID
+    investor_id: uuid.UUID
+    provider_name: str
+    account_type: str
+    account_name: str | None
+    currency: str
+    notes: str | None
+    holdings: list[InvestmentHoldingOut] = []
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}

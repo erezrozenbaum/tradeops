@@ -1,7 +1,7 @@
 # TradeOps AI — Architecture
 
-**Version:** 0.10.0  
-**Last updated:** 2026-04-26
+**Version:** 0.12.0  
+**Last updated:** 2026-04-27
 
 ---
 
@@ -74,6 +74,19 @@ backend/app/
 │   ├── schemas.py              # InvestmentDecision output model
 │   └── router.py               # GET /investors/{id}/decision
 │
+├── holdings/
+│   ├── service.py              # Account + holding CRUD
+│   └── router.py               # /investors/{id}/accounts + /holdings
+│
+├── currency_engine/
+│   └── rates.py                # FX rate fetch (open.er-api.com) + 24h DB cache
+│
+├── portfolio_analysis/
+│   ├── engine.py               # Pure analysis function (P&L, allocation, exposure)
+│   ├── service.py              # Data assembly + engine call
+│   ├── schemas.py              # PortfolioSummary, AccountAnalysis, HoldingAnalysis
+│   └── router.py               # GET /investors/{id}/portfolio
+│
 ├── audit/                      # Event log for all significant actions
 ├── dashboard/                  # Aggregated summary endpoint
 └── workers/                    # Reserved for background jobs (not yet implemented)
@@ -93,6 +106,9 @@ All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`:
 | `/investors/{id}/paper-portfolios` | paper_trading | paper-trading |
 | `/investors/{id}/ai-report` | ai_analysis | ai-analysis |
 | `/investors/{id}/decision` | financial_decision | decision |
+| `/investors/{id}/portfolio` | portfolio_analysis | portfolio |
+| `/investors/{id}/accounts` | holdings | holdings |
+| `/investors/{id}/accounts/{id}/holdings` | holdings | holdings |
 | `/family-profiles` | family_profiles | family-profiles |
 | `/strategies/templates` | strategy_library | strategy-templates |
 
@@ -112,6 +128,8 @@ Managed by Alembic. Migrations in `backend/alembic/versions/`.
 | `0004_audit_events.py` | Audit event table |
 | `0005_investor_profile_extended.py` | Added `investment_goal`, `risk_tolerance`, `time_horizon`, `preferred_assets`, `trading_frequency`, `guardian_required` to investor_profiles |
 | `0006_risk_model_enforcement_fields.py` | Added `age_tier`, `allowed_strategy_families`, `blocked_strategy_families`, `live_trading_allowed`, `requires_paper_trading`, `max_trade_size_pct`, `max_open_positions` to risk_models |
+| `0007_holdings.py` | `investment_accounts` and `investment_holdings` tables |
+| `0008_currency_rates.py` | `currency_rates` cache table |
 
 ### Core tables
 
@@ -125,6 +143,11 @@ family_profiles            — household profiles
 family_members             — members linked to family_profile
 
 risk_models                — generated risk allocation models per investor; + enforcement fields (age_tier, allowed/blocked strategy families, live_trading_allowed, etc.)
+
+investment_accounts        — investor's accounts by provider + type (pension, brokerage, crypto, etc.)
+investment_holdings        — individual positions per account (ticker, ISIN, quantity, avg buy price, current value)
+currency_rates             — FX rate cache (base → target, fetched_at); 24h TTL
+
 strategy_templates         — curated strategy definitions (seeded)
 strategy_recommendations   — ranked strategies generated for an investor
 
@@ -150,7 +173,8 @@ frontend/src/
 │   │   └── login/page.tsx          # Login + investor profile creation
 │   ├── (dashboard)/
 │   │   ├── layout.tsx              # Sidebar navigation shell
-│   │   ├── dashboard/page.tsx      # Dashboard overview + Investment Readiness card
+│   │   ├── dashboard/page.tsx      # Dashboard overview + Investment Readiness + Portfolio widget
+│   ├── investments/page.tsx    # Investment accounts + holdings tracking + portfolio summary
 │   │   ├── financial/page.tsx      # Financial profile CRUD + assets/liabilities
 │   │   ├── goals/page.tsx          # Financial goals
 │   │   ├── family/page.tsx         # Family profile

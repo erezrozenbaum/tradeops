@@ -16,6 +16,8 @@ from app.models.strategy_template import StrategyTemplate, StrategyType
 from app.models.strategy_recommendation import StrategyRecommendation
 from app.models.backtest import BacktestRun, BacktestPeriod
 from app.models.paper_trade import PaperPortfolio, PaperTick, PortfolioStatus
+from app.models.investment_account import InvestmentAccount, InvestmentHolding, AccountType, HoldingAssetType
+from app.models.currency_rate import CurrencyRate
 
 __all__ = [
     "InvestorProfile",
@@ -43,4 +45,9 @@ __all__ = [
     "PaperPortfolio",
     "PaperTick",
     "PortfolioStatus",
+    "InvestmentAccount",
+    "InvestmentHolding",
+    "AccountType",
+    "HoldingAssetType",
+    "CurrencyRate",
 ]

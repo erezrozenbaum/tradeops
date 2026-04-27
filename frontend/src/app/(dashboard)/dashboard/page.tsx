@@ -26,6 +26,14 @@ interface InvestmentDecision {
   explanation: string;
 }
 
+interface PortfolioSummary {
+  base_currency: string;
+  total_current_value: number;
+  unrealized_pnl: number;
+  unrealized_pnl_pct: number;
+  asset_allocation: Record<string, number>;
+}
+
 interface DashboardData {
   investor: {
     id: string;
@@ -125,6 +133,7 @@ export default function DashboardPage() {
   const investorId = useInvestorId();
   const [data, setData] = useState<DashboardData | null>(null);
   const [decision, setDecision] = useState<InvestmentDecision | null>(null);
+  const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -138,10 +147,14 @@ export default function DashboardPage() {
       fetch(`/api/v1/investors/${investorId}/decision`).then((r) =>
         r.ok ? r.json() : null
       ),
+      fetch(`/api/v1/investors/${investorId}/portfolio`).then((r) =>
+        r.ok ? r.json() : null
+      ),
     ])
-      .then(([dashData, decisionData]) => {
+      .then(([dashData, decisionData, portfolioData]) => {
         setData(dashData);
         setDecision(decisionData);
+        setPortfolio(portfolioData);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -325,6 +338,48 @@ export default function DashboardPage() {
 
       {/* Investment Readiness */}
       <ReadinessCard decision={decision} hasFinancialData={!!data.net_worth} />
+
+      {/* Portfolio summary */}
+      {portfolio && portfolio.total_current_value > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Investment Portfolio</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-8">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Total value</p>
+                <p className="text-2xl font-bold tracking-tight">
+                  {formatCurrency(portfolio.total_current_value, portfolio.base_currency)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Unrealized P&L</p>
+                <p className={`text-xl font-semibold ${portfolio.unrealized_pnl >= 0 ? "text-green-600" : "text-red-500"}`}>
+                  {portfolio.unrealized_pnl >= 0 ? "+" : ""}
+                  {formatCurrency(portfolio.unrealized_pnl, portfolio.base_currency)}
+                  <span className="text-sm ml-2 font-normal text-muted-foreground">
+                    ({portfolio.unrealized_pnl_pct >= 0 ? "+" : ""}{portfolio.unrealized_pnl_pct.toFixed(2)}%)
+                  </span>
+                </p>
+              </div>
+              {Object.keys(portfolio.asset_allocation).length > 0 && (
+                <div className="ml-auto">
+                  <p className="text-xs text-muted-foreground mb-2">Allocation</p>
+                  <div className="flex gap-3">
+                    {Object.entries(portfolio.asset_allocation).map(([type, pct]) => (
+                      <div key={type} className="text-center">
+                        <p className="text-sm font-semibold">{pct.toFixed(1)}%</p>
+                        <p className="text-xs text-muted-foreground capitalize">{type}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Goals */}
       {goals.length > 0 && (
