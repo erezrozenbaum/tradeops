@@ -389,7 +389,7 @@ export default function InvestmentsPage() {
                   {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                   <div>
                     <p className="font-medium text-sm">{account.account_name ?? account.provider_name}</p>
-                    <p className="text-xs text-muted-foreground">{account.provider_name} · <Badge variant="outline" className="text-[10px] py-0">{accountTypeLabel(account.account_type)}</Badge></p>
+                    <p className="text-xs text-muted-foreground">{account.provider_name} · <Badge variant="muted" className="text-[10px] py-0">{accountTypeLabel(account.account_type)}</Badge></p>
                   </div>
                 </button>
                 <div className="flex items-center gap-4">
@@ -403,7 +403,7 @@ export default function InvestmentsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => { setAddingHoldingForAccount(account.id); setExpandedAccounts(prev => new Set([...prev, account.id])); }}
+                      onClick={() => { setAddingHoldingForAccount(account.id); setExpandedAccounts(prev => { const s = new Set(prev); s.add(account.id); return s; }); }}
                     >
                       <Plus className="h-3.5 w-3.5 mr-1" /> Add holding
                     </Button>
@@ -510,7 +510,7 @@ export default function InvestmentsPage() {
                               </div>
                             </td>
                             <td className="py-2.5 pr-3">
-                              <Badge variant="outline" className="text-[10px] py-0">{assetTypeLabel(h.asset_type)}</Badge>
+                              <Badge variant="muted" className="text-[10px] py-0">{assetTypeLabel(h.asset_type)}</Badge>
                             </td>
                             <td className="py-2.5 text-right tabular-nums">{h.quantity}</td>
                             <td className="py-2.5 text-right tabular-nums">

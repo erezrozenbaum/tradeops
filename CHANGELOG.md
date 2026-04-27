@@ -10,6 +10,20 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.14.0] — 2026-04-27
+
+### Added
+- **Market scanner module** (`backend/app/market_scanner/`) — stateless engine that filters and ranks a curated catalog of 25 instruments (ETFs, stocks, crypto) against the investor's risk model, investment readiness classification, preferred assets, time horizon, experience level, and existing portfolio allocation
+- **Curated instrument catalog** (`catalog.py`) — 25 instruments spanning 4 asset families (preservation, balanced, growth, speculative) and 4 markets (US, EU, GLOBAL, CRYPTO); covers bonds, index ETFs, sector ETFs, individual stocks, and crypto
+- **Fit scoring engine** — 4-factor score (0–100): risk alignment (0–40), portfolio diversification gap (0–30), time horizon match (0–20), beginner suitability (0–10)
+- **Hard safety filters** — `not_ready` returns empty list; `education_only` returns preservation-only; `blocked_strategy_families` (crypto, aggressive, speculative) and `age_tier` (retirement caps at moderate) enforced per risk model
+- **`GET /investors/{id}/market-scan`** — returns ranked `InstrumentSuggestion` list with per-instrument rationale, plus `scan_notes` explaining applied filters
+- **Market Scan page** (`/market-scan`) — ranked instrument cards with fit-score progress bar, color-coded risk/family/market badges, rationale text, and readiness banner
+- **Sidebar "Intelligence" section** extended with Market Scan link
+- **23 unit tests** for market scanner engine (159 total passing)
+
+---
+
 ## [0.13.0] — 2026-04-27
 
 ### Added
@@ -220,7 +234,8 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
-[Unreleased]: https://github.com/erezrozenbaum/tradeops/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/erezrozenbaum/tradeops/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.10.0...v0.11.0
