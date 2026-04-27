@@ -18,22 +18,18 @@ from app.portfolio_analysis.schemas import (
 )
 
 
-def _holding_current_value(h: InvestmentHolding) -> float:
-    """Current value in the holding's own currency.
-
-    Uses manually entered current_value if present; otherwise falls back to cost basis.
-    """
-    if h.current_value is not None:
-        return h.current_value
-    return h.quantity * h.avg_buy_price
-
-
 def analyze(
     investor_id,
     base_currency: str,
     accounts: list[InvestmentAccount],
     convert: Callable[[float, str, str], float],
+    live_prices: dict[str, tuple[float, str]] | None = None,
 ) -> PortfolioSummary:
+    """Analyze portfolio.
+
+    live_prices: {ticker: (price_per_unit, price_currency)} from market data cache.
+    """
+    lp = live_prices or {}
     account_analyses: list[AccountAnalysis] = []
     total_cost = 0.0
     total_value = 0.0
@@ -47,10 +43,26 @@ def analyze(
 
         for h in account.holdings:
             cost_local = h.quantity * h.avg_buy_price
-            value_local = _holding_current_value(h)
-
             cost_base = convert(cost_local, h.currency, base_currency)
-            value_base = convert(value_local, h.currency, base_currency)
+
+            live_price: float | None = None
+            live_price_currency: str | None = None
+
+            if h.ticker and h.ticker in lp:
+                lp_price, lp_currency = lp[h.ticker]
+                value_base = convert(lp_price * h.quantity, lp_currency, base_currency)
+                value_local = lp_price * h.quantity  # in price currency
+                price_source = "live"
+                live_price = lp_price
+                live_price_currency = lp_currency
+            elif h.current_value is not None:
+                value_local = h.current_value
+                value_base = convert(value_local, h.currency, base_currency)
+                price_source = "manual"
+            else:
+                value_local = cost_local
+                value_base = cost_base
+                price_source = "cost_basis"
 
             pnl = value_base - cost_base
             pnl_pct = (pnl / cost_base * 100) if cost_base > 0 else 0.0
@@ -71,6 +83,9 @@ def analyze(
                 unrealized_pnl_pct=round(pnl_pct, 2),
                 currency=h.currency,
                 purchase_date=h.purchase_date,
+                price_source=price_source,
+                live_price=live_price,
+                live_price_currency=live_price_currency,
             ))
 
             acc_cost += cost_base

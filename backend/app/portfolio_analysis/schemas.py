@@ -20,6 +20,9 @@ class HoldingAnalysis(BaseModel):
     unrealized_pnl_pct: float
     currency: str
     purchase_date: date | None
+    price_source: str  # "live" | "manual" | "cost_basis"
+    live_price: float | None  # per-unit price from market data (in price_currency)
+    live_price_currency: str | None  # currency of live_price
 
 
 class AccountAnalysis(BaseModel):

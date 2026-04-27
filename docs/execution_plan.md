@@ -1,6 +1,6 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.12.0
+**Version:** 0.13.0
 **Last updated:** 2026-04-27
 
 ---
@@ -25,7 +25,7 @@ Summary of what was built:
 
 **Goal:** Bridge the gap between the financial decision engine and real investing intelligence.
 
-**Version target:** 0.12.0 (TASK 8–10), 0.13.0+ (TASK 11–12)
+**Version target:** 0.12.0 (TASK 8–10), 0.13.0 (TASK 11), 0.14.0+ (TASK 12)
 
 **Framing:** This is NOT live trading. It is Portfolio & Market Intelligence — tracking existing investments, computing portfolio health, and scanning markets for context.
 
@@ -99,24 +99,34 @@ Current value logic: uses manually entered `current_value` if set; falls back to
 
 ---
 
-### TASK 11 — Market data integration (DEFERRED — pending data source decision)
+### TASK 11 — Market data integration ✅ DONE
 
-**Type:** New module  
-**Risk:** 🔴 Risky  
-**Status:** ❌ DEFERRED
+**Type:** New module + DB schema  
+**Risk:** 🔴 Risky — Alembic migration (0009)  
+**Status:** ✅ DONE
 
-**Planned data source:** Alpha Vantage / Polygon.io (free tier)  
-**Scope:**
-- On-demand price fetch per holding (not real-time streaming)
-- Store in `price_snapshots` table with TTL
-- Refresh portfolio current values automatically
-- Display live price vs avg buy price delta
+**Data source:** Alpha Vantage (free tier, 25 calls/day) — `GLOBAL_QUOTE` endpoint  
+**New table:** `price_snapshots` — ticker, price, currency, fetched_at; indexed on ticker  
+**Cache TTL:** 24 hours — aggressive caching to stay within free tier limits
 
-**Blocker:** TASE (Tel Aviv Stock Exchange) data availability on free tiers must be confirmed before implementation.
+**API endpoints:**
+```
+GET  /api/v1/market/quote/{ticker}                       — get/fetch cached quote
+POST /api/v1/investors/{id}/portfolio/refresh-prices     — bulk refresh all portfolio tickers
+```
+
+**Engine changes:**
+- `analyze()` accepts optional `live_prices: dict[str, tuple[float, str]]`
+- Priority: live price → manual `current_value` → cost basis fallback
+- `price_source` field added to `HoldingAnalysis` response: `"live"` | `"manual"` | `"cost_basis"`
+
+**Frontend:** "Refresh prices" button; green "Live" pill on holdings with market price; live price per unit shown in price column
+
+**TASE note:** Alpha Vantage does not reliably cover TASE tickers — Israeli holdings should continue using manual `current_value`. TASE support can be added later with a dedicated provider.
 
 ---
 
-### TASK 12 — Market scanner (DEFERRED)
+### TASK 12 — Market scanner (DEFERRED — depends on TASK 11)
 
 **Type:** New module  
 **Risk:** 🟡 Moderate  
@@ -153,6 +163,7 @@ TASK 12 (market scanner)   → deferred; depends on TASK 11
 | 0006 | Risk model enforcement fields |
 | 0007 | investment_accounts + investment_holdings |
 | 0008 | currency_rates |
+| 0009 | price_snapshots |
 
 ---
 

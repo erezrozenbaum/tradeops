@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str
     ANTHROPIC_API_KEY: str = ""
+    ALPHA_VANTAGE_API_KEY: str = ""
     ENVIRONMENT: str = "development"
     DEBUG: bool = False
 
