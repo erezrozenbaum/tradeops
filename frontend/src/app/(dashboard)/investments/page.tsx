@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatPercent } from "@/lib/utils";
-import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronRight, Briefcase } from "lucide-react";
+import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronRight, Briefcase, RefreshCw } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,6 +48,9 @@ interface HoldingAnalysis {
   unrealized_pnl: number;
   unrealized_pnl_pct: number;
   currency: string;
+  price_source: string;
+  live_price: number | null;
+  live_price_currency: string | null;
 }
 
 interface AccountAnalysis {
@@ -127,6 +130,7 @@ export default function InvestmentsPage() {
   const [addingHoldingForAccount, setAddingHoldingForAccount] = useState<string | null>(null);
   const [holdingForm, setHoldingForm] = useState(EMPTY_HOLDING);
   const [savingHolding, setSavingHolding] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (!investorId) return;
@@ -212,6 +216,19 @@ export default function InvestmentsPage() {
     }
   }
 
+  async function refreshPrices() {
+    setRefreshing(true);
+    try {
+      const res = await fetch(`/api/v1/investors/${investorId}/portfolio/refresh-prices`, { method: "POST" });
+      if (res.ok) {
+        const updated = await res.json();
+        setPortfolio(updated);
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   async function deleteHolding(accountId: string, holdingId: string) {
     if (!confirm("Remove this holding?")) return;
     await fetch(`/api/v1/investors/${investorId}/accounts/${accountId}/holdings/${holdingId}`, { method: "DELETE" });
@@ -235,9 +252,17 @@ export default function InvestmentsPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Investments</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Track your existing holdings across all accounts</p>
         </div>
-        <Button onClick={() => setShowAccountForm(true)}>
-          <Plus className="h-4 w-4 mr-2" /> Add account
-        </Button>
+        <div className="flex gap-2">
+          {accounts.length > 0 && (
+            <Button variant="outline" onClick={refreshPrices} disabled={refreshing}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Refreshing…" : "Refresh prices"}
+            </Button>
+          )}
+          <Button onClick={() => setShowAccountForm(true)}>
+            <Plus className="h-4 w-4 mr-2" /> Add account
+          </Button>
+        </div>
       </div>
 
       {/* Portfolio summary */}
@@ -475,15 +500,25 @@ export default function InvestmentsPage() {
                           <tr key={h.id} className="hover:bg-muted/30 transition-colors">
                             <td className="py-2.5 pr-3">
                               <p className="font-medium">{h.name}</p>
-                              {(h.ticker || h.isin) && (
-                                <p className="text-xs text-muted-foreground">{h.ticker ?? h.isin}</p>
-                              )}
+                              <div className="flex items-center gap-1.5">
+                                {(h.ticker || h.isin) && (
+                                  <p className="text-xs text-muted-foreground">{h.ticker ?? h.isin}</p>
+                                )}
+                                {ha?.price_source === "live" && (
+                                  <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-1.5 py-0 text-[10px] font-medium text-green-700 dark:text-green-400">Live</span>
+                                )}
+                              </div>
                             </td>
                             <td className="py-2.5 pr-3">
                               <Badge variant="outline" className="text-[10px] py-0">{assetTypeLabel(h.asset_type)}</Badge>
                             </td>
                             <td className="py-2.5 text-right tabular-nums">{h.quantity}</td>
-                            <td className="py-2.5 text-right tabular-nums">{formatCurrency(h.avg_buy_price, h.currency)}</td>
+                            <td className="py-2.5 text-right tabular-nums">
+                              <p className="tabular-nums">{formatCurrency(h.avg_buy_price, h.currency)}</p>
+                              {ha?.price_source === "live" && ha.live_price != null && (
+                                <p className="text-xs text-green-600 tabular-nums">{formatCurrency(ha.live_price, ha.live_price_currency ?? h.currency)}</p>
+                              )}
+                            </td>
                             <td className="py-2.5 text-right tabular-nums">
                               {ha ? formatCurrency(ha.current_value_base, currency) : formatCurrency(h.quantity * h.avg_buy_price, h.currency)}
                             </td>

@@ -18,6 +18,7 @@ from app.models.backtest import BacktestRun, BacktestPeriod
 from app.models.paper_trade import PaperPortfolio, PaperTick, PortfolioStatus
 from app.models.investment_account import InvestmentAccount, InvestmentHolding, AccountType, HoldingAssetType
 from app.models.currency_rate import CurrencyRate
+from app.models.price_snapshot import PriceSnapshot
 
 __all__ = [
     "InvestorProfile",
@@ -50,4 +51,5 @@ __all__ = [
     "AccountType",
     "HoldingAssetType",
     "CurrencyRate",
+    "PriceSnapshot",
 ]

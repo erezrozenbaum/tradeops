@@ -10,6 +10,20 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.13.0] — 2026-04-27
+
+### Added
+- **Market data module** (`backend/app/market_data/`) — Alpha Vantage GLOBAL_QUOTE integration; on-demand price fetch per ticker; 24-hour DB cache in `price_snapshots` table (migration 0009); falls back gracefully when API key absent or ticker unavailable
+- **`price_snapshots` table** (migration 0009) — `ticker`, `price`, `currency`, `fetched_at`; indexed on `ticker`
+- **Live prices in portfolio analysis** — when a holding has a ticker with a fresh cache entry, portfolio engine uses live price instead of manual `current_value` or cost basis; `price_source` field (`"live"` / `"manual"` / `"cost_basis"`) added to each holding in the portfolio response
+- **`POST /investors/{id}/portfolio/refresh-prices`** — force-refreshes all tickered holdings in an investor's portfolio, then returns updated portfolio summary
+- **`GET /market/quote/{ticker}`** — fetch or return cached quote for any ticker; accepts `?force_refresh=true`
+- **"Refresh prices" button** on investments page — triggers bulk price refresh, shows spinner during fetch; button only shown when accounts exist
+- **Live price badge** on holdings table — green "Live" pill next to ticker when price is from market data; current price per unit shown in green below avg buy price column
+- **`ALPHA_VANTAGE_API_KEY`** added to `Settings` in `config.py`; loaded from environment
+
+---
+
 ## [0.12.0] — 2026-04-27
 
 ### Added
@@ -206,7 +220,8 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
-[Unreleased]: https://github.com/erezrozenbaum/tradeops/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/erezrozenbaum/tradeops/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.9.0...v0.10.0

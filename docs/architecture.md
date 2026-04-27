@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 0.12.0  
+**Version:** 0.13.0  
 **Last updated:** 2026-04-27
 
 ---
@@ -81,6 +81,11 @@ backend/app/
 ├── currency_engine/
 │   └── rates.py                # FX rate fetch (open.er-api.com) + 24h DB cache
 │
+├── market_data/
+│   ├── fetcher.py              # Alpha Vantage GLOBAL_QUOTE HTTP call
+│   ├── service.py              # get_cached_price / fetch_and_cache / refresh_tickers with 24h TTL
+│   └── router.py               # GET /market/quote/{ticker}
+│
 ├── portfolio_analysis/
 │   ├── engine.py               # Pure analysis function (P&L, allocation, exposure)
 │   ├── service.py              # Data assembly + engine call
@@ -107,6 +112,8 @@ All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`:
 | `/investors/{id}/ai-report` | ai_analysis | ai-analysis |
 | `/investors/{id}/decision` | financial_decision | decision |
 | `/investors/{id}/portfolio` | portfolio_analysis | portfolio |
+| `/investors/{id}/portfolio/refresh-prices` | portfolio_analysis | portfolio |
+| `/market` | market_data | market-data |
 | `/investors/{id}/accounts` | holdings | holdings |
 | `/investors/{id}/accounts/{id}/holdings` | holdings | holdings |
 | `/family-profiles` | family_profiles | family-profiles |
@@ -130,6 +137,7 @@ Managed by Alembic. Migrations in `backend/alembic/versions/`.
 | `0006_risk_model_enforcement_fields.py` | Added `age_tier`, `allowed_strategy_families`, `blocked_strategy_families`, `live_trading_allowed`, `requires_paper_trading`, `max_trade_size_pct`, `max_open_positions` to risk_models |
 | `0007_holdings.py` | `investment_accounts` and `investment_holdings` tables |
 | `0008_currency_rates.py` | `currency_rates` cache table |
+| `0009_price_snapshots.py` | `price_snapshots` market data cache table |
 
 ### Core tables
 
@@ -147,6 +155,7 @@ risk_models                — generated risk allocation models per investor; + 
 investment_accounts        — investor's accounts by provider + type (pension, brokerage, crypto, etc.)
 investment_holdings        — individual positions per account (ticker, ISIN, quantity, avg buy price, current value)
 currency_rates             — FX rate cache (base → target, fetched_at); 24h TTL
+price_snapshots            — market price cache per ticker (Alpha Vantage); 24h TTL
 
 strategy_templates         — curated strategy definitions (seeded)
 strategy_recommendations   — ranked strategies generated for an investor
