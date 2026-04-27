@@ -18,10 +18,11 @@ Investor Profile → Financial Context → Risk Model → Portfolio Tracking →
 4. **Investment decision engine** — deterministic readiness assessment: ready / ready with limits / not ready / education only
 5. **Portfolio tracking** — manually add existing investment accounts and holdings; track P&L, asset allocation, and currency exposure across all accounts
 6. **Multi-currency support** — FX rates cached from open.er-api.com; all values normalised to investor's base currency
-7. **Strategy recommendations** — ranked list from a curated template library
-8. **Backtesting** — deterministic simulation of strategy performance over configurable periods
-9. **Paper trading** — month-by-month portfolio simulation without real capital
-10. **AI financial report** — Claude-powered 7-section narrative analysis
+7. **Market data** — live prices via Alpha Vantage (24h cache); "Refresh prices" updates all tickered holdings; price source shown per holding (`live` / `manual` / `cost_basis`)
+8. **Strategy recommendations** — ranked list from a curated template library
+9. **Backtesting** — deterministic simulation of strategy performance over configurable periods
+10. **Paper trading** — month-by-month portfolio simulation without real capital
+11. **AI financial report** — Claude-powered 7-section narrative analysis
 
 ---
 
@@ -182,6 +183,8 @@ Key endpoints:
 | GET/POST | `/api/v1/investors/{id}/risk-model` | Risk allocation model |
 | GET | `/api/v1/investors/{id}/decision` | Investment readiness decision |
 | GET | `/api/v1/investors/{id}/portfolio` | Portfolio analysis (P&L, allocation, exposure) |
+| POST | `/api/v1/investors/{id}/portfolio/refresh-prices` | Force-refresh market prices for all tickered holdings |
+| GET | `/api/v1/market/quote/{ticker}` | Get cached or fresh quote for a ticker |
 | GET/POST | `/api/v1/investors/{id}/accounts` | Investment accounts |
 | GET/PUT/DELETE | `/api/v1/investors/{id}/accounts/{id}` | Manage account |
 | GET/POST | `/api/v1/investors/{id}/accounts/{id}/holdings` | Holdings per account |
