@@ -10,6 +10,24 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.16.0] — 2026-04-28
+
+### Added
+- **Investment Recommendations module** (`backend/app/investment_recommendations/`) — AI-powered, personalised investment guidance engine using Claude API
+- **`GET /investors/{id}/recommendations`** — returns `RecommendationReport`: overall guidance narrative, 2–4 action plan steps (with urgency), 3–6 specific instrument recommendations from the curated catalog, and a discovery section for instruments the investor doesn't currently hold
+- **Instrument recommendations** include: ticker, name, asset type, risk level, why it fits this specific investor, suggested allocation %, plain-language educational note, action type (start_position / increase / consider), and is_new_to_you flag
+- **"Recommendations" page** (`/recommendations`) — new frontend page under the Intelligence section; shows overall guidance card, colour-coded action plan, discovery instruments grid (new-to-you), and existing holdings guidance; each instrument card has an expandable "What is this?" educational panel
+- **Sidebar entry** — "Recommendations" added to the Intelligence section with a wand icon
+- **Portfolio gap in real money** — rebalance engine now computes `target_amount`, `actual_amount`, and `gap_amount` per tier (in base currency) when portfolio total value is available
+- **Rebalancing card updated** — shows "Sell ~X" / "Buy ~X" concrete money amounts alongside percentage delta for each overweight/underweight tier
+
+### Changed
+- `RebalanceTier` schema extended with `target_amount`, `actual_amount`, `gap_amount` (all nullable)
+- `RebalanceResult` schema extended with `total_portfolio_value` and `currency` (nullable)
+- Portfolio rebalance router now passes `total_current_value` and `base_currency` to the engine
+
+---
+
 ## [0.15.0] — 2026-04-27
 
 ### Added

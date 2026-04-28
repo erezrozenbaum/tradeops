@@ -18,6 +18,7 @@ import {
   LogOut,
   Briefcase,
   ScanSearch,
+  Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +51,7 @@ const sections = [
   {
     label: "Intelligence",
     items: [
+      { label: "Recommendations", href: "/recommendations", icon: Wand2 },
       { label: "Market Scan", href: "/market-scan", icon: ScanSearch },
       { label: "AI Report", href: "/reports", icon: Sparkles },
     ],
