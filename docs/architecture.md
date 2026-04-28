@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 0.14.0  
+**Version:** 0.15.0  
 **Last updated:** 2026-04-27
 
 ---
@@ -88,9 +88,17 @@ backend/app/
 │
 ├── portfolio_analysis/
 │   ├── engine.py               # Pure analysis function (P&L, allocation, exposure)
+│   ├── rebalance_engine.py     # Pure rebalance function (asset tier vs risk model target)
 │   ├── service.py              # Data assembly + engine call
 │   ├── schemas.py              # PortfolioSummary, AccountAnalysis, HoldingAnalysis
-│   └── router.py               # GET /investors/{id}/portfolio
+│   ├── rebalance_schemas.py    # RebalanceTier, RebalanceResult
+│   └── router.py               # GET /investors/{id}/portfolio + /rebalance
+│
+├── goals_analysis/
+│   ├── engine.py               # Pure analysis: progress, contribution needed, gap, on_track
+│   ├── service.py              # Data assembly + engine call
+│   ├── schemas.py              # GoalAnalysis, GoalsAnalysisResult
+│   └── router.py               # GET /investors/{id}/goals-analysis
 │
 ├── market_scanner/
 │   ├── catalog.py              # Curated 25-instrument catalog (ETFs, stocks, crypto)
@@ -118,7 +126,9 @@ All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`:
 | `/investors/{id}/paper-portfolios` | paper_trading | paper-trading |
 | `/investors/{id}/ai-report` | ai_analysis | ai-analysis |
 | `/investors/{id}/decision` | financial_decision | decision |
+| `/investors/{id}/goals-analysis` | goals_analysis | goals-analysis |
 | `/investors/{id}/portfolio` | portfolio_analysis | portfolio |
+| `/investors/{id}/portfolio/rebalance` | portfolio_analysis | portfolio |
 | `/investors/{id}/portfolio/refresh-prices` | portfolio_analysis | portfolio |
 | `/investors/{id}/market-scan` | market_scanner | market-scan |
 | `/market` | market_data | market-data |

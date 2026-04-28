@@ -13,7 +13,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { AlertCircle, TrendingUp, TrendingDown, Minus, ShieldCheck, ShieldAlert, ShieldX, GraduationCap } from "lucide-react";
+import { AlertCircle, TrendingUp, TrendingDown, Minus, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, AlertTriangle } from "lucide-react";
 
 interface InvestmentDecision {
   can_invest: boolean;
@@ -24,6 +24,21 @@ interface InvestmentDecision {
   required_actions: string[];
   warnings: string[];
   explanation: string;
+}
+
+interface GoalAnalysis {
+  id: string;
+  months_to_target: number | null;
+  monthly_contribution_needed: number | null;
+  gap: number | null;
+  on_track: boolean;
+  status: string;
+}
+
+interface GoalsAnalysisResult {
+  goals: GoalAnalysis[];
+  total_monthly_contribution_needed: number;
+  monthly_surplus: number | null;
 }
 
 interface PortfolioSummary {
@@ -134,6 +149,7 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [decision, setDecision] = useState<InvestmentDecision | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
+  const [goalsAnalysis, setGoalsAnalysis] = useState<GoalsAnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -150,11 +166,15 @@ export default function DashboardPage() {
       fetch(`/api/v1/investors/${investorId}/portfolio`).then((r) =>
         r.ok ? r.json() : null
       ),
+      fetch(`/api/v1/investors/${investorId}/goals-analysis`).then((r) =>
+        r.ok ? r.json() : null
+      ),
     ])
-      .then(([dashData, decisionData, portfolioData]) => {
+      .then(([dashData, decisionData, portfolioData, goalsAnalysisData]) => {
         setData(dashData);
         setDecision(decisionData);
         setPortfolio(portfolioData);
+        setGoalsAnalysis(goalsAnalysisData);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -388,33 +408,51 @@ export default function DashboardPage() {
             Goals
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {goals.map((goal) => (
-              <Card key={goal.id}>
-                <CardContent className="pt-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <p className="text-sm font-medium">{goal.name}</p>
-                      <p className="text-xs text-muted-foreground capitalize mt-0.5">
-                        {goal.goal_type.replace(/_/g, " ")}
-                      </p>
+            {goals.map((goal) => {
+              const ga = goalsAnalysis?.goals.find((g) => g.id === goal.id);
+              return (
+                <Card key={goal.id}>
+                  <CardContent className="pt-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <p className="text-sm font-medium">{goal.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize mt-0.5">
+                          {goal.goal_type.replace(/_/g, " ")}
+                        </p>
+                      </div>
+                      <span className="text-sm font-semibold text-primary">
+                        {goal.progress_pct.toFixed(0)}%
+                      </span>
                     </div>
-                    <span className="text-sm font-semibold text-primary">
-                      {goal.progress_pct.toFixed(0)}%
-                    </span>
-                  </div>
-                  <Progress value={goal.progress_pct} className="mb-3" />
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{formatCurrency(goal.current_amount, goal.currency)}</span>
-                    <span>{formatCurrency(goal.target_amount, goal.currency)}</span>
-                  </div>
-                  {goal.target_date && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Target: {new Date(goal.target_date).toLocaleDateString()}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                    <Progress value={goal.progress_pct} className="mb-3" />
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{formatCurrency(goal.current_amount, goal.currency)}</span>
+                      <span>{formatCurrency(goal.target_amount, goal.currency)}</span>
+                    </div>
+                    {goal.target_date && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Target: {new Date(goal.target_date).toLocaleDateString()}
+                      </p>
+                    )}
+                    {ga && ga.status !== "complete" && ga.monthly_contribution_needed !== null && (
+                      <div className="mt-2 pt-2 border-t border-border flex items-center gap-1.5 text-xs">
+                        {ga.on_track
+                          ? <TrendingUp className="h-3 w-3 text-green-500 shrink-0" />
+                          : <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />}
+                        <span className="text-muted-foreground">
+                          {formatCurrency(ga.monthly_contribution_needed, goal.currency)}/mo needed
+                        </span>
+                        {!ga.on_track && ga.gap !== null && ga.gap > 0 && (
+                          <span className="ml-auto text-red-500 font-medium">
+                            {formatCurrency(ga.gap, goal.currency)} short
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}

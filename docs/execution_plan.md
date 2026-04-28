@@ -1,6 +1,6 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.14.0
+**Version:** 0.15.0
 **Last updated:** 2026-04-27
 
 ---
@@ -25,7 +25,7 @@ Summary of what was built:
 
 **Goal:** Bridge the gap between the financial decision engine and real investing intelligence.
 
-**Version target:** 0.12.0 (TASK 8–10), 0.13.0 (TASK 11), 0.14.0 (TASK 12)
+**Version target:** 0.12.0 (TASK 8–10), 0.13.0 (TASK 11), 0.14.0 (TASK 12), 0.15.0 (TASK 13–15)
 
 **Framing:** This is NOT live trading. It is Portfolio & Market Intelligence — tracking existing investments, computing portfolio health, and scanning markets for context.
 
@@ -127,6 +127,66 @@ POST /api/v1/investors/{id}/portfolio/refresh-prices     — bulk refresh all po
 ---
 
 ### TASK 12 — Market scanner ✅ DONE
+
+---
+
+## Phase 3: Financial Intelligence Deepening
+
+**Goal:** Connect all the data the system has into actionable guidance — goals on-track analysis, portfolio rebalancing, and a richer AI report.
+
+**Version target:** 0.15.0 (TASK 13–15)
+
+---
+
+### TASK 13 — Goals progress engine ✅ DONE
+
+**Type:** New module  
+**Risk:** 🟢 Safe — no DB migration
+
+**Endpoint:** `GET /api/v1/investors/{id}/goals-analysis`
+
+**Engine inputs:** goals list + financial_profile (for monthly_surplus)  
+**Per-goal outputs:** amount_remaining, months_to_target, monthly_contribution_needed, gap, on_track, status
+
+**Statuses:** `complete` | `on_track` | `at_risk` | `no_date`
+
+**Frontend:** Enhanced goals page (status badge, contribution needed, gap indicator) + enhanced dashboard goal cards + monthly summary banner
+
+**Tests:** 9 unit tests
+
+---
+
+### TASK 14 — Portfolio rebalancing guide ✅ DONE
+
+**Type:** New endpoint (extends portfolio_analysis module)  
+**Risk:** 🟢 Safe — no DB migration
+
+**Endpoint:** `GET /api/v1/investors/{id}/portfolio/rebalance`
+
+**Engine:** Maps asset_type → risk tier (low_risk/growth/high_risk), compares actual % vs risk model target %; flags tiers >5% off target
+
+**Asset tier mapping:**
+- low_risk: bond, fund
+- growth: etf, stock, real_estate
+- high_risk: crypto
+- other: excluded
+
+**Frontend:** Rebalancing guide card on investments page — per-tier progress bar with target marker, action labels (Reduce / Buy more / Hold), rebalance_needed badge
+
+**Tests:** 8 unit tests
+
+---
+
+### TASK 15 — Enhanced AI report ✅ DONE
+
+**Type:** Feature extension (ai_analysis module)  
+**Risk:** 🟢 Safe — no schema change
+
+**Changes:**
+- `build_context()` now accepts `portfolio_summary` and `goals_analysis` optional params
+- Two new JSON keys in system prompt: `portfolio_analysis` and `goals_progress`
+- `service.py` fetches portfolio + goals analysis before calling Claude
+- Frontend `reports/page.tsx` renders 2 new sections: Portfolio Analysis, Goals Progress
 
 **Type:** New module  
 **Risk:** 🟡 Moderate  

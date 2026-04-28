@@ -12,6 +12,8 @@ interface AnalysisReport {
   summary: string;
   financial_health: string;
   risk_profile: string;
+  portfolio_analysis: string;
+  goals_progress: string;
   strategy_analysis: string;
   backtest_insights: string;
   paper_trading_performance: string;
@@ -22,6 +24,8 @@ const SECTIONS: { key: keyof AnalysisReport; label: string }[] = [
   { key: "summary", label: "Executive Summary" },
   { key: "financial_health", label: "Financial Health" },
   { key: "risk_profile", label: "Risk Profile" },
+  { key: "portfolio_analysis", label: "Portfolio Analysis" },
+  { key: "goals_progress", label: "Goals Progress" },
   { key: "strategy_analysis", label: "Strategy Analysis" },
   { key: "backtest_insights", label: "Backtest Insights" },
   { key: "paper_trading_performance", label: "Paper Trading Performance" },
