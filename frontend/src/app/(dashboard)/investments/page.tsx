@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatPercent } from "@/lib/utils";
-import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronRight, Briefcase, RefreshCw } from "lucide-react";
+import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronRight, Briefcase, RefreshCw, Scale } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -76,6 +76,22 @@ interface PortfolioSummary {
   accounts: AccountAnalysis[];
 }
 
+interface RebalanceTier {
+  tier: string;
+  label: string;
+  target_pct: number;
+  actual_pct: number;
+  delta_pct: number;
+  action: string;
+  asset_types: string[];
+}
+
+interface RebalanceResult {
+  rebalance_needed: boolean;
+  tiers: RebalanceTier[];
+  notes: string[];
+}
+
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const ACCOUNT_TYPES = [
@@ -118,6 +134,7 @@ export default function InvestmentsPage() {
   const investorId = useInvestorId();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
+  const [rebalance, setRebalance] = useState<RebalanceResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
 
@@ -139,12 +156,14 @@ export default function InvestmentsPage() {
 
   async function loadAll() {
     setLoading(true);
-    const [accts, port] = await Promise.all([
+    const [accts, port, reb] = await Promise.all([
       fetch(`/api/v1/investors/${investorId}/accounts`).then(r => r.ok ? r.json() : []),
       fetch(`/api/v1/investors/${investorId}/portfolio`).then(r => r.ok ? r.json() : null),
+      fetch(`/api/v1/investors/${investorId}/portfolio/rebalance`).then(r => r.ok ? r.json() : null),
     ]);
     setAccounts(accts);
     setPortfolio(port);
+    setRebalance(reb);
     setLoading(false);
   }
 
@@ -223,6 +242,9 @@ export default function InvestmentsPage() {
       if (res.ok) {
         const updated = await res.json();
         setPortfolio(updated);
+        // Refresh rebalance data with updated prices
+        const reb = await fetch(`/api/v1/investors/${investorId}/portfolio/rebalance`).then(r => r.ok ? r.json() : null);
+        setRebalance(reb);
       }
     } finally {
       setRefreshing(false);
@@ -305,6 +327,82 @@ export default function InvestmentsPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Rebalancing guide */}
+      {rebalance && rebalance.tiers.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Scale className="h-4 w-4" />
+                Rebalancing Guide
+              </CardTitle>
+              {rebalance.rebalance_needed ? (
+                <Badge variant="warning">Rebalance needed</Badge>
+              ) : (
+                <Badge variant="success">Balanced</Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              {rebalance.tiers.map((tier) => {
+                const delta = tier.delta_pct;
+                const actionColor =
+                  tier.action === "reduce"
+                    ? "text-amber-500"
+                    : tier.action === "buy_more"
+                    ? "text-blue-500"
+                    : "text-muted-foreground";
+                const actionLabel =
+                  tier.action === "reduce"
+                    ? "Reduce"
+                    : tier.action === "buy_more"
+                    ? "Buy more"
+                    : "Hold";
+                return (
+                  <div key={tier.tier} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{tier.label}</span>
+                      <span className={`text-xs font-semibold ${actionColor}`}>{actionLabel}</span>
+                    </div>
+                    <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`absolute left-0 top-0 h-full rounded-full transition-all ${
+                          tier.action === "reduce" ? "bg-amber-500" :
+                          tier.action === "buy_more" ? "bg-blue-500" : "bg-green-500"
+                        }`}
+                        style={{ width: `${Math.min(tier.actual_pct, 100)}%` }}
+                      />
+                      <div
+                        className="absolute top-0 h-full w-0.5 bg-foreground/40"
+                        style={{ left: `${Math.min(tier.target_pct, 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Actual: <span className="font-medium text-foreground">{tier.actual_pct.toFixed(1)}%</span></span>
+                      <span>Target: <span className="font-medium text-foreground">{tier.target_pct.toFixed(1)}%</span></span>
+                    </div>
+                    {delta !== 0 && (
+                      <p className={`text-xs font-medium ${delta > 0 ? "text-amber-500" : "text-blue-500"}`}>
+                        {delta > 0 ? "+" : ""}{delta.toFixed(1)}% vs target
+                      </p>
+                    )}
+                    <p className="text-[10px] text-muted-foreground capitalize">
+                      {tier.asset_types.join(", ")}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+            {rebalance.notes.map((note, i) => (
+              <p key={i} className="text-xs text-muted-foreground border-t border-border pt-3">
+                {note}
+              </p>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       {/* Add account form */}

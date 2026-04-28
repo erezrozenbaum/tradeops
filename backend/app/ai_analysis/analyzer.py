@@ -22,6 +22,8 @@ Respond ONLY with a valid JSON object with exactly these keys:
   "summary": "<1-2 paragraph overall financial situation summary in plain language>",
   "financial_health": "<assessment of income, expenses, savings rate, emergency fund, debt burden>",
   "risk_profile": "<explanation of the risk model: stability score, classification, capital allocation breakdown>",
+  "portfolio_analysis": "<assessment of the investment portfolio: total value, P&L, asset allocation, currency exposure, and whether the allocation is diversified and appropriate; or 'No portfolio data available.' if absent>",
+  "goals_progress": "<assessment of each financial goal: which are on track, which are at risk, monthly contribution needed vs available surplus, and advice for at-risk goals; or 'No goals defined.' if absent>",
   "strategy_analysis": "<analysis of the strategies used or recommended, why they suit this investor>",
   "backtest_insights": "<explanation of backtest results in plain terms, or 'No backtest data available.' if absent>",
   "paper_trading_performance": "<explanation of paper trading performance in plain terms, or 'No paper trading data available.' if absent>",
@@ -43,6 +45,8 @@ def build_context(
     goals,
     backtest_runs,
     paper_portfolios,
+    portfolio_summary=None,
+    goals_analysis=None,
 ) -> dict:
     ctx: dict = {
         "investor": {
@@ -159,6 +163,39 @@ def build_context(
             }
             for p in paper_portfolios[:3]
         ]
+
+    if portfolio_summary and portfolio_summary.total_current_value > 0:
+        ctx["portfolio"] = {
+            "total_cost_basis": portfolio_summary.total_cost_basis,
+            "total_current_value": portfolio_summary.total_current_value,
+            "unrealized_pnl": portfolio_summary.unrealized_pnl,
+            "unrealized_pnl_pct": portfolio_summary.unrealized_pnl_pct,
+            "base_currency": portfolio_summary.base_currency,
+            "asset_allocation": portfolio_summary.asset_allocation,
+            "currency_exposure": portfolio_summary.currency_exposure,
+            "account_count": len(portfolio_summary.accounts),
+        }
+
+    if goals_analysis and goals_analysis.goals:
+        ctx["goals_analysis"] = {
+            "total_monthly_contribution_needed": goals_analysis.total_monthly_contribution_needed,
+            "monthly_surplus": goals_analysis.monthly_surplus,
+            "goals": [
+                {
+                    "name": g.name,
+                    "goal_type": g.goal_type,
+                    "progress_pct": g.progress_pct,
+                    "amount_remaining": g.amount_remaining,
+                    "months_to_target": g.months_to_target,
+                    "monthly_contribution_needed": g.monthly_contribution_needed,
+                    "gap": g.gap,
+                    "on_track": g.on_track,
+                    "status": g.status,
+                    "currency": g.currency,
+                }
+                for g in goals_analysis.goals
+            ],
+        }
 
     return ctx
 

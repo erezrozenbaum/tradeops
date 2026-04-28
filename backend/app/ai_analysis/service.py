@@ -9,8 +9,10 @@ from app.backtesting import service as backtest_service
 from app.core.config import settings
 from app.financial_profiles import service as fp_service
 from app.goals import service as goals_service
+from app.goals_analysis import service as goals_analysis_service
 from app.models.investor_profile import InvestorProfile
 from app.paper_trading import service as pt_service
+from app.portfolio_analysis import service as portfolio_service
 from app.risk_modeling import service as rm_service
 
 
@@ -24,6 +26,8 @@ def generate(db: Session, investor_id: uuid.UUID) -> dict | None:
     goals = goals_service.get_by_investor(db, investor_id)
     backtest_runs = backtest_service.list_for_investor(db, investor_id)
     paper_portfolios = pt_service.list_for_investor(db, investor_id)
+    portfolio_summary = portfolio_service.get_portfolio(db, investor_id)
+    goals_analysis = goals_analysis_service.get_analysis(db, investor_id)
 
     context = build_context(
         investor=investor,
@@ -32,6 +36,8 @@ def generate(db: Session, investor_id: uuid.UUID) -> dict | None:
         goals=goals,
         backtest_runs=backtest_runs,
         paper_portfolios=paper_portfolios,
+        portfolio_summary=portfolio_summary,
+        goals_analysis=goals_analysis,
     )
 
     report = generate_report(context, api_key=settings.ANTHROPIC_API_KEY)

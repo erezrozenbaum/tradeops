@@ -10,6 +10,23 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.15.0] — 2026-04-27
+
+### Added
+- **Goals analysis module** (`backend/app/goals_analysis/`) — stateless engine computing per-goal progress metrics: amount remaining, months to target, monthly contribution needed, gap vs monthly surplus, on_track flag, and status (`complete` / `on_track` / `at_risk` / `no_date`)
+- **`GET /investors/{id}/goals-analysis`** — returns `GoalsAnalysisResult` with per-goal analysis and total monthly contribution needed
+- **Goals page enhanced** — each goal card now shows status badge (On track / At risk / No date), months remaining, monthly contribution needed, and gap vs surplus
+- **Goals analysis summary banner** on goals page — total monthly needed, monthly surplus, and net coverage status
+- **Dashboard goal cards enhanced** — monthly contribution needed + shortfall indicator shown inline per goal
+- **Portfolio rebalancing engine** (`backend/app/portfolio_analysis/rebalance_engine.py`) — maps portfolio asset types to risk tiers (low_risk: bond/fund, growth: etf/stock/real_estate, high_risk: crypto), compares actual vs risk model target allocation, flags tiers deviating >5%
+- **`GET /investors/{id}/portfolio/rebalance`** — returns `RebalanceResult` with per-tier actual/target/delta/action and rebalance_needed flag
+- **Rebalancing guide card** on investments page — visual progress bars per tier with target marker, action labels (Reduce / Buy more / Hold), and rebalance status badge
+- **Enhanced AI report context** — portfolio holdings summary (value, P&L, allocation, currency exposure) and goals analysis (per-goal status, monthly contributions, gap) now passed to Claude; two new report sections: Portfolio Analysis and Goals Progress
+- **`portfolio_analysis` and `goals_progress`** keys added to AI report JSON; frontend reports page renders both new sections
+- **17 unit tests** for goals_analysis engine (9 tests) and rebalance engine (8 tests) — 176 total passing
+
+---
+
 ## [0.14.0] — 2026-04-27
 
 ### Added
@@ -234,7 +251,8 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
-[Unreleased]: https://github.com/erezrozenbaum/tradeops/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/erezrozenbaum/tradeops/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/erezrozenbaum/tradeops/compare/v0.11.0...v0.12.0
