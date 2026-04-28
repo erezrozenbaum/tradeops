@@ -1,7 +1,7 @@
 # TradeOps AI — Architecture
 
-**Version:** 0.15.0  
-**Last updated:** 2026-04-27
+**Version:** 0.16.0  
+**Last updated:** 2026-04-28
 
 ---
 
@@ -107,6 +107,12 @@ backend/app/
 │   ├── schemas.py              # InstrumentSuggestion, MarketScanResult
 │   └── router.py               # GET /investors/{id}/market-scan
 │
+├── investment_recommendations/
+│   ├── analyzer.py             # Claude API call — personalised recommendations from catalog
+│   ├── service.py              # Data assembly (portfolio, gaps, goals, holdings) + engine call
+│   ├── schemas.py              # InstrumentRecommendation, PortfolioAction, RecommendationReport
+│   └── router.py               # GET /investors/{id}/recommendations
+│
 ├── audit/                      # Event log for all significant actions
 ├── dashboard/                  # Aggregated summary endpoint
 └── workers/                    # Reserved for background jobs (not yet implemented)
@@ -131,6 +137,7 @@ All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`:
 | `/investors/{id}/portfolio/rebalance` | portfolio_analysis | portfolio |
 | `/investors/{id}/portfolio/refresh-prices` | portfolio_analysis | portfolio |
 | `/investors/{id}/market-scan` | market_scanner | market-scan |
+| `/investors/{id}/recommendations` | investment_recommendations | recommendations |
 | `/market` | market_data | market-data |
 | `/investors/{id}/accounts` | holdings | holdings |
 | `/investors/{id}/accounts/{id}/holdings` | holdings | holdings |

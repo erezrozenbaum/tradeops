@@ -1,7 +1,7 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.15.0
-**Last updated:** 2026-04-27
+**Version:** 0.16.0
+**Last updated:** 2026-04-28
 
 ---
 
@@ -127,6 +127,51 @@ POST /api/v1/investors/{id}/portfolio/refresh-prices     — bulk refresh all po
 ---
 
 ### TASK 12 — Market scanner ✅ DONE
+
+---
+
+## Phase 4: Investment Intelligence
+
+**Goal:** Shift from "track what you have" to "guide what you should do" — personalised AI recommendations, discovery of new instruments, and actionable portfolio gap amounts.
+
+**Version target:** 0.16.0
+
+---
+
+### TASK 16 — AI Investment Recommendation Engine ✅ DONE
+
+**Type:** New module (`investment_recommendations/`)
+**Risk:** 🟢 Safe — no DB migration
+
+**Endpoint:** `GET /api/v1/investors/{id}/recommendations`
+
+**Engine:** Sends full investor context (profile, risk model, portfolio, gaps, goals, catalog) to Claude; returns personalised `RecommendationReport`:
+- `overall_guidance` — 2-3 paragraph honest narrative
+- `portfolio_actions` — 2-4 concrete actions with urgency (immediate / soon / when_convenient)
+- `recommendations` — 3-6 specific instruments from catalog with why_fits, educational_note, suggested_allocation_pct, action, is_new_to_you
+
+**Frontend:** `/recommendations` page — overall guidance card, action plan, discovery grid, existing holdings guidance, expandable educational panels per instrument.
+
+---
+
+### TASK 17 — Portfolio Gap in Real Money ✅ DONE
+
+**Type:** Schema extension (extends portfolio_analysis rebalance)
+**Risk:** 🟢 Safe — no DB migration, backward-compatible nullable fields
+
+**Changes:**
+- `RebalanceTier` gains `target_amount`, `actual_amount`, `gap_amount` (nullable, in base currency)
+- `RebalanceResult` gains `total_portfolio_value`, `currency`
+- Rebalancing card shows "Sell ~X" / "Buy ~X" concrete money amounts
+
+---
+
+### TASK 18 — Discovery Feed ✅ DONE
+
+**Type:** Part of TASK 16 (discovery instruments in recommendations output)
+**Risk:** 🟢 Safe
+
+`is_new_to_you: true` instruments shown in a dedicated "New to you — worth exploring" section on the recommendations page.
 
 ---
 

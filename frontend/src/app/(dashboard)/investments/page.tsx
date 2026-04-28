@@ -84,12 +84,17 @@ interface RebalanceTier {
   delta_pct: number;
   action: string;
   asset_types: string[];
+  target_amount: number | null;
+  actual_amount: number | null;
+  gap_amount: number | null;
 }
 
 interface RebalanceResult {
   rebalance_needed: boolean;
   tiers: RebalanceTier[];
   notes: string[];
+  total_portfolio_value: number | null;
+  currency: string | null;
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -387,6 +392,18 @@ export default function InvestmentsPage() {
                     {delta !== 0 && (
                       <p className={`text-xs font-medium ${delta > 0 ? "text-amber-500" : "text-blue-500"}`}>
                         {delta > 0 ? "+" : ""}{delta.toFixed(1)}% vs target
+                        {tier.gap_amount != null && (
+                          <span className="ml-1 text-muted-foreground font-normal">
+                            ({tier.gap_amount > 0 ? "−" : "+"}{formatCurrency(Math.abs(tier.gap_amount), rebalance.currency ?? "USD")})
+                          </span>
+                        )}
+                      </p>
+                    )}
+                    {tier.gap_amount != null && tier.action !== "hold" && (
+                      <p className="text-[10px] text-muted-foreground">
+                        {tier.action === "reduce"
+                          ? `Sell ~${formatCurrency(Math.abs(tier.gap_amount), rebalance.currency ?? "USD")}`
+                          : `Buy ~${formatCurrency(Math.abs(tier.gap_amount), rebalance.currency ?? "USD")}`}
                       </p>
                     )}
                     <p className="text-[10px] text-muted-foreground capitalize">

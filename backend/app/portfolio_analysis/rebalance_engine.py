@@ -31,6 +31,8 @@ def compute_rebalance(
     investor_id: uuid.UUID,
     risk_model,               # RiskModel ORM object or None
     asset_allocation: dict[str, float],  # e.g. {"etf": 45.0, "crypto": 25.0}
+    total_value: float | None = None,    # total portfolio value in base currency
+    currency: str | None = None,
 ) -> RebalanceResult:
     notes: list[str] = []
 
@@ -90,6 +92,14 @@ def compute_rebalance(
         else:
             action = "hold"
 
+        target_amount = round(total_value * tgt / 100, 2) if total_value else None
+        actual_amount = round(total_value * actual / 100, 2) if total_value else None
+        gap_amount = (
+            round(actual_amount - target_amount, 2)
+            if target_amount is not None and actual_amount is not None
+            else None
+        )
+
         tiers.append(RebalanceTier(
             tier=tier_key,
             label=tier_label,
@@ -98,6 +108,9 @@ def compute_rebalance(
             delta_pct=delta,
             action=action,
             asset_types=asset_types,
+            target_amount=target_amount,
+            actual_amount=actual_amount,
+            gap_amount=gap_amount,
         ))
 
     if rebalance_needed:
@@ -114,4 +127,6 @@ def compute_rebalance(
         tiers=tiers,
         notes=notes,
         computed_at=datetime.now(timezone.utc),
+        total_portfolio_value=round(total_value, 2) if total_value else None,
+        currency=currency,
     )
