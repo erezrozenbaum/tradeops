@@ -17,6 +17,7 @@ from app.holdings.router import router as holdings_router
 from app.market_data.router import router as market_data_router
 from app.goals_analysis.router import router as goals_analysis_router
 from app.market_scanner.router import router as market_scanner_router
+from app.investment_recommendations.router import router as investment_recommendations_router
 from app.portfolio_analysis.router import router as portfolio_router
 
 api_router = APIRouter()
@@ -33,6 +34,7 @@ api_router.include_router(decision_router, prefix="/investors/{investor_id}/deci
 api_router.include_router(portfolio_router, prefix="/investors/{investor_id}/portfolio", tags=["portfolio"])
 api_router.include_router(goals_analysis_router, prefix="/investors/{investor_id}/goals-analysis", tags=["goals-analysis"])
 api_router.include_router(market_scanner_router, prefix="/investors/{investor_id}/market-scan", tags=["market-scan"])
+api_router.include_router(investment_recommendations_router, prefix="/investors/{investor_id}/recommendations", tags=["recommendations"])
 api_router.include_router(holdings_router, prefix="/investors", tags=["holdings"])
 api_router.include_router(market_data_router, prefix="/market", tags=["market-data"])
 api_router.include_router(dashboard_router, prefix="/investors", tags=["dashboard"])

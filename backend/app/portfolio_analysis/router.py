@@ -34,6 +34,8 @@ def get_rebalance(investor_id: uuid.UUID, db: Session = Depends(get_db)):
         investor_id=investor_id,
         risk_model=risk_model,
         asset_allocation=portfolio.asset_allocation,
+        total_value=portfolio.total_current_value,
+        currency=portfolio.base_currency,
     )
 
 
