@@ -52,6 +52,7 @@ interface HoldingAnalysis {
   current_value_base: number;
   unrealized_pnl: number;
   unrealized_pnl_pct: number;
+  pnl_after_tax: number;
   currency: string;
   price_source: string;
   live_price: number | null;
@@ -67,6 +68,7 @@ interface AccountAnalysis {
   total_current_value: number;
   unrealized_pnl: number;
   unrealized_pnl_pct: number;
+  pnl_after_tax: number;
   holdings: HoldingAnalysis[];
 }
 
@@ -76,6 +78,9 @@ interface PortfolioSummary {
   total_current_value: number;
   unrealized_pnl: number;
   unrealized_pnl_pct: number;
+  pnl_after_tax: number;
+  pnl_after_tax_pct: number;
+  fx_rates: Record<string, number>;
   asset_allocation: Record<string, number>;
   currency_exposure: Record<string, number>;
   accounts: AccountAnalysis[];
@@ -426,6 +431,7 @@ export default function InvestmentsPage() {
               <CardContent className="pt-5">
                 <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Total value</p>
                 <p className="text-xl font-semibold">{formatCurrency(portfolio.total_current_value, currency)}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">All values in {currency}</p>
               </CardContent>
             </Card>
             <Card>
@@ -443,10 +449,32 @@ export default function InvestmentsPage() {
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {portfolio.unrealized_pnl_pct >= 0 ? "+" : ""}{portfolio.unrealized_pnl_pct.toFixed(2)}%
                 </p>
+                <div className="mt-2 pt-2 border-t border-border/60">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">After 25% tax</p>
+                  <p className={`text-sm font-semibold ${portfolio.pnl_after_tax >= 0 ? "text-green-600" : "text-red-500"}`}>
+                    {portfolio.pnl_after_tax >= 0 ? "+" : ""}{formatCurrency(portfolio.pnl_after_tax, currency)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {portfolio.pnl_after_tax_pct >= 0 ? "+" : ""}{portfolio.pnl_after_tax_pct.toFixed(2)}%
+                  </p>
+                </div>
               </CardContent>
             </Card>
             <AllocationDonut allocation={portfolio.asset_allocation} />
           </div>
+
+          {/* FX rate banner */}
+          {Object.keys(portfolio.fx_rates).length > 0 && (
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-1 px-4 py-2.5 rounded-lg border border-border bg-muted/30 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Exchange rates → {currency}</span>
+              {Object.entries(portfolio.fx_rates).map(([c, rate]) => (
+                <span key={c}>
+                  1 <span className="font-medium text-foreground">{c}</span> = <span className="font-medium text-foreground tabular-nums">{rate.toFixed(4)}</span> {currency}
+                  {rate === 1 && <span className="ml-1 text-amber-500">(fallback — check network)</span>}
+                </span>
+              ))}
+            </div>
+          )}
 
           {/* Refresh feedback */}
           {refreshResult && (
@@ -803,12 +831,15 @@ export default function InvestmentsPage() {
                           <tr key={h.id} className="hover:bg-muted/30 transition-colors">
                             <td className="py-2.5 pr-3">
                               <p className="font-medium">{h.name}</p>
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
                                 {(h.ticker || h.isin) && (
                                   <p className="text-xs text-muted-foreground">{h.ticker ?? h.isin}</p>
                                 )}
                                 {ha?.price_source === "live" && (
                                   <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-1.5 py-0 text-[10px] font-medium text-green-700 dark:text-green-400">Live</span>
+                                )}
+                                {ha?.price_source !== "live" && h.ticker && (
+                                  <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0 text-[10px] font-medium text-amber-700 dark:text-amber-400">Manual — refresh for live</span>
                                 )}
                               </div>
                             </td>
@@ -825,18 +856,18 @@ export default function InvestmentsPage() {
                             <td className="py-2.5 text-right tabular-nums">
                               {ha ? (
                                 <>
-                                  <p>{formatCurrency(ha.current_value_base, currency)}</p>
+                                  <p className="font-medium">{formatCurrency(ha.current_value_base, currency)}</p>
                                   {h.currency !== currency && (
                                     <p className="text-[10px] text-muted-foreground tabular-nums">
-                                      {formatCurrency(ha.current_value_local, h.currency)}
+                                      ≈ {formatCurrency(ha.current_value_local, h.currency)}
                                     </p>
                                   )}
                                   <p className="text-[10px] text-muted-foreground">
                                     {ha.price_source === "live"
                                       ? `${h.quantity} × ${formatCurrency(ha.live_price!, ha.live_price_currency ?? h.currency)}`
                                       : ha.price_source === "manual"
-                                      ? `${h.quantity} × ${formatCurrency(ha.current_value_local / h.quantity, h.currency)}`
-                                      : `${h.quantity} × ${formatCurrency(h.avg_buy_price, h.currency)}`}
+                                      ? `${h.quantity} × ${formatCurrency(ha.current_value_local / h.quantity, h.currency)} (manual)`
+                                      : `${h.quantity} × ${formatCurrency(h.avg_buy_price, h.currency)} (cost)`}
                                   </p>
                                 </>
                               ) : (
