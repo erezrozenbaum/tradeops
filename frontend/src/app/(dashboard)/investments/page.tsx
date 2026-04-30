@@ -148,11 +148,16 @@ export default function InvestmentsPage() {
   const [accountForm, setAccountForm] = useState(EMPTY_ACCOUNT);
   const [savingAccount, setSavingAccount] = useState(false);
 
-  // Holding form
+  // Holding form — add
   const [addingHoldingForAccount, setAddingHoldingForAccount] = useState<string | null>(null);
   const [holdingForm, setHoldingForm] = useState(EMPTY_HOLDING);
   const [savingHolding, setSavingHolding] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Holding form — edit
+  const [editingHolding, setEditingHolding] = useState<{ accountId: string; holdingId: string } | null>(null);
+  const [editHoldingForm, setEditHoldingForm] = useState(EMPTY_HOLDING);
+  const [savingEditHolding, setSavingEditHolding] = useState(false);
 
   useEffect(() => {
     if (!investorId) return;
@@ -253,6 +258,57 @@ export default function InvestmentsPage() {
       }
     } finally {
       setRefreshing(false);
+    }
+  }
+
+  function startEditHolding(accountId: string, h: Holding) {
+    setEditingHolding({ accountId, holdingId: h.id });
+    setEditHoldingForm({
+      ticker: h.ticker ?? "",
+      isin: h.isin ?? "",
+      name: h.name,
+      asset_type: h.asset_type,
+      quantity: String(h.quantity),
+      avg_buy_price: String(h.avg_buy_price),
+      currency: h.currency,
+      fees: String(h.fees),
+      purchase_date: h.purchase_date ?? "",
+      current_value: h.current_value != null ? String(h.current_value) : "",
+      notes: h.notes ?? "",
+    });
+    setExpandedAccounts(prev => { const s = new Set(prev); s.add(accountId); return s; });
+  }
+
+  async function updateHolding(accountId: string, holdingId: string) {
+    setSavingEditHolding(true);
+    try {
+      const res = await fetch(
+        `/api/v1/investors/${investorId}/accounts/${accountId}/holdings/${holdingId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ticker: editHoldingForm.ticker || null,
+            isin: editHoldingForm.isin || null,
+            name: editHoldingForm.name || undefined,
+            asset_type: editHoldingForm.asset_type || undefined,
+            quantity: parseFloat(editHoldingForm.quantity) || undefined,
+            avg_buy_price: parseFloat(editHoldingForm.avg_buy_price) || undefined,
+            currency: editHoldingForm.currency || undefined,
+            fees: editHoldingForm.fees ? parseFloat(editHoldingForm.fees) : 0,
+            purchase_date: editHoldingForm.purchase_date || null,
+            current_value: editHoldingForm.current_value ? parseFloat(editHoldingForm.current_value) : null,
+            notes: editHoldingForm.notes || null,
+          }),
+        }
+      );
+      if (res.ok) {
+        setEditingHolding(null);
+        setEditHoldingForm(EMPTY_HOLDING);
+        loadAll();
+      }
+    } finally {
+      setSavingEditHolding(false);
     }
   }
 
@@ -602,16 +658,19 @@ export default function InvestmentsPage() {
                         <th className="text-left pb-2 font-medium">Name</th>
                         <th className="text-left pb-2 font-medium">Type</th>
                         <th className="text-right pb-2 font-medium">Qty</th>
-                        <th className="text-right pb-2 font-medium">Avg price</th>
+                        <th className="text-right pb-2 font-medium">Buy price</th>
                         <th className="text-right pb-2 font-medium">Current value</th>
                         <th className="text-right pb-2 font-medium">P&L</th>
-                        <th className="w-8" />
+                        <th className="w-16" />
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
                       {account.holdings.map(h => {
                         const ha = analysis?.holdings.find(x => x.id === h.id);
+                        const isEditing = editingHolding?.holdingId === h.id;
+                        const calcValue = h.quantity * h.avg_buy_price;
                         return (
+                          <>
                           <tr key={h.id} className="hover:bg-muted/30 transition-colors">
                             <td className="py-2.5 pr-3">
                               <p className="font-medium">{h.name}</p>
@@ -631,21 +690,96 @@ export default function InvestmentsPage() {
                             <td className="py-2.5 text-right tabular-nums">
                               <p className="tabular-nums">{formatCurrency(h.avg_buy_price, h.currency)}</p>
                               {ha?.price_source === "live" && ha.live_price != null && (
-                                <p className="text-xs text-green-600 tabular-nums">{formatCurrency(ha.live_price, ha.live_price_currency ?? h.currency)}</p>
+                                <p className="text-xs text-green-600 tabular-nums">{formatCurrency(ha.live_price, ha.live_price_currency ?? h.currency)} now</p>
                               )}
                             </td>
                             <td className="py-2.5 text-right tabular-nums">
-                              {ha ? formatCurrency(ha.current_value_base, currency) : formatCurrency(h.quantity * h.avg_buy_price, h.currency)}
+                              {ha ? (
+                                <>
+                                  <p>{formatCurrency(ha.current_value_base, currency)}</p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {ha.price_source === "live" ? "Live price" : ha.price_source === "manual" ? "Manual" : `${h.quantity} × ${formatCurrency(h.avg_buy_price, h.currency)}`}
+                                  </p>
+                                </>
+                              ) : (
+                                <>
+                                  <p>{formatCurrency(calcValue, h.currency)}</p>
+                                  <p className="text-[10px] text-muted-foreground">{h.quantity} × {formatCurrency(h.avg_buy_price, h.currency)}</p>
+                                </>
+                              )}
                             </td>
                             <td className="py-2.5 text-right">
                               {ha ? <PnlBadge pnl={ha.unrealized_pnl} pct={ha.unrealized_pnl_pct} /> : "—"}
                             </td>
                             <td className="py-2.5 text-right">
-                              <Button variant="ghost" size="sm" onClick={() => deleteHolding(account.id, h.id)}>
-                                <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                              </Button>
+                              <div className="flex justify-end gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => startEditHolding(account.id, h)}>
+                                  <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => deleteHolding(account.id, h.id)}>
+                                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                                </Button>
+                              </div>
                             </td>
                           </tr>
+                          {isEditing && (
+                            <tr key={`edit-${h.id}`}>
+                              <td colSpan={7} className="pb-3">
+                                <div className="border border-primary/30 rounded-lg p-4 space-y-3 bg-muted/30">
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Edit holding</p>
+                                  <div className="grid grid-cols-3 gap-3">
+                                    <div className="space-y-1">
+                                      <label className="text-xs text-muted-foreground">Name *</label>
+                                      <Input value={editHoldingForm.name} onChange={e => setEditHoldingForm({ ...editHoldingForm, name: e.target.value })} />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-xs text-muted-foreground">Ticker</label>
+                                      <Input value={editHoldingForm.ticker} onChange={e => setEditHoldingForm({ ...editHoldingForm, ticker: e.target.value })} />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-xs text-muted-foreground">ISIN</label>
+                                      <Input value={editHoldingForm.isin} onChange={e => setEditHoldingForm({ ...editHoldingForm, isin: e.target.value })} />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-xs text-muted-foreground">Asset type</label>
+                                      <Select value={editHoldingForm.asset_type} onChange={e => setEditHoldingForm({ ...editHoldingForm, asset_type: e.target.value })}>
+                                        {ASSET_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                                      </Select>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-xs text-muted-foreground">Quantity *</label>
+                                      <Input type="number" value={editHoldingForm.quantity} onChange={e => setEditHoldingForm({ ...editHoldingForm, quantity: e.target.value })} />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-xs text-muted-foreground">Avg buy price *</label>
+                                      <Input type="number" value={editHoldingForm.avg_buy_price} onChange={e => setEditHoldingForm({ ...editHoldingForm, avg_buy_price: e.target.value })} />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-xs text-muted-foreground">Currency</label>
+                                      <Input maxLength={3} value={editHoldingForm.currency} onChange={e => setEditHoldingForm({ ...editHoldingForm, currency: e.target.value.toUpperCase() })} />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-xs text-muted-foreground">Current value (override)</label>
+                                      <Input type="number" placeholder="Leave blank to auto-calculate" value={editHoldingForm.current_value} onChange={e => setEditHoldingForm({ ...editHoldingForm, current_value: e.target.value })} />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-xs text-muted-foreground">Purchase date</label>
+                                      <Input type="date" value={editHoldingForm.purchase_date} onChange={e => setEditHoldingForm({ ...editHoldingForm, purchase_date: e.target.value })} />
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button size="sm" onClick={() => updateHolding(account.id, h.id)} disabled={savingEditHolding}>
+                                      {savingEditHolding ? "Saving…" : "Save changes"}
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={() => { setEditingHolding(null); setEditHoldingForm(EMPTY_HOLDING); }}>
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          </>
                         );
                       })}
                     </tbody>
