@@ -269,7 +269,7 @@ function InstrumentCard({ rec }: { rec: InstrumentRecommendation }) {
             <p className="text-sm font-medium mt-1 leading-snug">{rec.name}</p>
           </div>
           {rec.is_new_to_you && (
-            <Badge variant="secondary" className="shrink-0 text-[10px]">New</Badge>
+            <Badge variant="muted" className="shrink-0 text-[10px]">New</Badge>
           )}
         </div>
 
