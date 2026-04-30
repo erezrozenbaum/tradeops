@@ -10,6 +10,22 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.19.0] — 2026-04-30
+
+### Added
+- **Portfolio value history** — `portfolio_snapshots` table (migration 0010); snapshot saved on every price refresh; `GET /investors/{id}/portfolio/history` endpoint; area chart on investments page showing portfolio value over time
+- **Allocation donut chart** — investments page asset allocation card replaced with an interactive donut chart (Recharts PieChart) with per-type colour legend
+- **Price refresh feedback** — `POST /refresh-prices` now returns `PriceRefreshResult` with `tickers_refreshed`, `tickers_failed`, and `cache_valid_until`; investments page shows a feedback banner after each refresh
+- **Setup completeness checklist** — dashboard shows a 5-step checklist (profile → financial → risk model → goals → holdings) that disappears once all steps are complete
+- **Fund this goal CTA** — goals page shows a "how to fund" section on at-risk goals with a link to the recommendations page
+- **Ticker search on market scanner** — search any ticker symbol to get a live price quote directly from Alpha Vantage
+- **Market data cache panel on settings** — shows cached price and freshness status per portfolio ticker, with a "Refresh all" button
+
+### Changed
+- `formatCurrency()` now accepts an optional `compact` flag for abbreviated values in chart axes (e.g. `₪10K`, `₪1.2M`)
+
+---
+
 ## [0.18.0] — 2026-04-30
 
 ### Fixed

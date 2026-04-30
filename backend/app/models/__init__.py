@@ -19,6 +19,7 @@ from app.models.paper_trade import PaperPortfolio, PaperTick, PortfolioStatus
 from app.models.investment_account import InvestmentAccount, InvestmentHolding, AccountType, HoldingAssetType
 from app.models.currency_rate import CurrencyRate
 from app.models.price_snapshot import PriceSnapshot
+from app.models.portfolio_snapshot import PortfolioSnapshot
 
 __all__ = [
     "InvestorProfile",
@@ -52,4 +53,5 @@ __all__ = [
     "HoldingAssetType",
     "CurrencyRate",
     "PriceSnapshot",
+    "PortfolioSnapshot",
 ]

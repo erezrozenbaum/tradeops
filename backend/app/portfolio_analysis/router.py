@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -8,7 +9,11 @@ from app.models.investment_account import InvestmentAccount
 from app.market_data.service import refresh_tickers
 from app.portfolio_analysis import service
 from app.portfolio_analysis import rebalance_engine
-from app.portfolio_analysis.schemas import PortfolioSummary
+from app.portfolio_analysis.schemas import (
+    PortfolioSummary,
+    PriceRefreshResult,
+    PortfolioHistoryResult,
+)
 from app.portfolio_analysis.rebalance_schemas import RebalanceResult
 from app.risk_modeling.service import get_latest as get_latest_risk_model
 
@@ -25,7 +30,6 @@ def get_portfolio(investor_id: uuid.UUID, db: Session = Depends(get_db)):
 
 @router.get("/rebalance", response_model=RebalanceResult)
 def get_rebalance(investor_id: uuid.UUID, db: Session = Depends(get_db)):
-    """Compare portfolio allocation against risk model targets and suggest rebalancing."""
     portfolio = service.get_portfolio(db, investor_id)
     if portfolio is None:
         raise HTTPException(status_code=404, detail="Investor not found")
@@ -39,19 +43,42 @@ def get_rebalance(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     )
 
 
-@router.post("/refresh-prices", response_model=PortfolioSummary)
+@router.post("/refresh-prices", response_model=PriceRefreshResult)
 def refresh_prices(investor_id: uuid.UUID, db: Session = Depends(get_db)):
-    """Force-refresh market prices for all tickered holdings, then return updated portfolio."""
+    """Force-refresh market prices for all tickered holdings, return updated portfolio + refresh summary."""
     accounts = (
         db.query(InvestmentAccount)
         .filter(InvestmentAccount.investor_id == investor_id)
         .all()
     )
     tickers = {h.ticker for acc in accounts for h in acc.holdings if h.ticker}
+
+    refreshed: list[str] = []
+    failed: list[str] = []
     if tickers:
-        refresh_tickers(db, tickers)
+        results = refresh_tickers(db, tickers)
+        refreshed = sorted(results.keys())
+        failed = sorted(t for t in tickers if t not in results)
 
     summary = service.get_portfolio(db, investor_id)
     if summary is None:
         raise HTTPException(status_code=404, detail="Investor not found")
-    return summary
+
+    if summary.total_current_value > 0:
+        service.save_snapshot(db, summary)
+
+    return PriceRefreshResult(
+        portfolio=summary,
+        tickers_refreshed=refreshed,
+        tickers_failed=failed,
+        cache_valid_until=datetime.now(timezone.utc) + timedelta(hours=24),
+    )
+
+
+@router.get("/history", response_model=PortfolioHistoryResult)
+def get_portfolio_history(
+    investor_id: uuid.UUID, limit: int = 60, db: Session = Depends(get_db)
+):
+    """Return historical portfolio value snapshots (most recent `limit` entries, chronological)."""
+    snapshots = service.get_history(db, investor_id, limit=limit)
+    return PortfolioHistoryResult(investor_id=investor_id, snapshots=snapshots)
