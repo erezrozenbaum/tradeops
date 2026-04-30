@@ -19,6 +19,7 @@ class HoldingAnalysis(BaseModel):
     current_value_base: float
     unrealized_pnl: float
     unrealized_pnl_pct: float
+    pnl_after_tax: float  # unrealized P&L after 25% capital gains tax (gains only)
     currency: str
     purchase_date: date | None
     price_source: str  # "live" | "manual" | "cost_basis"
@@ -36,6 +37,7 @@ class AccountAnalysis(BaseModel):
     total_current_value: float
     unrealized_pnl: float
     unrealized_pnl_pct: float
+    pnl_after_tax: float
     holdings: list[HoldingAnalysis]
 
 
@@ -46,6 +48,9 @@ class PortfolioSummary(BaseModel):
     total_current_value: float
     unrealized_pnl: float
     unrealized_pnl_pct: float
+    pnl_after_tax: float
+    pnl_after_tax_pct: float
+    fx_rates: dict[str, float]  # {foreign_currency: rate_to_base} e.g. {"USD": 3.62}
     asset_allocation: dict[str, float]
     currency_exposure: dict[str, float]
     accounts: list[AccountAnalysis]
