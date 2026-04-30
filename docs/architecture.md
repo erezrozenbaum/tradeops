@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 0.19.0  
+**Version:** 0.20.0  
 **Last updated:** 2026-04-30
 
 ---
@@ -87,10 +87,10 @@ backend/app/
 │   └── router.py               # GET /market/quote/{ticker}
 │
 ├── portfolio_analysis/
-│   ├── engine.py               # Pure analysis function (P&L, allocation, exposure)
+│   ├── engine.py               # Pure analysis function (P&L, allocation, exposure, after-tax P&L, FX rates)
 │   ├── rebalance_engine.py     # Pure rebalance function (asset tier vs risk model target)
 │   ├── service.py              # Data assembly + engine call
-│   ├── schemas.py              # PortfolioSummary, AccountAnalysis, HoldingAnalysis
+│   ├── schemas.py              # PortfolioSummary (+ pnl_after_tax, fx_rates), AccountAnalysis, HoldingAnalysis
 │   ├── rebalance_schemas.py    # RebalanceTier, RebalanceResult
 │   └── router.py               # GET /investors/{id}/portfolio + /rebalance
 │

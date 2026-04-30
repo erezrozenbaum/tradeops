@@ -236,3 +236,55 @@ def test_holding_analysis_fields():
     assert ha.unrealized_pnl == 150.0
     assert ha.unrealized_pnl_pct == 20.0
     assert ha.purchase_date == date(2024, 1, 15)
+
+
+# ── After-tax P&L ─────────────────────────────────────────────────────────────
+
+def test_pnl_after_tax_on_gain():
+    h = _holding(quantity=10, avg_buy_price=100, current_value=1500)
+    result = analyze(INVESTOR_ID, "ILS", [_account(holdings=[h])], identity_convert)
+    # gain = 500, after 25% tax → 375
+    assert result.pnl_after_tax == pytest.approx(375.0)
+    assert result.pnl_after_tax_pct == pytest.approx(37.5)
+
+
+def test_pnl_after_tax_on_loss_unchanged():
+    h = _holding(quantity=10, avg_buy_price=100, current_value=800)
+    result = analyze(INVESTOR_ID, "ILS", [_account(holdings=[h])], identity_convert)
+    # loss = -200, tax does not apply
+    assert result.pnl_after_tax == pytest.approx(-200.0)
+
+
+def test_pnl_after_tax_zero_at_breakeven():
+    h = _holding(quantity=10, avg_buy_price=100)  # no current_value → cost_basis fallback
+    result = analyze(INVESTOR_ID, "ILS", [_account(holdings=[h])], identity_convert)
+    assert result.pnl_after_tax == 0.0
+
+
+def test_pnl_after_tax_holding_level():
+    h = _holding(quantity=10, avg_buy_price=100, current_value=1200)
+    result = analyze(INVESTOR_ID, "ILS", [_account(holdings=[h])], identity_convert)
+    ha = result.accounts[0].holdings[0]
+    assert ha.pnl_after_tax == pytest.approx(150.0)  # gain 200 * 0.75
+
+
+def test_pnl_after_tax_account_level():
+    h = _holding(quantity=10, avg_buy_price=100, current_value=1400)
+    result = analyze(INVESTOR_ID, "ILS", [_account(holdings=[h])], identity_convert)
+    acc = result.accounts[0]
+    assert acc.pnl_after_tax == pytest.approx(300.0)  # gain 400 * 0.75
+
+
+# ── FX rates ──────────────────────────────────────────────────────────────────
+
+def test_fx_rates_populated_for_foreign_currency():
+    h = _holding(currency="USD", quantity=1, avg_buy_price=100, current_value=100)
+    result = analyze(INVESTOR_ID, "ILS", [_account(holdings=[h])], fixed_convert(3.7))
+    assert "USD" in result.fx_rates
+    assert result.fx_rates["USD"] == pytest.approx(3.7)
+
+
+def test_fx_rates_empty_when_all_same_currency():
+    h = _holding(currency="ILS", quantity=1, avg_buy_price=100, current_value=100)
+    result = analyze(INVESTOR_ID, "ILS", [_account(holdings=[h])], identity_convert)
+    assert result.fx_rates == {}
