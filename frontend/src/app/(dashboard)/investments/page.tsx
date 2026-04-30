@@ -44,6 +44,7 @@ interface HoldingAnalysis {
   ticker: string | null;
   asset_type: string;
   cost_basis: number;
+  current_value_local: number;
   current_value_base: number;
   unrealized_pnl: number;
   unrealized_pnl_pct: number;
@@ -231,7 +232,9 @@ export default function InvestmentsPage() {
           currency: holdingForm.currency,
           fees: holdingForm.fees ? parseFloat(holdingForm.fees) : 0,
           purchase_date: holdingForm.purchase_date || null,
-          current_value: holdingForm.current_value ? parseFloat(holdingForm.current_value) : null,
+          current_value: holdingForm.current_value
+            ? parseFloat(holdingForm.current_value) * (parseFloat(holdingForm.quantity) || 1)
+            : null,
           notes: holdingForm.notes || null,
         }),
       });
@@ -273,7 +276,7 @@ export default function InvestmentsPage() {
       currency: h.currency,
       fees: String(h.fees),
       purchase_date: h.purchase_date ?? "",
-      current_value: h.current_value != null ? String(h.current_value) : "",
+      current_value: h.current_value != null && h.quantity > 0 ? String((h.current_value / h.quantity).toFixed(4)) : "",
       notes: h.notes ?? "",
     });
     setExpandedAccounts(prev => { const s = new Set(prev); s.add(accountId); return s; });
@@ -297,7 +300,9 @@ export default function InvestmentsPage() {
             currency: editHoldingForm.currency || undefined,
             fees: editHoldingForm.fees ? parseFloat(editHoldingForm.fees) : 0,
             purchase_date: editHoldingForm.purchase_date || null,
-            current_value: editHoldingForm.current_value ? parseFloat(editHoldingForm.current_value) : null,
+            current_value: editHoldingForm.current_value
+              ? parseFloat(editHoldingForm.current_value) * (parseFloat(editHoldingForm.quantity) || 1)
+              : null,
             notes: editHoldingForm.notes || null,
           }),
         }
@@ -624,7 +629,7 @@ export default function InvestmentsPage() {
                         <Input maxLength={3} value={holdingForm.currency} onChange={e => setHoldingForm({ ...holdingForm, currency: e.target.value.toUpperCase() })} />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Current value (optional)</label>
+                        <label className="text-xs text-muted-foreground">Current price per unit (optional)</label>
                         <Input type="number" placeholder="Auto-calculated if blank" value={holdingForm.current_value} onChange={e => setHoldingForm({ ...holdingForm, current_value: e.target.value })} />
                       </div>
                       <div className="space-y-1">
@@ -697,8 +702,17 @@ export default function InvestmentsPage() {
                               {ha ? (
                                 <>
                                   <p>{formatCurrency(ha.current_value_base, currency)}</p>
+                                  {h.currency !== currency && (
+                                    <p className="text-[10px] text-muted-foreground tabular-nums">
+                                      {formatCurrency(ha.current_value_local, h.currency)}
+                                    </p>
+                                  )}
                                   <p className="text-[10px] text-muted-foreground">
-                                    {ha.price_source === "live" ? "Live price" : ha.price_source === "manual" ? "Manual" : `${h.quantity} × ${formatCurrency(h.avg_buy_price, h.currency)}`}
+                                    {ha.price_source === "live"
+                                      ? `${h.quantity} × ${formatCurrency(ha.live_price!, ha.live_price_currency ?? h.currency)}`
+                                      : ha.price_source === "manual"
+                                      ? `${h.quantity} × ${formatCurrency(ha.current_value_local / h.quantity, h.currency)}`
+                                      : `${h.quantity} × ${formatCurrency(h.avg_buy_price, h.currency)}`}
                                   </p>
                                 </>
                               ) : (
@@ -759,7 +773,7 @@ export default function InvestmentsPage() {
                                       <Input maxLength={3} value={editHoldingForm.currency} onChange={e => setEditHoldingForm({ ...editHoldingForm, currency: e.target.value.toUpperCase() })} />
                                     </div>
                                     <div className="space-y-1">
-                                      <label className="text-xs text-muted-foreground">Current value (override)</label>
+                                      <label className="text-xs text-muted-foreground">Current price per unit (optional)</label>
                                       <Input type="number" placeholder="Leave blank to auto-calculate" value={editHoldingForm.current_value} onChange={e => setEditHoldingForm({ ...editHoldingForm, current_value: e.target.value })} />
                                     </div>
                                     <div className="space-y-1">
