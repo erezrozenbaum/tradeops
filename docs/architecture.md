@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 0.18.0  
+**Version:** 0.19.0  
 **Last updated:** 2026-04-30
 
 ---
@@ -136,6 +136,7 @@ All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`:
 | `/investors/{id}/portfolio` | portfolio_analysis | portfolio |
 | `/investors/{id}/portfolio/rebalance` | portfolio_analysis | portfolio |
 | `/investors/{id}/portfolio/refresh-prices` | portfolio_analysis | portfolio |
+| `/investors/{id}/portfolio/history` | portfolio_analysis | portfolio |
 | `/investors/{id}/market-scan` | market_scanner | market-scan |
 | `/investors/{id}/recommendations` | investment_recommendations | recommendations |
 | `/market` | market_data | market-data |
@@ -163,6 +164,7 @@ Managed by Alembic. Migrations in `backend/alembic/versions/`.
 | `0007_holdings.py` | `investment_accounts` and `investment_holdings` tables |
 | `0008_currency_rates.py` | `currency_rates` cache table |
 | `0009_price_snapshots.py` | `price_snapshots` market data cache table |
+| `0010_portfolio_snapshots.py` | `portfolio_snapshots` value history table |
 
 ### Core tables
 
@@ -181,6 +183,7 @@ investment_accounts        — investor's accounts by provider + type (pension, 
 investment_holdings        — individual positions per account (ticker, ISIN, quantity, avg buy price, current value)
 currency_rates             — FX rate cache (base → target, fetched_at); 24h TTL
 price_snapshots            — market price cache per ticker (Alpha Vantage); 24h TTL
+portfolio_snapshots        — historical portfolio value snapshots (saved on every price refresh)
 
 strategy_templates         — curated strategy definitions (seeded)
 strategy_recommendations   — ranked strategies generated for an investor

@@ -9,7 +9,8 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Trash2, Target, TrendingUp, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Target, TrendingUp, AlertTriangle, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 interface FinancialGoal {
   id: string;
@@ -391,6 +392,23 @@ export default function GoalsPage() {
                               +{formatCurrency(ga.gap, goal.currency)} short
                             </span>
                           )}
+                        </div>
+                      )}
+                      {/* Fund this goal CTA */}
+                      {!ga.on_track && ga.monthly_contribution_needed !== null && (
+                        <div className="pt-2 border-t border-border/60">
+                          <p className="text-[10px] text-muted-foreground mb-1.5">
+                            To fund this goal, increase your monthly investment by{" "}
+                            <span className="font-medium text-foreground">
+                              {formatCurrency(ga.monthly_contribution_needed, goal.currency)}
+                            </span>
+                          </p>
+                          <Link
+                            href="/recommendations"
+                            className="inline-flex items-center gap-1 text-[10px] font-medium text-primary hover:underline"
+                          >
+                            View investment recommendations <ArrowRight className="h-3 w-3" />
+                          </Link>
                         </div>
                       )}
                     </div>

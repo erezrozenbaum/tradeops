@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -49,3 +50,24 @@ class PortfolioSummary(BaseModel):
     currency_exposure: dict[str, float]
     accounts: list[AccountAnalysis]
     computed_at: datetime
+
+
+class PriceRefreshResult(BaseModel):
+    portfolio: PortfolioSummary
+    tickers_refreshed: list[str]
+    tickers_failed: list[str]
+    cache_valid_until: datetime
+
+
+class PortfolioSnapshotPoint(BaseModel):
+    snapshot_at: datetime
+    total_value: float
+    cost_basis: float
+    unrealized_pnl: float
+    unrealized_pnl_pct: float
+    currency: str
+
+
+class PortfolioHistoryResult(BaseModel):
+    investor_id: uuid.UUID
+    snapshots: list[PortfolioSnapshotPoint]

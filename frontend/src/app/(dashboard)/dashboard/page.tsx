@@ -13,7 +13,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { AlertCircle, TrendingUp, TrendingDown, Minus, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, AlertTriangle } from "lucide-react";
+import { AlertCircle, TrendingUp, TrendingDown, Minus, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, AlertTriangle, CheckCircle2, Circle } from "lucide-react";
+import Link from "next/link";
 
 interface InvestmentDecision {
   can_invest: boolean;
@@ -223,6 +224,14 @@ export default function DashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* Setup checklist */}
+      <SetupChecklist
+        hasFinancialProfile={!!net_worth}
+        hasRiskModel={!!risk_model}
+        hasGoals={goals.length > 0}
+        hasHoldings={(portfolio?.total_cost_basis ?? 0) > 0}
+      />
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -579,6 +588,58 @@ function ReadinessCard({
               ))}
             </div>
           )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SetupChecklist({
+  hasFinancialProfile,
+  hasRiskModel,
+  hasGoals,
+  hasHoldings,
+}: {
+  hasFinancialProfile: boolean;
+  hasRiskModel: boolean;
+  hasGoals: boolean;
+  hasHoldings: boolean;
+}) {
+  const steps = [
+    { label: "Investor profile", href: "/profile", done: true },
+    { label: "Financial profile", href: "/financial", done: hasFinancialProfile },
+    { label: "Risk model", href: "/risk", done: hasRiskModel },
+    { label: "Financial goals", href: "/goals", done: hasGoals },
+    { label: "Investment holdings", href: "/investments", done: hasHoldings },
+  ];
+  if (steps.every(s => s.done)) return null;
+  const completed = steps.filter(s => s.done).length;
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-semibold flex items-center justify-between">
+          Setup checklist
+          <span className="text-xs font-normal text-muted-foreground">{completed} / {steps.length} complete</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          {steps.map(step => (
+            <Link
+              key={step.href}
+              href={step.href}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs transition-colors ${
+                step.done
+                  ? "border-green-500/30 bg-green-500/5 text-green-700 dark:text-green-400 pointer-events-none"
+                  : "border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {step.done
+                ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                : <Circle className="h-3.5 w-3.5 shrink-0" />}
+              {step.label}
+            </Link>
+          ))}
         </div>
       </CardContent>
     </Card>
