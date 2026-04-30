@@ -8,7 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatPercent } from "@/lib/utils";
-import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronRight, Briefcase, RefreshCw, Scale } from "lucide-react";
+import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronRight, Briefcase, RefreshCw, Scale, CheckCircle2, XCircle } from "lucide-react";
+import {
+  AreaChart, Area, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer,
+  PieChart, Pie, Cell,
+} from "recharts";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -77,6 +81,22 @@ interface PortfolioSummary {
   accounts: AccountAnalysis[];
 }
 
+interface PortfolioSnapshotPoint {
+  snapshot_at: string;
+  total_value: number;
+  cost_basis: number;
+  unrealized_pnl: number;
+  unrealized_pnl_pct: number;
+  currency: string;
+}
+
+interface PriceRefreshResult {
+  portfolio: PortfolioSummary;
+  tickers_refreshed: string[];
+  tickers_failed: string[];
+  cache_valid_until: string;
+}
+
 interface RebalanceTier {
   tier: string;
   label: string;
@@ -125,6 +145,35 @@ const EMPTY_HOLDING = { ticker: "", isin: "", name: "", asset_type: "stock", qua
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+const ALLOC_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#3b82f6", "#8b5cf6", "#ec4899"];
+
+function AllocationDonut({ allocation }: { allocation: Record<string, number> }) {
+  const data = Object.entries(allocation).map(([name, value]) => ({ name, value }));
+  return (
+    <Card>
+      <CardContent className="pt-5">
+        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Asset allocation</p>
+        <div className="flex items-center gap-3">
+          <PieChart width={80} height={80}>
+            <Pie data={data} cx={35} cy={35} innerRadius={22} outerRadius={36} dataKey="value" stroke="none">
+              {data.map((_, i) => <Cell key={i} fill={ALLOC_COLORS[i % ALLOC_COLORS.length]} />)}
+            </Pie>
+          </PieChart>
+          <div className="space-y-1 min-w-0">
+            {data.map((d, i) => (
+              <div key={d.name} className="flex items-center gap-1.5 text-xs">
+                <span className="h-2 w-2 rounded-full shrink-0" style={{ background: ALLOC_COLORS[i % ALLOC_COLORS.length] }} />
+                <span className="text-muted-foreground capitalize truncate">{d.name}</span>
+                <span className="font-medium ml-auto">{d.value.toFixed(1)}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function PnlBadge({ pnl, pct }: { pnl: number; pct: number }) {
   if (pnl > 0) return <span className="flex items-center gap-1 text-green-600 text-sm font-medium"><TrendingUp className="h-3.5 w-3.5" />+{formatPercent(pct / 100)}</span>;
   if (pnl < 0) return <span className="flex items-center gap-1 text-red-500 text-sm font-medium"><TrendingDown className="h-3.5 w-3.5" />{formatPercent(pct / 100)}</span>;
@@ -154,6 +203,8 @@ export default function InvestmentsPage() {
   const [holdingForm, setHoldingForm] = useState(EMPTY_HOLDING);
   const [savingHolding, setSavingHolding] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshResult, setRefreshResult] = useState<PriceRefreshResult | null>(null);
+  const [history, setHistory] = useState<PortfolioSnapshotPoint[]>([]);
 
   // Holding form — edit
   const [editingHolding, setEditingHolding] = useState<{ accountId: string; holdingId: string } | null>(null);
@@ -167,14 +218,16 @@ export default function InvestmentsPage() {
 
   async function loadAll() {
     setLoading(true);
-    const [accts, port, reb] = await Promise.all([
+    const [accts, port, reb, hist] = await Promise.all([
       fetch(`/api/v1/investors/${investorId}/accounts`).then(r => r.ok ? r.json() : []),
       fetch(`/api/v1/investors/${investorId}/portfolio`).then(r => r.ok ? r.json() : null),
       fetch(`/api/v1/investors/${investorId}/portfolio/rebalance`).then(r => r.ok ? r.json() : null),
+      fetch(`/api/v1/investors/${investorId}/portfolio/history`).then(r => r.ok ? r.json() : null),
     ]);
     setAccounts(accts);
     setPortfolio(port);
     setRebalance(reb);
+    setHistory(hist?.snapshots ?? []);
     setLoading(false);
   }
 
@@ -250,12 +303,24 @@ export default function InvestmentsPage() {
 
   async function refreshPrices() {
     setRefreshing(true);
+    setRefreshResult(null);
     try {
       const res = await fetch(`/api/v1/investors/${investorId}/portfolio/refresh-prices`, { method: "POST" });
       if (res.ok) {
-        const updated = await res.json();
-        setPortfolio(updated);
-        // Refresh rebalance data with updated prices
+        const result: PriceRefreshResult = await res.json();
+        setPortfolio(result.portfolio);
+        setRefreshResult(result);
+        setHistory(prev => {
+          const snap: PortfolioSnapshotPoint = {
+            snapshot_at: new Date().toISOString(),
+            total_value: result.portfolio.total_current_value,
+            cost_basis: result.portfolio.total_cost_basis,
+            unrealized_pnl: result.portfolio.unrealized_pnl,
+            unrealized_pnl_pct: result.portfolio.unrealized_pnl_pct,
+            currency: result.portfolio.base_currency,
+          };
+          return [...prev, snap];
+        });
         const reb = await fetch(`/api/v1/investors/${investorId}/portfolio/rebalance`).then(r => r.ok ? r.json() : null);
         setRebalance(reb);
       }
@@ -355,44 +420,103 @@ export default function InvestmentsPage() {
 
       {/* Portfolio summary */}
       {portfolio && (portfolio.total_current_value > 0 || accounts.length > 0) && (
-        <div className="grid grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-5">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Total value</p>
-              <p className="text-xl font-semibold">{formatCurrency(portfolio.total_current_value, currency)}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-5">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Cost basis</p>
-              <p className="text-xl font-semibold">{formatCurrency(portfolio.total_cost_basis, currency)}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-5">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Unrealized P&L</p>
-              <p className={`text-xl font-semibold ${portfolio.unrealized_pnl >= 0 ? "text-green-600" : "text-red-500"}`}>
-                {portfolio.unrealized_pnl >= 0 ? "+" : ""}{formatCurrency(portfolio.unrealized_pnl, currency)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {portfolio.unrealized_pnl_pct >= 0 ? "+" : ""}{portfolio.unrealized_pnl_pct.toFixed(2)}%
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-5">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Asset allocation</p>
-              <div className="space-y-1">
-                {Object.entries(portfolio.asset_allocation).map(([type, pct]) => (
-                  <div key={type} className="flex justify-between text-xs">
-                    <span className="text-muted-foreground capitalize">{type}</span>
-                    <span className="font-medium">{pct.toFixed(1)}%</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <>
+          <div className="grid grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="pt-5">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Total value</p>
+                <p className="text-xl font-semibold">{formatCurrency(portfolio.total_current_value, currency)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-5">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Cost basis</p>
+                <p className="text-xl font-semibold">{formatCurrency(portfolio.total_cost_basis, currency)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-5">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Unrealized P&L</p>
+                <p className={`text-xl font-semibold ${portfolio.unrealized_pnl >= 0 ? "text-green-600" : "text-red-500"}`}>
+                  {portfolio.unrealized_pnl >= 0 ? "+" : ""}{formatCurrency(portfolio.unrealized_pnl, currency)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {portfolio.unrealized_pnl_pct >= 0 ? "+" : ""}{portfolio.unrealized_pnl_pct.toFixed(2)}%
+                </p>
+              </CardContent>
+            </Card>
+            <AllocationDonut allocation={portfolio.asset_allocation} />
+          </div>
+
+          {/* Refresh feedback */}
+          {refreshResult && (
+            <div className="flex flex-wrap items-center gap-4 px-4 py-3 rounded-lg border border-border bg-muted/40 text-sm">
+              {refreshResult.tickers_refreshed.length > 0 && (
+                <span className="flex items-center gap-1.5 text-green-600">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  Refreshed: <span className="font-medium">{refreshResult.tickers_refreshed.join(", ")}</span>
+                </span>
+              )}
+              {refreshResult.tickers_failed.length > 0 && (
+                <span className="flex items-center gap-1.5 text-amber-600">
+                  <XCircle className="h-4 w-4 shrink-0" />
+                  Unavailable: <span className="font-medium">{refreshResult.tickers_failed.join(", ")}</span>
+                </span>
+              )}
+              <span className="text-muted-foreground ml-auto text-xs">
+                Cache valid until {new Date(refreshResult.cache_valid_until).toLocaleString()}
+              </span>
+            </div>
+          )}
+
+          {/* Portfolio history chart */}
+          {history.length > 1 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Portfolio value history</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={160}>
+                  <AreaChart data={history} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                    <defs>
+                      <linearGradient id="portfolioGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis
+                      dataKey="snapshot_at"
+                      tickFormatter={v => new Date(v).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                      tick={{ fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      tickFormatter={v => formatCurrency(v, currency, true)}
+                      tick={{ fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={false}
+                      width={72}
+                    />
+                    <ReTooltip
+                      formatter={(v: number) => [formatCurrency(v, currency), "Value"]}
+                      labelFormatter={v => new Date(v).toLocaleString()}
+                      contentStyle={{ fontSize: 12 }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="total_value"
+                      stroke="#6366f1"
+                      strokeWidth={2}
+                      fill="url(#portfolioGrad)"
+                      dot={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
       {/* Rebalancing guide */}

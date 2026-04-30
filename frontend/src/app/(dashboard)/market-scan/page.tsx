@@ -5,8 +5,9 @@ import { useInvestorId } from "@/hooks/useInvestorId";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatPercent } from "@/lib/utils";
-import { ScanSearch, RefreshCw, Info, TrendingUp, ShieldCheck, ShieldAlert, ShieldX, GraduationCap } from "lucide-react";
+import { formatPercent, formatCurrency } from "@/lib/utils";
+import { ScanSearch, RefreshCw, Info, TrendingUp, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -86,11 +87,22 @@ function label(str: string) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+interface QuoteResult {
+  ticker: string;
+  price: number;
+  currency: string;
+  cached: boolean;
+}
+
 export default function MarketScanPage() {
   const investorId = useInvestorId();
   const [result, setResult] = useState<MarketScanResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTicker, setSearchTicker] = useState("");
+  const [quoteResult, setQuoteResult] = useState<QuoteResult | null>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
 
   async function fetchScan() {
     if (!investorId) return;
@@ -104,6 +116,26 @@ export default function MarketScanPage() {
       setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function searchQuote() {
+    const ticker = searchTicker.trim().toUpperCase();
+    if (!ticker) return;
+    setSearching(true);
+    setQuoteResult(null);
+    setQuoteError(null);
+    try {
+      const res = await fetch(`/api/v1/market/quote/${ticker}?force_refresh=true`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail ?? `Price unavailable for ${ticker}`);
+      }
+      setQuoteResult(await res.json());
+    } catch (e: unknown) {
+      setQuoteError(e instanceof Error ? e.message : "Lookup failed");
+    } finally {
+      setSearching(false);
     }
   }
 
@@ -150,6 +182,37 @@ export default function MarketScanPage() {
           Refresh
         </Button>
       </div>
+
+      {/* Ticker search */}
+      <Card>
+        <CardContent className="pt-4 pb-4">
+          <p className="text-xs font-medium text-muted-foreground mb-2">Look up any ticker</p>
+          <div className="flex gap-2">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-8 uppercase"
+                placeholder="e.g. NVDA, AAPL, BTC"
+                value={searchTicker}
+                onChange={e => setSearchTicker(e.target.value.toUpperCase())}
+                onKeyDown={e => e.key === "Enter" && searchQuote()}
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={searchQuote} disabled={searching || !searchTicker.trim()}>
+              {searching ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Get price"}
+            </Button>
+          </div>
+          {quoteResult && (
+            <div className="mt-3 flex items-center gap-4 text-sm">
+              <span className="font-mono font-semibold">{quoteResult.ticker}</span>
+              <span className="text-xl font-bold">{formatCurrency(quoteResult.price, quoteResult.currency)}</span>
+              <span className="text-xs text-muted-foreground">{quoteResult.currency}</span>
+              {quoteResult.cached && <span className="text-[10px] text-muted-foreground bg-muted rounded px-1.5 py-0.5">cached</span>}
+            </div>
+          )}
+          {quoteError && <p className="mt-2 text-xs text-destructive">{quoteError}</p>}
+        </CardContent>
+      </Card>
 
       {/* Readiness banner */}
       {result && (

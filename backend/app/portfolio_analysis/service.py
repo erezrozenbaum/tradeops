@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -7,7 +8,7 @@ from app.models.investor_profile import InvestorProfile
 from app.currency_engine.rates import convert as fx_convert
 from app.market_data.service import get_cached_price
 from app.portfolio_analysis import engine
-from app.portfolio_analysis.schemas import PortfolioSummary
+from app.portfolio_analysis.schemas import PortfolioSummary, PortfolioSnapshotPoint
 
 
 def get_portfolio(db: Session, investor_id: uuid.UUID) -> PortfolioSummary | None:
@@ -39,3 +40,44 @@ def get_portfolio(db: Session, investor_id: uuid.UUID) -> PortfolioSummary | Non
         convert=convert,
         live_prices=live_prices or None,
     )
+
+
+def save_snapshot(db: Session, portfolio: PortfolioSummary) -> None:
+    from app.models.portfolio_snapshot import PortfolioSnapshot
+    snap = PortfolioSnapshot(
+        id=uuid.uuid4(),
+        investor_id=portfolio.investor_id,
+        total_value=portfolio.total_current_value,
+        cost_basis=portfolio.total_cost_basis,
+        unrealized_pnl=portfolio.unrealized_pnl,
+        unrealized_pnl_pct=portfolio.unrealized_pnl_pct,
+        currency=portfolio.base_currency,
+        asset_allocation=portfolio.asset_allocation,
+        snapshot_at=datetime.now(timezone.utc),
+    )
+    db.add(snap)
+    db.commit()
+
+
+def get_history(
+    db: Session, investor_id: uuid.UUID, limit: int = 60
+) -> list[PortfolioSnapshotPoint]:
+    from app.models.portfolio_snapshot import PortfolioSnapshot
+    rows = (
+        db.query(PortfolioSnapshot)
+        .filter(PortfolioSnapshot.investor_id == investor_id)
+        .order_by(PortfolioSnapshot.snapshot_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        PortfolioSnapshotPoint(
+            snapshot_at=s.snapshot_at,
+            total_value=s.total_value,
+            cost_basis=s.cost_basis,
+            unrealized_pnl=s.unrealized_pnl,
+            unrealized_pnl_pct=s.unrealized_pnl_pct,
+            currency=s.currency,
+        )
+        for s in reversed(rows)
+    ]
