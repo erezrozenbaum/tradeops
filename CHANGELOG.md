@@ -10,6 +10,17 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.18.0] — 2026-04-30
+
+### Fixed
+- **Holdings current value calculation**: "Current value" override field now accepts **price per unit** (e.g. 209.20 per share) and multiplies by quantity on save — previously accepted total position value which was confusing and led to wrong totals
+- **Holdings multi-currency display**: current value cell now shows the value in the holding's native currency (e.g. $2,717 USD) beneath the base-currency total (e.g. ₪10,050 ILS) when currencies differ; formula hint updated to show `qty × price` for all price sources (live, manual, cost basis)
+
+### Changed
+- Holdings add/edit form field renamed "Current value (override)" → "Current price per unit (optional)" with updated placeholder text
+
+---
+
 ## [0.17.0] — 2026-04-30
 
 ### Fixed
