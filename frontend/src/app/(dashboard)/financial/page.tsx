@@ -52,6 +52,8 @@ export default function FinancialPage() {
   const [editingProfile, setEditingProfile] = useState(false);
   const [form, setForm] = useState<Partial<FinancialProfile>>({});
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [assetError, setAssetError] = useState<string | null>(null);
   const [showCreateProfile, setShowCreateProfile] = useState(false);
 
   // Asset form
@@ -126,6 +128,7 @@ export default function FinancialPage() {
   async function saveProfile() {
     if (!investorId) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const res = await fetch(`/api/v1/investors/${investorId}/financial-profile`, {
         method: "PUT",
@@ -145,7 +148,12 @@ export default function FinancialPage() {
         const data = await res.json();
         setProfile(data);
         setEditingProfile(false);
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setSaveError(body.detail ?? "Failed to save profile");
       }
+    } catch {
+      setSaveError("Network error — please try again");
     } finally {
       setSaving(false);
     }
@@ -153,6 +161,7 @@ export default function FinancialPage() {
 
   async function addAsset() {
     if (!investorId || !assetForm.name) return;
+    setAssetError(null);
     const res = await fetch(`/api/v1/investors/${investorId}/financial-profile/assets`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -165,6 +174,9 @@ export default function FinancialPage() {
       setAddingAsset(false);
       setAssetForm({ name: "", asset_type: "cash", current_value: "", currency: "ILS", is_liquid: true });
       loadProfile();
+    } else {
+      const body = await res.json().catch(() => ({}));
+      setAssetError(body.detail ?? "Failed to add asset");
     }
   }
 
@@ -291,10 +303,10 @@ export default function FinancialPage() {
                     value={form.job_stability ?? "stable"}
                     onChange={(e) => setForm({ ...form, job_stability: e.target.value })}
                   >
-                    <option value="very_stable">Very stable</option>
                     <option value="stable">Stable</option>
-                    <option value="moderate">Moderate</option>
+                    <option value="freelance">Freelance / Self-employed</option>
                     <option value="unstable">Unstable</option>
+                    <option value="unemployed">Unemployed</option>
                   </Select>
                 </Field>
                 <Field label="Income trend">
@@ -373,7 +385,7 @@ export default function FinancialPage() {
       </div>
 
       {/* Cash flow summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard label="Monthly income" value={formatCurrency(profile.monthly_income, profile.currency)} />
         <StatCard label="Monthly expenses" value={formatCurrency(profile.monthly_expenses, profile.currency)} />
         <StatCard
@@ -381,7 +393,9 @@ export default function FinancialPage() {
           value={formatCurrency(surplus, profile.currency)}
           highlight={surplus >= 0 ? "positive" : "negative"}
         />
+        <StatCard label="Liquid savings" value={formatCurrency(profile.liquid_savings, profile.currency)} />
         <StatCard label="Emergency fund" value={`${profile.emergency_fund_months.toFixed(1)} months`} />
+        <StatCard label="Investable capital" value={`${profile.investable_capital_pct}%`} />
       </div>
 
       {/* Edit form */}
@@ -466,11 +480,14 @@ export default function FinancialPage() {
                 />
               </Field>
             </div>
+            {saveError && (
+              <p className="text-xs text-destructive">{saveError}</p>
+            )}
             <div className="flex gap-3 pt-2">
               <Button onClick={saveProfile} disabled={saving}>
                 {saving ? "Saving…" : "Save changes"}
               </Button>
-              <Button variant="outline" onClick={() => { setForm(profile); setEditingProfile(false); }}>
+              <Button variant="outline" onClick={() => { setForm(profile); setEditingProfile(false); setSaveError(null); }}>
                 Cancel
               </Button>
             </div>
@@ -511,11 +528,12 @@ export default function FinancialPage() {
                       onChange={(e) => setAssetForm({ ...assetForm, asset_type: e.target.value })}
                     >
                       <option value="cash">Cash</option>
-                      <option value="savings">Savings</option>
-                      <option value="investment">Investment</option>
+                      <option value="stocks">Stocks</option>
+                      <option value="bonds">Bonds</option>
+                      <option value="etf">ETF</option>
                       <option value="real_estate">Real estate</option>
-                      <option value="vehicle">Vehicle</option>
                       <option value="crypto">Crypto</option>
+                      <option value="pension">Pension</option>
                       <option value="other">Other</option>
                     </Select>
                   </Field>
@@ -547,9 +565,12 @@ export default function FinancialPage() {
                   />
                   <label htmlFor="is_liquid" className="text-xs">Liquid asset</label>
                 </div>
+                {assetError && (
+                  <p className="text-xs text-destructive">{assetError}</p>
+                )}
                 <div className="flex gap-2">
                   <Button size="sm" onClick={addAsset}>Add asset</Button>
-                  <Button size="sm" variant="outline" onClick={() => setAddingAsset(false)}>Cancel</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setAddingAsset(false); setAssetError(null); }}>Cancel</Button>
                 </div>
               </div>
             )}
