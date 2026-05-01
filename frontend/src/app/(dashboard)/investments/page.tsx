@@ -30,6 +30,10 @@ interface Holding {
   purchase_date: string | null;
   current_value: number | null;
   notes: string | null;
+  current_balance: number | null;
+  total_deposits: number | null;
+  monthly_contribution: number | null;
+  annual_return_rate: number | null;
 }
 
 interface Account {
@@ -147,11 +151,15 @@ const ASSET_TYPES = [
 ];
 
 const EMPTY_ACCOUNT = { provider_name: "", account_type: "brokerage", account_name: "", currency: "ILS", notes: "" };
-const EMPTY_HOLDING = { ticker: "", isin: "", name: "", asset_type: "stock", quantity: "", avg_buy_price: "", currency: "ILS", fees: "", purchase_date: "", current_value: "", notes: "" };
+const EMPTY_HOLDING = { ticker: "", isin: "", name: "", asset_type: "stock", quantity: "", avg_buy_price: "", currency: "ILS", fees: "", purchase_date: "", current_value: "", notes: "", current_balance: "", total_deposits: "", monthly_contribution: "", annual_return_rate: "" };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const ALLOC_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#3b82f6", "#8b5cf6", "#ec4899"];
+
+function isPensionAccount(accountType: string) {
+  return accountType === "pension" || accountType === "keren_hishtalmut";
+}
 
 function ilsEquiv(amount: number, fxRates: Record<string, number>, baseCurrency: string): string | null {
   if (baseCurrency === "ILS") return null;
@@ -285,24 +293,42 @@ export default function InvestmentsPage() {
   async function addHolding(accountId: string) {
     setSavingHolding(true);
     try {
+      const acct = accounts.find(a => a.id === accountId);
+      const pension = isPensionAccount(acct?.account_type ?? "");
+      const body = pension
+        ? {
+            name: holdingForm.name,
+            asset_type: "pension_fund",
+            quantity: 0,
+            avg_buy_price: 0,
+            currency: holdingForm.currency,
+            fees: 0,
+            purchase_date: holdingForm.purchase_date || null,
+            current_balance: holdingForm.current_balance ? parseFloat(holdingForm.current_balance) : null,
+            total_deposits: holdingForm.total_deposits ? parseFloat(holdingForm.total_deposits) : null,
+            monthly_contribution: holdingForm.monthly_contribution ? parseFloat(holdingForm.monthly_contribution) : null,
+            annual_return_rate: holdingForm.annual_return_rate ? parseFloat(holdingForm.annual_return_rate) : null,
+            notes: holdingForm.notes || null,
+          }
+        : {
+            ticker: holdingForm.ticker || null,
+            isin: holdingForm.isin || null,
+            name: holdingForm.name,
+            asset_type: holdingForm.asset_type,
+            quantity: parseFloat(holdingForm.quantity),
+            avg_buy_price: parseFloat(holdingForm.avg_buy_price),
+            currency: holdingForm.currency,
+            fees: holdingForm.fees ? parseFloat(holdingForm.fees) : 0,
+            purchase_date: holdingForm.purchase_date || null,
+            current_value: holdingForm.current_value
+              ? parseFloat(holdingForm.current_value) * (parseFloat(holdingForm.quantity) || 1)
+              : null,
+            notes: holdingForm.notes || null,
+          };
       const res = await fetch(`/api/v1/investors/${investorId}/accounts/${accountId}/holdings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ticker: holdingForm.ticker || null,
-          isin: holdingForm.isin || null,
-          name: holdingForm.name,
-          asset_type: holdingForm.asset_type,
-          quantity: parseFloat(holdingForm.quantity),
-          avg_buy_price: parseFloat(holdingForm.avg_buy_price),
-          currency: holdingForm.currency,
-          fees: holdingForm.fees ? parseFloat(holdingForm.fees) : 0,
-          purchase_date: holdingForm.purchase_date || null,
-          current_value: holdingForm.current_value
-            ? parseFloat(holdingForm.current_value) * (parseFloat(holdingForm.quantity) || 1)
-            : null,
-          notes: holdingForm.notes || null,
-        }),
+        body: JSON.stringify(body),
       });
       if (res.ok) {
         setAddingHoldingForAccount(null);
@@ -356,6 +382,10 @@ export default function InvestmentsPage() {
       purchase_date: h.purchase_date ?? "",
       current_value: h.current_value != null && h.quantity > 0 ? String((h.current_value / h.quantity).toFixed(4)) : "",
       notes: h.notes ?? "",
+      current_balance: h.current_balance != null ? String(h.current_balance) : "",
+      total_deposits: h.total_deposits != null ? String(h.total_deposits) : "",
+      monthly_contribution: h.monthly_contribution != null ? String(h.monthly_contribution) : "",
+      annual_return_rate: h.annual_return_rate != null ? String(h.annual_return_rate) : "",
     });
     setExpandedAccounts(prev => { const s = new Set(prev); s.add(accountId); return s; });
   }
@@ -363,12 +393,24 @@ export default function InvestmentsPage() {
   async function updateHolding(accountId: string, holdingId: string) {
     setSavingEditHolding(true);
     try {
-      const res = await fetch(
-        `/api/v1/investors/${investorId}/accounts/${accountId}/holdings/${holdingId}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+      const acct = accounts.find(a => a.id === accountId);
+      const pension = isPensionAccount(acct?.account_type ?? "");
+      const body = pension
+        ? {
+            name: editHoldingForm.name || undefined,
+            asset_type: "pension_fund",
+            quantity: 0,
+            avg_buy_price: 0,
+            currency: editHoldingForm.currency || undefined,
+            fees: 0,
+            purchase_date: editHoldingForm.purchase_date || null,
+            current_balance: editHoldingForm.current_balance ? parseFloat(editHoldingForm.current_balance) : null,
+            total_deposits: editHoldingForm.total_deposits ? parseFloat(editHoldingForm.total_deposits) : null,
+            monthly_contribution: editHoldingForm.monthly_contribution ? parseFloat(editHoldingForm.monthly_contribution) : null,
+            annual_return_rate: editHoldingForm.annual_return_rate ? parseFloat(editHoldingForm.annual_return_rate) : null,
+            notes: editHoldingForm.notes || null,
+          }
+        : {
             ticker: editHoldingForm.ticker || null,
             isin: editHoldingForm.isin || null,
             name: editHoldingForm.name || undefined,
@@ -382,8 +424,10 @@ export default function InvestmentsPage() {
               ? parseFloat(editHoldingForm.current_value) * (parseFloat(editHoldingForm.quantity) || 1)
               : null,
             notes: editHoldingForm.notes || null,
-          }),
-        }
+          };
+      const res = await fetch(
+        `/api/v1/investors/${investorId}/accounts/${accountId}/holdings/${holdingId}`,
+        { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
       );
       if (res.ok) {
         setEditingHolding(null);
@@ -767,54 +811,94 @@ export default function InvestmentsPage() {
                 {/* Add holding form */}
                 {addingHoldingForAccount === account.id && (
                   <div className="border border-border rounded-lg p-4 space-y-3 bg-muted/30">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Add holding</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Name *</label>
-                        <Input placeholder="e.g. S&P 500 ETF" value={holdingForm.name} onChange={e => setHoldingForm({ ...holdingForm, name: e.target.value })} />
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      {isPensionAccount(account.account_type) ? "Add pension fund" : "Add holding"}
+                    </p>
+                    {isPensionAccount(account.account_type) ? (
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1 col-span-3 sm:col-span-1">
+                          <label className="text-xs text-muted-foreground">Fund name *</label>
+                          <Input placeholder="e.g. My Pension Fund" value={holdingForm.name} onChange={e => setHoldingForm({ ...holdingForm, name: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Current balance *</label>
+                          <Input type="number" placeholder="500000" value={holdingForm.current_balance} onChange={e => setHoldingForm({ ...holdingForm, current_balance: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Total deposits</label>
+                          <Input type="number" placeholder="400000" value={holdingForm.total_deposits} onChange={e => setHoldingForm({ ...holdingForm, total_deposits: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Monthly contribution</label>
+                          <Input type="number" placeholder="2000" value={holdingForm.monthly_contribution} onChange={e => setHoldingForm({ ...holdingForm, monthly_contribution: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Expected annual return (%)</label>
+                          <Input type="number" placeholder="5.5" value={holdingForm.annual_return_rate} onChange={e => setHoldingForm({ ...holdingForm, annual_return_rate: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Currency</label>
+                          <Input maxLength={3} value={holdingForm.currency} onChange={e => setHoldingForm({ ...holdingForm, currency: e.target.value.toUpperCase() })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Start date</label>
+                          <Input type="date" value={holdingForm.purchase_date} onChange={e => setHoldingForm({ ...holdingForm, purchase_date: e.target.value })} />
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Ticker</label>
-                        <Input placeholder="SPY" value={holdingForm.ticker} onChange={e => setHoldingForm({ ...holdingForm, ticker: e.target.value })} />
+                    ) : (
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Name *</label>
+                          <Input placeholder="e.g. S&P 500 ETF" value={holdingForm.name} onChange={e => setHoldingForm({ ...holdingForm, name: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Ticker</label>
+                          <Input placeholder="SPY" value={holdingForm.ticker} onChange={e => setHoldingForm({ ...holdingForm, ticker: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">ISIN</label>
+                          <Input placeholder="US78462F1030" value={holdingForm.isin} onChange={e => setHoldingForm({ ...holdingForm, isin: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Asset type</label>
+                          <Select value={holdingForm.asset_type} onChange={e => setHoldingForm({ ...holdingForm, asset_type: e.target.value })}>
+                            {ASSET_TYPES.filter(t => t.value !== "pension_fund").map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Quantity *</label>
+                          <Input type="number" placeholder="10" value={holdingForm.quantity} onChange={e => setHoldingForm({ ...holdingForm, quantity: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Avg buy price *</label>
+                          <Input type="number" placeholder="450.00" value={holdingForm.avg_buy_price} onChange={e => setHoldingForm({ ...holdingForm, avg_buy_price: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Currency</label>
+                          <Input maxLength={3} value={holdingForm.currency} onChange={e => setHoldingForm({ ...holdingForm, currency: e.target.value.toUpperCase() })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Current price per unit (optional)</label>
+                          <Input type="number" placeholder="Auto-calculated if blank" value={holdingForm.current_value} onChange={e => setHoldingForm({ ...holdingForm, current_value: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Purchase date</label>
+                          <Input type="date" value={holdingForm.purchase_date} onChange={e => setHoldingForm({ ...holdingForm, purchase_date: e.target.value })} />
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">ISIN</label>
-                        <Input placeholder="US78462F1030" value={holdingForm.isin} onChange={e => setHoldingForm({ ...holdingForm, isin: e.target.value })} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Asset type</label>
-                        <Select value={holdingForm.asset_type} onChange={e => setHoldingForm({ ...holdingForm, asset_type: e.target.value })}>
-                          {ASSET_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Quantity *</label>
-                        <Input type="number" placeholder="10" value={holdingForm.quantity} onChange={e => setHoldingForm({ ...holdingForm, quantity: e.target.value })} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Avg buy price *</label>
-                        <Input type="number" placeholder="450.00" value={holdingForm.avg_buy_price} onChange={e => setHoldingForm({ ...holdingForm, avg_buy_price: e.target.value })} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Currency</label>
-                        <Input maxLength={3} value={holdingForm.currency} onChange={e => setHoldingForm({ ...holdingForm, currency: e.target.value.toUpperCase() })} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Current price per unit (optional)</label>
-                        <Input type="number" placeholder="Auto-calculated if blank" value={holdingForm.current_value} onChange={e => setHoldingForm({ ...holdingForm, current_value: e.target.value })} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Purchase date</label>
-                        <Input type="date" value={holdingForm.purchase_date} onChange={e => setHoldingForm({ ...holdingForm, purchase_date: e.target.value })} />
-                      </div>
-                    </div>
+                    )}
                     <div className="flex gap-2">
                       <Button
                         size="sm"
                         onClick={() => addHolding(account.id)}
-                        disabled={!holdingForm.name || !holdingForm.quantity || !holdingForm.avg_buy_price || savingHolding}
+                        disabled={
+                          !holdingForm.name || savingHolding ||
+                          (isPensionAccount(account.account_type)
+                            ? !holdingForm.current_balance
+                            : (!holdingForm.quantity || !holdingForm.avg_buy_price))
+                        }
                       >
-                        {savingHolding ? "Saving…" : "Add holding"}
+                        {savingHolding ? "Saving…" : isPensionAccount(account.account_type) ? "Add fund" : "Add holding"}
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => { setAddingHoldingForAccount(null); setHoldingForm(EMPTY_HOLDING); }}>
                         Cancel
@@ -844,45 +928,67 @@ export default function InvestmentsPage() {
                       {account.holdings.map(h => {
                         const ha = analysis?.holdings.find(x => x.id === h.id);
                         const isEditing = editingHolding?.holdingId === h.id;
-                        const calcValue = h.quantity * h.avg_buy_price;
+                        const isPension = h.asset_type === "pension_fund";
+                        const calcValue = isPension
+                          ? (h.current_balance ?? h.total_deposits ?? 0)
+                          : h.quantity * h.avg_buy_price;
                         return (
                           <>
                           <tr key={h.id} className="hover:bg-muted/30 transition-colors">
                             <td className="py-2.5 pr-3">
                               <p className="font-medium">{h.name}</p>
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                {(h.ticker || h.isin) && (
+                                {!isPension && (h.ticker || h.isin) && (
                                   <p className="text-xs text-muted-foreground">{h.ticker ?? h.isin}</p>
                                 )}
-                                {ha?.price_source === "live" && (
+                                {!isPension && ha?.price_source === "live" && (
                                   <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-1.5 py-0 text-[10px] font-medium text-green-700 dark:text-green-400">Live</span>
                                 )}
-                                {ha?.price_source !== "live" && h.ticker && (
+                                {!isPension && ha?.price_source !== "live" && h.ticker && (
                                   <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0 text-[10px] font-medium text-amber-700 dark:text-amber-400">Manual — refresh for live</span>
+                                )}
+                                {isPension && (
+                                  <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/30 px-1.5 py-0 text-[10px] font-medium text-blue-700 dark:text-blue-400">Pension fund</span>
                                 )}
                               </div>
                             </td>
                             <td className="py-2.5 pr-3">
                               <Badge variant="muted" className="text-[10px] py-0">{assetTypeLabel(h.asset_type)}</Badge>
                             </td>
-                            <td className="py-2.5 text-right tabular-nums">{h.quantity}</td>
                             <td className="py-2.5 text-right tabular-nums">
-                              <p className="tabular-nums">{formatCurrency(h.avg_buy_price, h.currency)}</p>
-                              {ha?.price_source === "live" && ha.live_price != null && (
-                                <p className="text-xs text-green-600 tabular-nums">{formatCurrency(ha.live_price, ha.live_price_currency ?? h.currency)} now</p>
+                              {isPension ? (
+                                h.monthly_contribution != null
+                                  ? <span className="text-xs text-muted-foreground">+{formatCurrency(h.monthly_contribution, h.currency)}/mo</span>
+                                  : <span className="text-muted-foreground">—</span>
+                              ) : h.quantity}
+                            </td>
+                            <td className="py-2.5 text-right tabular-nums">
+                              {isPension ? (
+                                h.total_deposits != null
+                                  ? <p className="tabular-nums text-xs text-muted-foreground">{formatCurrency(h.total_deposits, h.currency)} deposited</p>
+                                  : <span className="text-muted-foreground">—</span>
+                              ) : (
+                                <>
+                                  <p className="tabular-nums">{formatCurrency(h.avg_buy_price, h.currency)}</p>
+                                  {ha?.price_source === "live" && ha.live_price != null && (
+                                    <p className="text-xs text-green-600 tabular-nums">{formatCurrency(ha.live_price, ha.live_price_currency ?? h.currency)} now</p>
+                                  )}
+                                </>
                               )}
                             </td>
                             <td className="py-2.5 text-right tabular-nums">
                               {ha ? (
                                 <>
                                   <p className="font-medium">{formatCurrency(ha.current_value_base, currency)}</p>
-                                  {(() => {
-                                    // For live prices, local value is in live_price_currency (not necessarily h.currency)
+                                  {isPension ? (
+                                    <p className="text-[10px] text-muted-foreground">
+                                      {h.current_balance != null ? `Balance: ${formatCurrency(h.current_balance, h.currency)}` : "Balance not set — edit to add"}
+                                    </p>
+                                  ) : (() => {
                                     const localCur = ha.price_source === "live" && ha.live_price_currency
                                       ? ha.live_price_currency
                                       : h.currency;
                                     const showLocal = localCur !== currency;
-                                    // Show ILS equivalent if base isn't ILS and it's not already shown via localCur
                                     const ilsVal = ilsEquiv(ha.current_value_base, portfolio?.fx_rates ?? {}, currency);
                                     const showIls = ilsVal !== null && localCur !== "ILS";
                                     return (
@@ -897,21 +1003,21 @@ export default function InvestmentsPage() {
                                             ≈ {ilsVal}
                                           </p>
                                         )}
+                                        <p className="text-[10px] text-muted-foreground">
+                                          {ha.price_source === "live"
+                                            ? `${h.quantity} × ${formatCurrency(ha.live_price!, ha.live_price_currency ?? h.currency)}`
+                                            : ha.price_source === "manual"
+                                            ? `${h.quantity} × ${formatCurrency(ha.current_value_local / h.quantity, h.currency)} (manual — edit to fix)`
+                                            : `${h.quantity} × ${formatCurrency(h.avg_buy_price, h.currency)} (cost basis)`}
+                                        </p>
                                       </>
                                     );
                                   })()}
-                                  <p className="text-[10px] text-muted-foreground">
-                                    {ha.price_source === "live"
-                                      ? `${h.quantity} × ${formatCurrency(ha.live_price!, ha.live_price_currency ?? h.currency)}`
-                                      : ha.price_source === "manual"
-                                      ? `${h.quantity} × ${formatCurrency(ha.current_value_local / h.quantity, h.currency)} (manual — edit to fix)`
-                                      : `${h.quantity} × ${formatCurrency(h.avg_buy_price, h.currency)} (cost basis)`}
-                                  </p>
                                 </>
                               ) : (
                                 <>
                                   <p>{formatCurrency(calcValue, h.currency)}</p>
-                                  <p className="text-[10px] text-muted-foreground">{h.quantity} × {formatCurrency(h.avg_buy_price, h.currency)}</p>
+                                  {!isPension && <p className="text-[10px] text-muted-foreground">{h.quantity} × {formatCurrency(h.avg_buy_price, h.currency)}</p>}
                                 </>
                               )}
                             </td>
@@ -944,47 +1050,82 @@ export default function InvestmentsPage() {
                             <tr key={`edit-${h.id}`}>
                               <td colSpan={7} className="pb-3">
                                 <div className="border border-primary/30 rounded-lg p-4 space-y-3 bg-muted/30">
-                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Edit holding</p>
-                                  <div className="grid grid-cols-3 gap-3">
-                                    <div className="space-y-1">
-                                      <label className="text-xs text-muted-foreground">Name *</label>
-                                      <Input value={editHoldingForm.name} onChange={e => setEditHoldingForm({ ...editHoldingForm, name: e.target.value })} />
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                    {isPension ? "Edit pension fund" : "Edit holding"}
+                                  </p>
+                                  {isPension ? (
+                                    <div className="grid grid-cols-3 gap-3">
+                                      <div className="space-y-1 col-span-3 sm:col-span-1">
+                                        <label className="text-xs text-muted-foreground">Fund name *</label>
+                                        <Input value={editHoldingForm.name} onChange={e => setEditHoldingForm({ ...editHoldingForm, name: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Current balance *</label>
+                                        <Input type="number" value={editHoldingForm.current_balance} onChange={e => setEditHoldingForm({ ...editHoldingForm, current_balance: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Total deposits</label>
+                                        <Input type="number" value={editHoldingForm.total_deposits} onChange={e => setEditHoldingForm({ ...editHoldingForm, total_deposits: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Monthly contribution</label>
+                                        <Input type="number" value={editHoldingForm.monthly_contribution} onChange={e => setEditHoldingForm({ ...editHoldingForm, monthly_contribution: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Expected annual return (%)</label>
+                                        <Input type="number" value={editHoldingForm.annual_return_rate} onChange={e => setEditHoldingForm({ ...editHoldingForm, annual_return_rate: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Currency</label>
+                                        <Input maxLength={3} value={editHoldingForm.currency} onChange={e => setEditHoldingForm({ ...editHoldingForm, currency: e.target.value.toUpperCase() })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Start date</label>
+                                        <Input type="date" value={editHoldingForm.purchase_date} onChange={e => setEditHoldingForm({ ...editHoldingForm, purchase_date: e.target.value })} />
+                                      </div>
                                     </div>
-                                    <div className="space-y-1">
-                                      <label className="text-xs text-muted-foreground">Ticker</label>
-                                      <Input value={editHoldingForm.ticker} onChange={e => setEditHoldingForm({ ...editHoldingForm, ticker: e.target.value })} />
+                                  ) : (
+                                    <div className="grid grid-cols-3 gap-3">
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Name *</label>
+                                        <Input value={editHoldingForm.name} onChange={e => setEditHoldingForm({ ...editHoldingForm, name: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Ticker</label>
+                                        <Input value={editHoldingForm.ticker} onChange={e => setEditHoldingForm({ ...editHoldingForm, ticker: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">ISIN</label>
+                                        <Input value={editHoldingForm.isin} onChange={e => setEditHoldingForm({ ...editHoldingForm, isin: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Asset type</label>
+                                        <Select value={editHoldingForm.asset_type} onChange={e => setEditHoldingForm({ ...editHoldingForm, asset_type: e.target.value })}>
+                                          {ASSET_TYPES.filter(t => t.value !== "pension_fund").map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                                        </Select>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Quantity *</label>
+                                        <Input type="number" value={editHoldingForm.quantity} onChange={e => setEditHoldingForm({ ...editHoldingForm, quantity: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Avg buy price *</label>
+                                        <Input type="number" value={editHoldingForm.avg_buy_price} onChange={e => setEditHoldingForm({ ...editHoldingForm, avg_buy_price: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Currency</label>
+                                        <Input maxLength={3} value={editHoldingForm.currency} onChange={e => setEditHoldingForm({ ...editHoldingForm, currency: e.target.value.toUpperCase() })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Current price per unit (optional)</label>
+                                        <Input type="number" placeholder="Leave blank to auto-calculate" value={editHoldingForm.current_value} onChange={e => setEditHoldingForm({ ...editHoldingForm, current_value: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Purchase date</label>
+                                        <Input type="date" value={editHoldingForm.purchase_date} onChange={e => setEditHoldingForm({ ...editHoldingForm, purchase_date: e.target.value })} />
+                                      </div>
                                     </div>
-                                    <div className="space-y-1">
-                                      <label className="text-xs text-muted-foreground">ISIN</label>
-                                      <Input value={editHoldingForm.isin} onChange={e => setEditHoldingForm({ ...editHoldingForm, isin: e.target.value })} />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-xs text-muted-foreground">Asset type</label>
-                                      <Select value={editHoldingForm.asset_type} onChange={e => setEditHoldingForm({ ...editHoldingForm, asset_type: e.target.value })}>
-                                        {ASSET_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                                      </Select>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-xs text-muted-foreground">Quantity *</label>
-                                      <Input type="number" value={editHoldingForm.quantity} onChange={e => setEditHoldingForm({ ...editHoldingForm, quantity: e.target.value })} />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-xs text-muted-foreground">Avg buy price *</label>
-                                      <Input type="number" value={editHoldingForm.avg_buy_price} onChange={e => setEditHoldingForm({ ...editHoldingForm, avg_buy_price: e.target.value })} />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-xs text-muted-foreground">Currency</label>
-                                      <Input maxLength={3} value={editHoldingForm.currency} onChange={e => setEditHoldingForm({ ...editHoldingForm, currency: e.target.value.toUpperCase() })} />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-xs text-muted-foreground">Current price per unit (optional)</label>
-                                      <Input type="number" placeholder="Leave blank to auto-calculate" value={editHoldingForm.current_value} onChange={e => setEditHoldingForm({ ...editHoldingForm, current_value: e.target.value })} />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-xs text-muted-foreground">Purchase date</label>
-                                      <Input type="date" value={editHoldingForm.purchase_date} onChange={e => setEditHoldingForm({ ...editHoldingForm, purchase_date: e.target.value })} />
-                                    </div>
-                                  </div>
+                                  )}
                                   <div className="flex gap-2">
                                     <Button size="sm" onClick={() => updateHolding(account.id, h.id)} disabled={savingEditHolding}>
                                       {savingEditHolding ? "Saving…" : "Save changes"}

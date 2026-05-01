@@ -56,29 +56,44 @@ def analyze(
             if h.currency != base_currency:
                 unique_foreign_currencies.add(h.currency)
 
-            cost_local = h.quantity * h.avg_buy_price
-            cost_base = convert(cost_local, h.currency, base_currency)
-
+            is_pension = h.asset_type == "pension_fund"
             live_price: float | None = None
             live_price_currency: str | None = None
 
-            if h.ticker and h.ticker in lp:
-                lp_price, lp_currency = lp[h.ticker]
-                value_base = convert(lp_price * h.quantity, lp_currency, base_currency)
-                value_local = lp_price * h.quantity  # in price currency
-                price_source = "live"
-                live_price = lp_price
-                live_price_currency = lp_currency
-                if lp_currency != base_currency:
-                    unique_foreign_currencies.add(lp_currency)
-            elif h.current_value is not None:
-                value_local = h.current_value
+            if is_pension:
+                cost_local = h.total_deposits if h.total_deposits is not None else 0.0
+                cost_base = convert(cost_local, h.currency, base_currency)
+                if h.current_balance is not None:
+                    value_local = h.current_balance
+                    price_source = "manual"
+                elif h.current_value is not None:
+                    value_local = h.current_value
+                    price_source = "manual"
+                else:
+                    value_local = cost_local
+                    price_source = "cost_basis"
                 value_base = convert(value_local, h.currency, base_currency)
-                price_source = "manual"
             else:
-                value_local = cost_local
-                value_base = cost_base
-                price_source = "cost_basis"
+                cost_local = h.quantity * h.avg_buy_price
+                cost_base = convert(cost_local, h.currency, base_currency)
+
+                if h.ticker and h.ticker in lp:
+                    lp_price, lp_currency = lp[h.ticker]
+                    value_base = convert(lp_price * h.quantity, lp_currency, base_currency)
+                    value_local = lp_price * h.quantity  # in price currency
+                    price_source = "live"
+                    live_price = lp_price
+                    live_price_currency = lp_currency
+                    if lp_currency != base_currency:
+                        unique_foreign_currencies.add(lp_currency)
+                elif h.current_value is not None:
+                    value_local = h.current_value
+                    value_base = convert(value_local, h.currency, base_currency)
+                    price_source = "manual"
+                else:
+                    value_local = cost_local
+                    value_base = cost_base
+                    price_source = "cost_basis"
 
             pnl = value_base - cost_base
             pnl_pct = (pnl / cost_base * 100) if cost_base > 0 else 0.0
