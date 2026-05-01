@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models.currency_rate import CurrencyRate
 
-_CACHE_TTL_HOURS = 24
+_CACHE_TTL_HOURS = 4  # open.er-api.com free tier: ~1500 req/month; 4h TTL is safe
 _API_BASE = "https://open.er-api.com/v6/latest"
 
 
@@ -46,6 +46,11 @@ def _fetch_and_store(db: Session, base: str) -> dict[str, float]:
             ))
     db.commit()
     return rates
+
+
+def force_refresh_rates(db: Session, base: str) -> dict[str, float]:
+    """Bypass cache and immediately fetch fresh rates for `base` from the API."""
+    return _fetch_and_store(db, base)
 
 
 def get_rate(db: Session, base: str, target: str) -> float | None:

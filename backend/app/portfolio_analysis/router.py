@@ -6,7 +6,9 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.investment_account import InvestmentAccount
+from app.models.investor_profile import InvestorProfile
 from app.market_data.service import refresh_tickers
+from app.currency_engine.rates import force_refresh_rates
 from app.portfolio_analysis import service
 from app.portfolio_analysis import rebalance_engine
 from app.portfolio_analysis.schemas import (
@@ -52,6 +54,11 @@ def refresh_prices(investor_id: uuid.UUID, db: Session = Depends(get_db)):
         .all()
     )
     tickers = {h.ticker for acc in accounts for h in acc.holdings if h.ticker}
+
+    # Force-refresh FX rates before recomputing portfolio so conversions use today's rate
+    investor = db.get(InvestorProfile, investor_id)
+    if investor:
+        force_refresh_rates(db, investor.base_currency)
 
     refreshed: list[str] = []
     failed: list[str] = []
