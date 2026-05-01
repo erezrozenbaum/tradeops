@@ -2,8 +2,8 @@ import enum
 import uuid
 from datetime import date
 
-from sqlalchemy import Date, Enum, Float, ForeignKey, Integer, String
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy import Date, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -43,9 +43,16 @@ class FinancialGoal(Base, UUIDMixin, TimestampMixin):
     risk_suitability: Mapped[GoalRiskSuitability] = mapped_column(
         Enum(GoalRiskSuitability), nullable=False, default=GoalRiskSuitability.low
     )
+    tracking_mode: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="target_by_date"
+    )
+    mode_config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     investor: Mapped["InvestorProfile"] = relationship(
         "InvestorProfile", back_populates="goals"
+    )
+    progress_logs: Mapped[list["GoalProgressLog"]] = relationship(
+        "GoalProgressLog", back_populates="goal", cascade="all, delete-orphan"
     )
 
     @property
