@@ -20,6 +20,7 @@ from app.goals_analysis.router import router as goals_analysis_router
 from app.market_scanner.router import router as market_scanner_router
 from app.investment_recommendations.router import router as investment_recommendations_router
 from app.portfolio_analysis.router import router as portfolio_router
+from app.pension_simulation.router import router as pension_simulation_router
 
 api_router = APIRouter()
 
@@ -34,6 +35,7 @@ api_router.include_router(paper_trading_router, prefix="/investors/{investor_id}
 api_router.include_router(ai_analysis_router, prefix="/investors/{investor_id}/ai-report", tags=["ai-analysis"])
 api_router.include_router(decision_router, prefix="/investors/{investor_id}/decision", tags=["decision"])
 api_router.include_router(portfolio_router, prefix="/investors/{investor_id}/portfolio", tags=["portfolio"])
+api_router.include_router(pension_simulation_router, prefix="/investors/{investor_id}/pension-simulation", tags=["pension-simulation"])
 api_router.include_router(goals_analysis_router, prefix="/investors/{investor_id}/goals-analysis", tags=["goals-analysis"])
 api_router.include_router(market_scanner_router, prefix="/investors/{investor_id}/market-scan", tags=["market-scan"])
 api_router.include_router(investment_recommendations_router, prefix="/investors/{investor_id}/recommendations", tags=["recommendations"])
