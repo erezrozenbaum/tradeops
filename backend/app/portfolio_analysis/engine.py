@@ -56,7 +56,7 @@ def analyze(
             if h.currency != base_currency:
                 unique_foreign_currencies.add(h.currency)
 
-            is_pension = h.asset_type == "pension_fund"
+            is_pension = h.asset_type in ("pension_fund", "study_fund")
             live_price: float | None = None
             live_price_currency: str | None = None
 

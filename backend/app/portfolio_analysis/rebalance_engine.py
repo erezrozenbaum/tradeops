@@ -12,6 +12,7 @@ _ASSET_TO_TIER: dict[str, str | None] = {
     "bond": "low_risk",
     "fund": "low_risk",
     "pension_fund": "low_risk",
+    "study_fund": "low_risk",
     "etf": "growth",
     "stock": "growth",
     "real_estate": "growth",
@@ -20,7 +21,7 @@ _ASSET_TO_TIER: dict[str, str | None] = {
 }
 
 _TIER_META = [
-    ("low_risk", "Low Risk", ["bond", "fund", "pension_fund"]),
+    ("low_risk", "Low Risk", ["bond", "fund", "pension_fund", "study_fund"]),
     ("growth", "Growth", ["etf", "stock", "real_estate"]),
     ("high_risk", "High Risk", ["crypto"]),
 ]

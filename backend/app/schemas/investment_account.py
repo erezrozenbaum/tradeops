@@ -24,6 +24,9 @@ class InvestmentHoldingCreate(BaseModel):
     total_deposits: float | None = Field(None, ge=0)
     monthly_contribution: float | None = Field(None, ge=0)
     annual_return_rate: float | None = Field(None, ge=0)
+    monthly_contribution_employee: float | None = Field(None, ge=0)
+    monthly_contribution_employer: float | None = Field(None, ge=0)
+    fund_status: str | None = None
 
 
 class InvestmentHoldingUpdate(BaseModel):
@@ -42,6 +45,9 @@ class InvestmentHoldingUpdate(BaseModel):
     total_deposits: float | None = Field(None, ge=0)
     monthly_contribution: float | None = Field(None, ge=0)
     annual_return_rate: float | None = Field(None, ge=0)
+    monthly_contribution_employee: float | None = Field(None, ge=0)
+    monthly_contribution_employer: float | None = Field(None, ge=0)
+    fund_status: str | None = None
 
 
 class InvestmentHoldingOut(BaseModel):
@@ -62,6 +68,9 @@ class InvestmentHoldingOut(BaseModel):
     total_deposits: float | None
     monthly_contribution: float | None
     annual_return_rate: float | None
+    monthly_contribution_employee: float | None
+    monthly_contribution_employer: float | None
+    fund_status: str | None
     created_at: datetime
     updated_at: datetime
 
