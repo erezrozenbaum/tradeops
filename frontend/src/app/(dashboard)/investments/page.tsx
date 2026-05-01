@@ -153,6 +153,13 @@ const EMPTY_HOLDING = { ticker: "", isin: "", name: "", asset_type: "stock", qua
 
 const ALLOC_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#3b82f6", "#8b5cf6", "#ec4899"];
 
+function ilsEquiv(amount: number, fxRates: Record<string, number>, baseCurrency: string): string | null {
+  if (baseCurrency === "ILS") return null;
+  const rate = fxRates["ILS"];
+  if (!rate || rate <= 0) return null;
+  return formatCurrency(amount / rate, "ILS");
+}
+
 function AllocationDonut({ allocation }: { allocation: Record<string, number> }) {
   const data = Object.entries(allocation).map(([name, value]) => ({ name, value }));
   return (
@@ -432,6 +439,9 @@ export default function InvestmentsPage() {
               <CardContent className="pt-5">
                 <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Total value</p>
                 <p className="text-xl font-semibold">{formatCurrency(portfolio.total_current_value, currency)}</p>
+                {ilsEquiv(portfolio.total_current_value, portfolio.fx_rates, currency) && (
+                  <p className="text-sm text-muted-foreground tabular-nums">≈ {ilsEquiv(portfolio.total_current_value, portfolio.fx_rates, currency)}</p>
+                )}
                 <p className="text-xs text-muted-foreground mt-0.5">All values in {currency}</p>
               </CardContent>
             </Card>
@@ -439,6 +449,9 @@ export default function InvestmentsPage() {
               <CardContent className="pt-5">
                 <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Cost basis</p>
                 <p className="text-xl font-semibold">{formatCurrency(portfolio.total_cost_basis, currency)}</p>
+                {ilsEquiv(portfolio.total_cost_basis, portfolio.fx_rates, currency) && (
+                  <p className="text-sm text-muted-foreground tabular-nums">≈ {ilsEquiv(portfolio.total_cost_basis, portfolio.fx_rates, currency)}</p>
+                )}
               </CardContent>
             </Card>
             <Card>
@@ -447,6 +460,11 @@ export default function InvestmentsPage() {
                 <p className={`text-xl font-semibold ${portfolio.unrealized_pnl >= 0 ? "text-green-600" : "text-red-500"}`}>
                   {portfolio.unrealized_pnl >= 0 ? "+" : ""}{formatCurrency(portfolio.unrealized_pnl, currency)}
                 </p>
+                {ilsEquiv(portfolio.unrealized_pnl, portfolio.fx_rates, currency) && (
+                  <p className={`text-sm tabular-nums ${portfolio.unrealized_pnl >= 0 ? "text-green-600/70" : "text-red-500/70"}`}>
+                    ≈ {ilsEquiv(portfolio.unrealized_pnl, portfolio.fx_rates, currency)}
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {portfolio.unrealized_pnl_pct >= 0 ? "+" : ""}{portfolio.unrealized_pnl_pct.toFixed(2)}%
                 </p>
@@ -858,11 +876,30 @@ export default function InvestmentsPage() {
                               {ha ? (
                                 <>
                                   <p className="font-medium">{formatCurrency(ha.current_value_base, currency)}</p>
-                                  {h.currency !== currency && (
-                                    <p className="text-[10px] text-muted-foreground tabular-nums">
-                                      ≈ {formatCurrency(ha.current_value_local, h.currency)}
-                                    </p>
-                                  )}
+                                  {(() => {
+                                    // For live prices, local value is in live_price_currency (not necessarily h.currency)
+                                    const localCur = ha.price_source === "live" && ha.live_price_currency
+                                      ? ha.live_price_currency
+                                      : h.currency;
+                                    const showLocal = localCur !== currency;
+                                    // Show ILS equivalent if base isn't ILS and it's not already shown via localCur
+                                    const ilsVal = ilsEquiv(ha.current_value_base, portfolio?.fx_rates ?? {}, currency);
+                                    const showIls = ilsVal !== null && localCur !== "ILS";
+                                    return (
+                                      <>
+                                        {showLocal && (
+                                          <p className="text-[10px] text-muted-foreground tabular-nums">
+                                            ≈ {formatCurrency(ha.current_value_local, localCur)}
+                                          </p>
+                                        )}
+                                        {showIls && (
+                                          <p className="text-[10px] text-muted-foreground tabular-nums">
+                                            ≈ {ilsVal}
+                                          </p>
+                                        )}
+                                      </>
+                                    );
+                                  })()}
                                   <p className="text-[10px] text-muted-foreground">
                                     {ha.price_source === "live"
                                       ? `${h.quantity} × ${formatCurrency(ha.live_price!, ha.live_price_currency ?? h.currency)}`
