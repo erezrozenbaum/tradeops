@@ -44,6 +44,7 @@ interface GoalsAnalysisResult {
 
 interface PortfolioSummary {
   base_currency: string;
+  total_cost_basis: number;
   total_current_value: number;
   unrealized_pnl: number;
   unrealized_pnl_pct: number;
