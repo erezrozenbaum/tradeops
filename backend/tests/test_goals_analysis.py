@@ -29,6 +29,8 @@ def _goal(
         target_amount=target_amount,
         current_amount=current_amount,
         target_date=target_date,
+        tracking_mode="target_by_date",
+        mode_config=None,
         priority=priority,
         currency=currency,
     )

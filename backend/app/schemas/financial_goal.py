@@ -5,6 +5,14 @@ from pydantic import BaseModel, Field, computed_field
 
 from app.models.financial_goal import GoalRiskSuitability, GoalType
 
+TRACKING_MODES = {
+    "target_by_date",
+    "monthly_contribution",
+    "monthly_passive_income",
+    "balance_threshold",
+    "debt_reduction",
+}
+
 
 class FinancialGoalCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
@@ -15,6 +23,8 @@ class FinancialGoalCreate(BaseModel):
     priority: int = Field(1, ge=1, le=10)
     currency: str = Field(..., min_length=3, max_length=3)
     risk_suitability: GoalRiskSuitability = GoalRiskSuitability.low
+    tracking_mode: str = Field("target_by_date")
+    mode_config: dict | None = None
 
 
 class FinancialGoalUpdate(BaseModel):
@@ -24,6 +34,8 @@ class FinancialGoalUpdate(BaseModel):
     target_date: date | None = None
     priority: int | None = Field(None, ge=1, le=10)
     risk_suitability: GoalRiskSuitability | None = None
+    tracking_mode: str | None = None
+    mode_config: dict | None = None
 
 
 class FinancialGoalOut(FinancialGoalCreate):
