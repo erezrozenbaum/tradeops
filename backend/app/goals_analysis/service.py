@@ -7,6 +7,7 @@ from app.goals.service import get_by_investor as get_goals
 from app.goals_analysis import engine
 from app.goals_analysis.schemas import GoalsAnalysisResult
 from app.models.investor_profile import InvestorProfile
+from app.models.goal_progress_log import GoalProgressLog
 
 
 def get_analysis(db: Session, investor_id: uuid.UUID) -> GoalsAnalysisResult | None:
@@ -23,4 +24,18 @@ def get_analysis(db: Session, investor_id: uuid.UUID) -> GoalsAnalysisResult | N
             financial_profile.monthly_income - financial_profile.monthly_expenses, 2
         )
 
-    return engine.analyze(investor_id, goals, monthly_surplus)
+    goal_ids = [g.id for g in goals]
+    logs = (
+        db.query(GoalProgressLog)
+        .filter(GoalProgressLog.goal_id.in_(goal_ids))
+        .order_by(GoalProgressLog.period_year, GoalProgressLog.period_month)
+        .all()
+        if goal_ids
+        else []
+    )
+    progress_logs_by_goal: dict[str, list] = {}
+    for log in logs:
+        key = str(log.goal_id)
+        progress_logs_by_goal.setdefault(key, []).append(log)
+
+    return engine.analyze(investor_id, goals, monthly_surplus, progress_logs_by_goal)

@@ -1,7 +1,7 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.20.0
-**Last updated:** 2026-04-30
+**Version:** 0.22.0
+**Last updated:** 2026-05-01
 
 ---
 
