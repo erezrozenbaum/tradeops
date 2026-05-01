@@ -10,6 +10,23 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.27.0] — 2026-05-01
+
+### Added
+- **Study Fund (קרן השתלמות) asset type** — dedicated balance-based model for Israeli keren hishtalmut accounts
+  - New fields on `investment_holdings`: `monthly_contribution_employee`, `monthly_contribution_employer`, `fund_status` (all nullable); migration 0013
+  - `fund_status`: "active" | "inactive" — inactive funds set effective contribution to 0 in simulation
+  - Tax logic: `tax_exemption_date = start_date + 6 years`; returns "Tax-Free" or "Locked" with years remaining
+  - Portfolio engine extended: `is_pension` branch now covers both `pension_fund` and `study_fund`
+  - Rebalance engine: `study_fund` mapped to `low_risk` tier alongside bonds and pension funds
+  - Pension simulation router handles `study_fund`: respects `fund_status`, computes tax status, exposes employee/employer split
+- **Study fund UI** — keren_hishtalmut accounts show a dedicated add/edit form with: Fund Name, Current Balance, Total Deposits, Employee/Employer Contribution, Annual Return, Currency, Start Date, Fund Status toggle
+  - Table rows show monthly total contributions in Qty column, total deposits in Buy Price column
+  - Tax status badge inline: "✅ Tax-Free" (green) or "🔒 Locked · Xy" (orange) based on start date; "Inactive" badge if fund is inactive
+  - "Simulate" button appears on study fund rows; simulation panel shows tax status, inactive warning, and employee/employer contribution breakdown
+
+---
+
 ## [0.26.0] — 2026-05-01
 
 ### Fixed

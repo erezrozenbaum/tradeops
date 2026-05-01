@@ -27,6 +27,7 @@ class HoldingAssetType(str, enum.Enum):
     crypto = "crypto"
     fund = "fund"
     pension_fund = "pension_fund"
+    study_fund = "study_fund"
     real_estate = "real_estate"
     other = "other"
 
@@ -69,11 +70,15 @@ class InvestmentHolding(Base, UUIDMixin, TimestampMixin):
     purchase_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     current_value: Mapped[float | None] = mapped_column(Float, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # Pension fund fields (only meaningful when asset_type == "pension_fund")
+    # Savings fund fields (pension_fund and study_fund)
     current_balance: Mapped[float | None] = mapped_column(Float, nullable=True)
     total_deposits: Mapped[float | None] = mapped_column(Float, nullable=True)
     monthly_contribution: Mapped[float | None] = mapped_column(Float, nullable=True)
     annual_return_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Study fund specific
+    monthly_contribution_employee: Mapped[float | None] = mapped_column(Float, nullable=True)
+    monthly_contribution_employer: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fund_status: Mapped[str | None] = mapped_column(String(20), nullable=True)  # "active" | "inactive"
 
     account: Mapped["InvestmentAccount"] = relationship(
         "InvestmentAccount", back_populates="holdings"
