@@ -10,6 +10,17 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.21.0] — 2026-05-01
+
+### Added
+- **Pension Fund asset type** — `pension_fund` added to `HoldingAssetType` enum; maps to `low_risk` tier in the rebalancing engine; available in both add-holding and edit-holding forms; `pension_fund` also added to `_TIER_META` low-risk label
+- **Per-holding after-tax P&L** — each holding row in the investments table now shows "After tax: ±X" below the P&L badge when there is a non-zero P&L, applying the 25% Israeli capital gains tax at the holding level
+
+### Changed
+- Manual holding formula hint now reads `(manual — edit to fix)` instead of `(manual)` to guide users to correct stale current values via the edit form
+
+---
+
 ## [0.20.0] — 2026-04-30
 
 ### Added

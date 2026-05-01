@@ -141,6 +141,7 @@ const ASSET_TYPES = [
   { value: "etf", label: "ETF" },
   { value: "crypto", label: "Crypto" },
   { value: "fund", label: "Fund" },
+  { value: "pension_fund", label: "Pension Fund" },
   { value: "real_estate", label: "Real Estate" },
   { value: "other", label: "Other" },
 ];
@@ -866,8 +867,8 @@ export default function InvestmentsPage() {
                                     {ha.price_source === "live"
                                       ? `${h.quantity} × ${formatCurrency(ha.live_price!, ha.live_price_currency ?? h.currency)}`
                                       : ha.price_source === "manual"
-                                      ? `${h.quantity} × ${formatCurrency(ha.current_value_local / h.quantity, h.currency)} (manual)`
-                                      : `${h.quantity} × ${formatCurrency(h.avg_buy_price, h.currency)} (cost)`}
+                                      ? `${h.quantity} × ${formatCurrency(ha.current_value_local / h.quantity, h.currency)} (manual — edit to fix)`
+                                      : `${h.quantity} × ${formatCurrency(h.avg_buy_price, h.currency)} (cost basis)`}
                                   </p>
                                 </>
                               ) : (
@@ -878,7 +879,18 @@ export default function InvestmentsPage() {
                               )}
                             </td>
                             <td className="py-2.5 text-right">
-                              {ha ? <PnlBadge pnl={ha.unrealized_pnl} pct={ha.unrealized_pnl_pct} /> : "—"}
+                              {ha ? (
+                                <div className="space-y-0.5">
+                                  <PnlBadge pnl={ha.unrealized_pnl} pct={ha.unrealized_pnl_pct} />
+                                  {ha.unrealized_pnl !== 0 && (
+                                    <p className="text-[10px] text-muted-foreground text-right">
+                                      After tax: <span className={ha.pnl_after_tax >= 0 ? "text-green-600" : "text-red-500"}>
+                                        {ha.pnl_after_tax >= 0 ? "+" : ""}{formatCurrency(ha.pnl_after_tax, currency)}
+                                      </span>
+                                    </p>
+                                  )}
+                                </div>
+                              ) : "—"}
                             </td>
                             <td className="py-2.5 text-right">
                               <div className="flex justify-end gap-1">
