@@ -1,6 +1,6 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.22.0
+**Version:** 0.23.0
 **Last updated:** 2026-05-01
 
 ---
@@ -274,6 +274,30 @@ TASK 12 (market scanner)   → deferred; depends on TASK 11
 | 0007 | investment_accounts + investment_holdings |
 | 0008 | currency_rates |
 | 0009 | price_snapshots |
+
+---
+
+---
+
+## Phase 5: Workers + Market Expansion
+
+### TASK 19 — Workers module + TASE market support ✅ DONE
+
+**Type:** New module + market data extension
+**Risk:** 🟡 Moderate — no DB migration
+
+**Workers (APScheduler):**
+- `BackgroundScheduler` wired into FastAPI lifespan; starts/stops cleanly
+- `WORKERS_ENABLED` env flag (default `true`) — set to `false` to disable in test/CI
+- Job 1: `price_refresh` — runs daily at 20:00 UTC; fetches fresh prices for all distinct tickers in `investment_holdings`
+- Job 2: `goal_evaluation` — runs daily at 07:00 UTC; sweeps all investors, logs at-risk goal counts (read-only; no writes)
+
+**TASE market data:**
+- `market_data/fetcher.py` now has dual-provider dispatch
+  - `.TA` suffix → Yahoo Finance chart API (no key, free, returns ILS price)
+  - All others → Alpha Vantage (existing)
+- 8 TASE stocks added to market scanner catalog (BEZQ.TA, POLI.TA, LUMI.TA, ICL.TA, TEVA.TA, NICE.TA, ESLT.TA, DLEKG.TA)
+- 4 additional NASDAQ stocks added (AMZN, GOOGL, META, TSLA)
 
 ---
 

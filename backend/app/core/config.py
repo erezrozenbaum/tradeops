@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     ALPHA_VANTAGE_API_KEY: str = ""
     ENVIRONMENT: str = "development"
     DEBUG: bool = False
+    WORKERS_ENABLED: bool = True
 
     @property
     def is_production(self) -> bool:
