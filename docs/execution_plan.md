@@ -1,6 +1,6 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.24.0
+**Version:** 0.25.0
 **Last updated:** 2026-05-01
 
 ---
@@ -274,6 +274,9 @@ TASK 12 (market scanner)   → deferred; depends on TASK 11
 | 0007 | investment_accounts + investment_holdings |
 | 0008 | currency_rates |
 | 0009 | price_snapshots |
+| 0010 | portfolio_snapshots |
+| 0011 | goal tracking modes + progress logs |
+| 0012 | pension fund fields (current_balance, total_deposits, monthly_contribution, annual_return_rate) |
 
 ---
 

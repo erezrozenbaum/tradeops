@@ -13,13 +13,17 @@ class InvestmentHoldingCreate(BaseModel):
     isin: str | None = Field(None, max_length=20)
     name: str = Field(..., min_length=1, max_length=200)
     asset_type: HoldingAssetType
-    quantity: float = Field(..., gt=0)
-    avg_buy_price: float = Field(..., ge=0)
+    quantity: float = Field(0.0, ge=0)
+    avg_buy_price: float = Field(0.0, ge=0)
     currency: str = Field(..., min_length=3, max_length=3)
     fees: float = Field(0.0, ge=0)
     purchase_date: date | None = None
     current_value: float | None = Field(None, ge=0)
     notes: str | None = None
+    current_balance: float | None = Field(None, ge=0)
+    total_deposits: float | None = Field(None, ge=0)
+    monthly_contribution: float | None = Field(None, ge=0)
+    annual_return_rate: float | None = Field(None, ge=0)
 
 
 class InvestmentHoldingUpdate(BaseModel):
@@ -27,13 +31,17 @@ class InvestmentHoldingUpdate(BaseModel):
     isin: str | None = Field(None, max_length=20)
     name: str | None = Field(None, min_length=1, max_length=200)
     asset_type: HoldingAssetType | None = None
-    quantity: float | None = Field(None, gt=0)
+    quantity: float | None = Field(None, ge=0)
     avg_buy_price: float | None = Field(None, ge=0)
     currency: str | None = Field(None, min_length=3, max_length=3)
     fees: float | None = Field(None, ge=0)
     purchase_date: date | None = None
     current_value: float | None = Field(None, ge=0)
     notes: str | None = None
+    current_balance: float | None = Field(None, ge=0)
+    total_deposits: float | None = Field(None, ge=0)
+    monthly_contribution: float | None = Field(None, ge=0)
+    annual_return_rate: float | None = Field(None, ge=0)
 
 
 class InvestmentHoldingOut(BaseModel):
@@ -50,6 +58,10 @@ class InvestmentHoldingOut(BaseModel):
     purchase_date: date | None
     current_value: float | None
     notes: str | None
+    current_balance: float | None
+    total_deposits: float | None
+    monthly_contribution: float | None
+    annual_return_rate: float | None
     created_at: datetime
     updated_at: datetime
 
