@@ -172,6 +172,10 @@ def _fetch_yahoo_finance(ticker: str) -> tuple[float, str] | None:
         if price is None:
             log.warning("No price in Yahoo Finance response for %s", ticker)
             return None
+        # TASE prices are in agorot (ILA = Israeli Agora = 1/100 ILS); normalise to ILS
+        if currency == "ILA":
+            price = price / 100
+            currency = "ILS"
         return float(price), currency
     except Exception as exc:  # noqa: BLE001
         log.error("Yahoo Finance fetch failed for %s: %s", ticker, exc)
