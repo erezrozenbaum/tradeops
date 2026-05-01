@@ -106,6 +106,25 @@ interface PriceRefreshResult {
   cache_valid_until: string;
 }
 
+interface PensionSimResult {
+  holding_id: string;
+  fund_name: string;
+  currency: string;
+  current_balance: number;
+  current_age: number;
+  retirement_age: number;
+  years_to_retirement: number;
+  monthly_contribution: number;
+  annual_return_rate: number;
+  withdrawal_years: number;
+  projected_balance: number;
+  projected_from_current_balance: number;
+  projected_from_contributions: number;
+  total_contributions_added: number;
+  total_gains: number;
+  monthly_pension_estimate: number;
+}
+
 interface RebalanceTier {
   tier: string;
   label: string;
@@ -231,6 +250,12 @@ export default function InvestmentsPage() {
   const [editingHolding, setEditingHolding] = useState<{ accountId: string; holdingId: string } | null>(null);
   const [editHoldingForm, setEditHoldingForm] = useState(EMPTY_HOLDING);
   const [savingEditHolding, setSavingEditHolding] = useState(false);
+
+  // Pension simulation
+  const [simulatingHoldingId, setSimulatingHoldingId] = useState<string | null>(null);
+  const [simParams, setSimParams] = useState({ retirement_age: 67, monthly_contribution: 0, annual_return_rate: 5.0, withdrawal_years: 25 });
+  const [simResult, setSimResult] = useState<PensionSimResult | null>(null);
+  const [simLoading, setSimLoading] = useState(false);
 
   useEffect(() => {
     if (!investorId) return;
@@ -443,6 +468,36 @@ export default function InvestmentsPage() {
     if (!confirm("Remove this holding?")) return;
     await fetch(`/api/v1/investors/${investorId}/accounts/${accountId}/holdings/${holdingId}`, { method: "DELETE" });
     loadAll();
+  }
+
+  async function openSimulation(h: Holding) {
+    const params = {
+      retirement_age: simParams.retirement_age,
+      monthly_contribution: h.monthly_contribution ?? 0,
+      annual_return_rate: h.annual_return_rate ?? 5.0,
+      withdrawal_years: simParams.withdrawal_years,
+    };
+    setSimParams(params);
+    setSimulatingHoldingId(h.id);
+    setSimResult(null);
+    await runSimulation(h.id, params);
+  }
+
+  async function runSimulation(holdingId: string, params: typeof simParams) {
+    setSimLoading(true);
+    try {
+      const qs = new URLSearchParams({
+        holding_id: holdingId,
+        retirement_age: String(params.retirement_age),
+        monthly_contribution: String(params.monthly_contribution),
+        annual_return_rate: String(params.annual_return_rate),
+        withdrawal_years: String(params.withdrawal_years),
+      });
+      const res = await fetch(`/api/v1/investors/${investorId}/pension-simulation?${qs}`);
+      if (res.ok) setSimResult(await res.json());
+    } finally {
+      setSimLoading(false);
+    }
   }
 
   if (!investorId || loading) {
@@ -1037,6 +1092,16 @@ export default function InvestmentsPage() {
                             </td>
                             <td className="py-2.5 text-right">
                               <div className="flex justify-end gap-1">
+                                {isPension && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => simulatingHoldingId === h.id ? setSimulatingHoldingId(null) : openSimulation(h)}
+                                    className="text-xs text-blue-600 dark:text-blue-400 px-2"
+                                  >
+                                    Simulate
+                                  </Button>
+                                )}
                                 <Button variant="ghost" size="sm" onClick={() => startEditHolding(account.id, h)}>
                                   <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
                                 </Button>
@@ -1046,6 +1111,116 @@ export default function InvestmentsPage() {
                               </div>
                             </td>
                           </tr>
+                          {isPension && simulatingHoldingId === h.id && (
+                            <tr key={`sim-${h.id}`}>
+                              <td colSpan={7} className="pb-3">
+                                <div className="border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-4 bg-blue-50/40 dark:bg-blue-950/20">
+                                  <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide">Retirement Simulation — {h.name}</p>
+                                  <div className="grid grid-cols-4 gap-4">
+                                    <div className="space-y-1">
+                                      <label className="text-xs text-muted-foreground">Retirement age</label>
+                                      <Input
+                                        type="number"
+                                        min={50} max={90}
+                                        value={simParams.retirement_age}
+                                        onChange={e => {
+                                          const p = { ...simParams, retirement_age: parseInt(e.target.value) || 67 };
+                                          setSimParams(p);
+                                          runSimulation(h.id, p);
+                                        }}
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-xs text-muted-foreground">Monthly contribution ({h.currency})</label>
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        value={simParams.monthly_contribution}
+                                        onChange={e => {
+                                          const p = { ...simParams, monthly_contribution: parseFloat(e.target.value) || 0 };
+                                          setSimParams(p);
+                                          runSimulation(h.id, p);
+                                        }}
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-xs text-muted-foreground">Expected annual return (%)</label>
+                                      <Input
+                                        type="number"
+                                        min={0} max={30} step={0.5}
+                                        value={simParams.annual_return_rate}
+                                        onChange={e => {
+                                          const p = { ...simParams, annual_return_rate: parseFloat(e.target.value) || 0 };
+                                          setSimParams(p);
+                                          runSimulation(h.id, p);
+                                        }}
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-xs text-muted-foreground">Withdrawal period (years)</label>
+                                      <Input
+                                        type="number"
+                                        min={10} max={40}
+                                        value={simParams.withdrawal_years}
+                                        onChange={e => {
+                                          const p = { ...simParams, withdrawal_years: parseInt(e.target.value) || 25 };
+                                          setSimParams(p);
+                                          runSimulation(h.id, p);
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                  {simLoading && <p className="text-xs text-muted-foreground">Calculating…</p>}
+                                  {simResult && simResult.holding_id === h.id && !simLoading && (
+                                    <div className="space-y-3">
+                                      <div className="grid grid-cols-3 gap-3">
+                                        <div className="rounded-lg border border-border bg-background p-3">
+                                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Projected balance at {simResult.retirement_age}</p>
+                                          <p className="text-lg font-bold text-blue-700 dark:text-blue-400">{formatCurrency(simResult.projected_balance, simResult.currency)}</p>
+                                          <p className="text-xs text-muted-foreground mt-0.5">in {simResult.years_to_retirement} years</p>
+                                        </div>
+                                        <div className="rounded-lg border border-border bg-background p-3">
+                                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Monthly pension estimate</p>
+                                          <p className="text-lg font-bold text-green-600 dark:text-green-400">{formatCurrency(simResult.monthly_pension_estimate, simResult.currency)}</p>
+                                          <p className="text-xs text-muted-foreground mt-0.5">over {simResult.withdrawal_years} yrs</p>
+                                        </div>
+                                        <div className="rounded-lg border border-border bg-background p-3">
+                                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Investment gains</p>
+                                          <p className="text-lg font-bold text-emerald-600">{formatCurrency(simResult.total_gains, simResult.currency)}</p>
+                                          <p className="text-xs text-muted-foreground mt-0.5">+{formatCurrency(simResult.total_contributions_added, simResult.currency)} contributions</p>
+                                        </div>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <div className="flex justify-between text-xs text-muted-foreground">
+                                          <span>Current balance</span>
+                                          <span>Contributions</span>
+                                          <span>Investment gains</span>
+                                        </div>
+                                        <div className="h-3 rounded-full overflow-hidden flex">
+                                          {(() => {
+                                            const total = simResult.projected_balance || 1;
+                                            const balPct = (simResult.projected_from_current_balance / total) * 100;
+                                            const contPct = (simResult.projected_from_contributions / total) * 100;
+                                            const gainPct = Math.max(0, 100 - balPct - contPct);
+                                            return (
+                                              <>
+                                                <div className="bg-blue-500" style={{ width: `${balPct}%` }} title={`Current balance: ${balPct.toFixed(1)}%`} />
+                                                <div className="bg-indigo-400" style={{ width: `${contPct}%` }} title={`Contributions: ${contPct.toFixed(1)}%`} />
+                                                <div className="bg-emerald-500" style={{ width: `${gainPct}%` }} title={`Gains: ${gainPct.toFixed(1)}%`} />
+                                              </>
+                                            );
+                                          })()}
+                                        </div>
+                                        <p className="text-[10px] text-muted-foreground">
+                                          Age {simResult.current_age} → {simResult.retirement_age} · {simResult.annual_return_rate}% p.a. return
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
                           {isEditing && (
                             <tr key={`edit-${h.id}`}>
                               <td colSpan={7} className="pb-3">

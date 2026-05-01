@@ -10,6 +10,20 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.26.0] — 2026-05-01
+
+### Fixed
+- **Financial assets/liabilities now editable** — clicking the edit icon on any asset or liability expands an inline edit form; saves via `PUT /financial-profile/assets/{id}` and `PUT /financial-profile/liabilities/{id}` which already existed in the backend but had no frontend wiring
+
+### Added
+- **Pension simulation engine** (`pension_simulation/`) — pure-math projection for pension fund holdings; no DB migration
+  - Endpoint: `GET /api/v1/investors/{id}/pension-simulation?holding_id=&retirement_age=&monthly_contribution=&annual_return_rate=&withdrawal_years=`
+  - Formula: compound monthly interest on current balance + future contributions; withdrawal estimate over configurable period
+  - Uses investor `date_of_birth` from profile to compute current age and years to retirement
+- **Simulation panel on investments page** — "Simulate" button appears on pension fund holding rows; expands an interactive panel with 4 adjustable inputs (retirement age, monthly contribution, expected return %, withdrawal period); shows projected balance, monthly pension estimate, investment gains, and a stacked progress bar (current balance / contributions / gains)
+
+---
+
 ## [0.25.0] — 2026-05-01
 
 ### Added
