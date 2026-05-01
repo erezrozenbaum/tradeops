@@ -26,6 +26,7 @@ class HoldingAssetType(str, enum.Enum):
     etf = "etf"
     crypto = "crypto"
     fund = "fund"
+    pension_fund = "pension_fund"
     real_estate = "real_estate"
     other = "other"
 
