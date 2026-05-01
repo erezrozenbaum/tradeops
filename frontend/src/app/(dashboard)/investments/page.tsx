@@ -34,6 +34,9 @@ interface Holding {
   total_deposits: number | null;
   monthly_contribution: number | null;
   annual_return_rate: number | null;
+  monthly_contribution_employee: number | null;
+  monthly_contribution_employer: number | null;
+  fund_status: string | null;
 }
 
 interface Account {
@@ -109,6 +112,7 @@ interface PriceRefreshResult {
 interface PensionSimResult {
   holding_id: string;
   fund_name: string;
+  asset_type: string;
   currency: string;
   current_balance: number;
   current_age: number;
@@ -123,6 +127,12 @@ interface PensionSimResult {
   total_contributions_added: number;
   total_gains: number;
   monthly_pension_estimate: number;
+  fund_status: string | null;
+  tax_status: string | null;
+  tax_exemption_date: string | null;
+  years_until_tax_free: number | null;
+  monthly_contribution_employee: number | null;
+  monthly_contribution_employer: number | null;
 }
 
 interface RebalanceTier {
@@ -165,19 +175,34 @@ const ASSET_TYPES = [
   { value: "crypto", label: "Crypto" },
   { value: "fund", label: "Fund" },
   { value: "pension_fund", label: "Pension Fund" },
+  { value: "study_fund", label: "Study Fund (כה\"ת)" },
   { value: "real_estate", label: "Real Estate" },
   { value: "other", label: "Other" },
 ];
 
 const EMPTY_ACCOUNT = { provider_name: "", account_type: "brokerage", account_name: "", currency: "ILS", notes: "" };
-const EMPTY_HOLDING = { ticker: "", isin: "", name: "", asset_type: "stock", quantity: "", avg_buy_price: "", currency: "ILS", fees: "", purchase_date: "", current_value: "", notes: "", current_balance: "", total_deposits: "", monthly_contribution: "", annual_return_rate: "" };
+const EMPTY_HOLDING = { ticker: "", isin: "", name: "", asset_type: "stock", quantity: "", avg_buy_price: "", currency: "ILS", fees: "", purchase_date: "", current_value: "", notes: "", current_balance: "", total_deposits: "", monthly_contribution: "", annual_return_rate: "", monthly_contribution_employee: "", monthly_contribution_employer: "", fund_status: "active" };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const ALLOC_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#3b82f6", "#8b5cf6", "#ec4899"];
 
 function isPensionAccount(accountType: string) {
-  return accountType === "pension" || accountType === "keren_hishtalmut";
+  return accountType === "pension";
+}
+
+function isStudyFundAccount(accountType: string) {
+  return accountType === "keren_hishtalmut";
+}
+
+function studyFundTaxStatus(purchaseDate: string | null): { status: "Tax-Free" | "Locked" | null; yearsLeft: number | null } {
+  if (!purchaseDate) return { status: null, yearsLeft: null };
+  const start = new Date(purchaseDate);
+  const exempt = new Date(start.getFullYear() + 6, start.getMonth(), start.getDate());
+  const now = new Date();
+  if (now >= exempt) return { status: "Tax-Free", yearsLeft: 0 };
+  const yearsLeft = Math.round(((exempt.getTime() - now.getTime()) / (365.25 * 24 * 3600 * 1000)) * 10) / 10;
+  return { status: "Locked", yearsLeft };
 }
 
 function ilsEquiv(amount: number, fxRates: Record<string, number>, baseCurrency: string): string | null {
@@ -320,7 +345,25 @@ export default function InvestmentsPage() {
     try {
       const acct = accounts.find(a => a.id === accountId);
       const pension = isPensionAccount(acct?.account_type ?? "");
-      const body = pension
+      const studyFund = isStudyFundAccount(acct?.account_type ?? "");
+      const body = studyFund
+        ? {
+            name: holdingForm.name,
+            asset_type: "study_fund",
+            quantity: 0,
+            avg_buy_price: 0,
+            currency: holdingForm.currency,
+            fees: 0,
+            purchase_date: holdingForm.purchase_date || null,
+            current_balance: holdingForm.current_balance ? parseFloat(holdingForm.current_balance) : null,
+            total_deposits: holdingForm.total_deposits ? parseFloat(holdingForm.total_deposits) : null,
+            monthly_contribution_employee: holdingForm.monthly_contribution_employee ? parseFloat(holdingForm.monthly_contribution_employee) : null,
+            monthly_contribution_employer: holdingForm.monthly_contribution_employer ? parseFloat(holdingForm.monthly_contribution_employer) : null,
+            annual_return_rate: holdingForm.annual_return_rate ? parseFloat(holdingForm.annual_return_rate) : null,
+            fund_status: holdingForm.fund_status || "active",
+            notes: holdingForm.notes || null,
+          }
+        : pension
         ? {
             name: holdingForm.name,
             asset_type: "pension_fund",
@@ -411,6 +454,9 @@ export default function InvestmentsPage() {
       total_deposits: h.total_deposits != null ? String(h.total_deposits) : "",
       monthly_contribution: h.monthly_contribution != null ? String(h.monthly_contribution) : "",
       annual_return_rate: h.annual_return_rate != null ? String(h.annual_return_rate) : "",
+      monthly_contribution_employee: h.monthly_contribution_employee != null ? String(h.monthly_contribution_employee) : "",
+      monthly_contribution_employer: h.monthly_contribution_employer != null ? String(h.monthly_contribution_employer) : "",
+      fund_status: h.fund_status ?? "active",
     });
     setExpandedAccounts(prev => { const s = new Set(prev); s.add(accountId); return s; });
   }
@@ -420,7 +466,28 @@ export default function InvestmentsPage() {
     try {
       const acct = accounts.find(a => a.id === accountId);
       const pension = isPensionAccount(acct?.account_type ?? "");
-      const body = pension
+      const studyFund = isStudyFundAccount(acct?.account_type ?? "");
+      // Also detect by holding's own asset_type for cross-account editing
+      const holdingIsStudyFund = editHoldingForm.asset_type === "study_fund";
+      const holdingIsPension = editHoldingForm.asset_type === "pension_fund";
+      const body = (studyFund || holdingIsStudyFund)
+        ? {
+            name: editHoldingForm.name || undefined,
+            asset_type: "study_fund",
+            quantity: 0,
+            avg_buy_price: 0,
+            currency: editHoldingForm.currency || undefined,
+            fees: 0,
+            purchase_date: editHoldingForm.purchase_date || null,
+            current_balance: editHoldingForm.current_balance ? parseFloat(editHoldingForm.current_balance) : null,
+            total_deposits: editHoldingForm.total_deposits ? parseFloat(editHoldingForm.total_deposits) : null,
+            monthly_contribution_employee: editHoldingForm.monthly_contribution_employee ? parseFloat(editHoldingForm.monthly_contribution_employee) : null,
+            monthly_contribution_employer: editHoldingForm.monthly_contribution_employer ? parseFloat(editHoldingForm.monthly_contribution_employer) : null,
+            annual_return_rate: editHoldingForm.annual_return_rate ? parseFloat(editHoldingForm.annual_return_rate) : null,
+            fund_status: editHoldingForm.fund_status || "active",
+            notes: editHoldingForm.notes || null,
+          }
+        : (pension || holdingIsPension)
         ? {
             name: editHoldingForm.name || undefined,
             asset_type: "pension_fund",
@@ -471,9 +538,12 @@ export default function InvestmentsPage() {
   }
 
   async function openSimulation(h: Holding) {
+    const defaultContrib = h.asset_type === "study_fund"
+      ? (h.monthly_contribution_employee ?? 0) + (h.monthly_contribution_employer ?? 0)
+      : (h.monthly_contribution ?? 0);
     const params = {
       retirement_age: simParams.retirement_age,
-      monthly_contribution: h.monthly_contribution ?? 0,
+      monthly_contribution: defaultContrib,
       annual_return_rate: h.annual_return_rate ?? 5.0,
       withdrawal_years: simParams.withdrawal_years,
     };
@@ -867,9 +937,51 @@ export default function InvestmentsPage() {
                 {addingHoldingForAccount === account.id && (
                   <div className="border border-border rounded-lg p-4 space-y-3 bg-muted/30">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      {isPensionAccount(account.account_type) ? "Add pension fund" : "Add holding"}
+                      {isPensionAccount(account.account_type) ? "Add pension fund" : isStudyFundAccount(account.account_type) ? "Add study fund (כה\"ת)" : "Add holding"}
                     </p>
-                    {isPensionAccount(account.account_type) ? (
+                    {isStudyFundAccount(account.account_type) ? (
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1 col-span-3 sm:col-span-1">
+                          <label className="text-xs text-muted-foreground">Fund name *</label>
+                          <Input placeholder="e.g. Meitav Study Fund" value={holdingForm.name} onChange={e => setHoldingForm({ ...holdingForm, name: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Current balance *</label>
+                          <Input type="number" placeholder="120000" value={holdingForm.current_balance} onChange={e => setHoldingForm({ ...holdingForm, current_balance: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Total deposits</label>
+                          <Input type="number" placeholder="100000" value={holdingForm.total_deposits} onChange={e => setHoldingForm({ ...holdingForm, total_deposits: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Employee contribution / mo</label>
+                          <Input type="number" placeholder="1000" value={holdingForm.monthly_contribution_employee} onChange={e => setHoldingForm({ ...holdingForm, monthly_contribution_employee: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Employer contribution / mo</label>
+                          <Input type="number" placeholder="1500" value={holdingForm.monthly_contribution_employer} onChange={e => setHoldingForm({ ...holdingForm, monthly_contribution_employer: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Expected annual return (%)</label>
+                          <Input type="number" placeholder="5.0" value={holdingForm.annual_return_rate} onChange={e => setHoldingForm({ ...holdingForm, annual_return_rate: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Currency</label>
+                          <Input maxLength={3} value={holdingForm.currency} onChange={e => setHoldingForm({ ...holdingForm, currency: e.target.value.toUpperCase() })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Start date (for tax calculation)</label>
+                          <Input type="date" value={holdingForm.purchase_date} onChange={e => setHoldingForm({ ...holdingForm, purchase_date: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Fund status</label>
+                          <select className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background" value={holdingForm.fund_status} onChange={e => setHoldingForm({ ...holdingForm, fund_status: e.target.value })}>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                          </select>
+                        </div>
+                      </div>
+                    ) : isPensionAccount(account.account_type) ? (
                       <div className="grid grid-cols-3 gap-3">
                         <div className="space-y-1 col-span-3 sm:col-span-1">
                           <label className="text-xs text-muted-foreground">Fund name *</label>
@@ -948,12 +1060,14 @@ export default function InvestmentsPage() {
                         onClick={() => addHolding(account.id)}
                         disabled={
                           !holdingForm.name || savingHolding ||
-                          (isPensionAccount(account.account_type)
+                          (isStudyFundAccount(account.account_type)
+                            ? !holdingForm.current_balance
+                            : isPensionAccount(account.account_type)
                             ? !holdingForm.current_balance
                             : (!holdingForm.quantity || !holdingForm.avg_buy_price))
                         }
                       >
-                        {savingHolding ? "Saving…" : isPensionAccount(account.account_type) ? "Add fund" : "Add holding"}
+                        {savingHolding ? "Saving…" : isStudyFundAccount(account.account_type) ? "Add study fund" : isPensionAccount(account.account_type) ? "Add fund" : "Add holding"}
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => { setAddingHoldingForAccount(null); setHoldingForm(EMPTY_HOLDING); }}>
                         Cancel
@@ -984,7 +1098,10 @@ export default function InvestmentsPage() {
                         const ha = analysis?.holdings.find(x => x.id === h.id);
                         const isEditing = editingHolding?.holdingId === h.id;
                         const isPension = h.asset_type === "pension_fund";
-                        const calcValue = isPension
+                        const isStudyFund = h.asset_type === "study_fund";
+                        const isSavingsFund = isPension || isStudyFund;
+                        const taxInfo = isStudyFund ? studyFundTaxStatus(h.purchase_date) : null;
+                        const calcValue = isSavingsFund
                           ? (h.current_balance ?? h.total_deposits ?? 0)
                           : h.quantity * h.avg_buy_price;
                         return (
@@ -993,17 +1110,25 @@ export default function InvestmentsPage() {
                             <td className="py-2.5 pr-3">
                               <p className="font-medium">{h.name}</p>
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                {!isPension && (h.ticker || h.isin) && (
+                                {!isSavingsFund && (h.ticker || h.isin) && (
                                   <p className="text-xs text-muted-foreground">{h.ticker ?? h.isin}</p>
                                 )}
-                                {!isPension && ha?.price_source === "live" && (
+                                {!isSavingsFund && ha?.price_source === "live" && (
                                   <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-1.5 py-0 text-[10px] font-medium text-green-700 dark:text-green-400">Live</span>
                                 )}
-                                {!isPension && ha?.price_source !== "live" && h.ticker && (
+                                {!isSavingsFund && ha?.price_source !== "live" && h.ticker && (
                                   <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0 text-[10px] font-medium text-amber-700 dark:text-amber-400">Manual — refresh for live</span>
                                 )}
                                 {isPension && (
                                   <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/30 px-1.5 py-0 text-[10px] font-medium text-blue-700 dark:text-blue-400">Pension fund</span>
+                                )}
+                                {isStudyFund && taxInfo?.status && (
+                                  <span className={`inline-flex items-center rounded-full px-1.5 py-0 text-[10px] font-medium ${taxInfo.status === "Tax-Free" ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" : "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400"}`}>
+                                    {taxInfo.status === "Tax-Free" ? "✅ Tax-Free" : `🔒 Locked${taxInfo.yearsLeft ? ` · ${taxInfo.yearsLeft}y` : ""}`}
+                                  </span>
+                                )}
+                                {isStudyFund && h.fund_status === "inactive" && (
+                                  <span className="inline-flex items-center rounded-full bg-muted px-1.5 py-0 text-[10px] font-medium text-muted-foreground">Inactive</span>
                                 )}
                               </div>
                             </td>
@@ -1011,14 +1136,23 @@ export default function InvestmentsPage() {
                               <Badge variant="muted" className="text-[10px] py-0">{assetTypeLabel(h.asset_type)}</Badge>
                             </td>
                             <td className="py-2.5 text-right tabular-nums">
-                              {isPension ? (
+                              {isStudyFund ? (
+                                (() => {
+                                  const ee = h.monthly_contribution_employee ?? 0;
+                                  const er = h.monthly_contribution_employer ?? 0;
+                                  const total = ee + er;
+                                  return total > 0
+                                    ? <span className="text-xs text-muted-foreground">+{formatCurrency(total, h.currency)}/mo</span>
+                                    : <span className="text-muted-foreground">—</span>;
+                                })()
+                              ) : isPension ? (
                                 h.monthly_contribution != null
                                   ? <span className="text-xs text-muted-foreground">+{formatCurrency(h.monthly_contribution, h.currency)}/mo</span>
                                   : <span className="text-muted-foreground">—</span>
                               ) : h.quantity}
                             </td>
                             <td className="py-2.5 text-right tabular-nums">
-                              {isPension ? (
+                              {isSavingsFund ? (
                                 h.total_deposits != null
                                   ? <p className="tabular-nums text-xs text-muted-foreground">{formatCurrency(h.total_deposits, h.currency)} deposited</p>
                                   : <span className="text-muted-foreground">—</span>
@@ -1035,7 +1169,7 @@ export default function InvestmentsPage() {
                               {ha ? (
                                 <>
                                   <p className="font-medium">{formatCurrency(ha.current_value_base, currency)}</p>
-                                  {isPension ? (
+                                  {isSavingsFund ? (
                                     <p className="text-[10px] text-muted-foreground">
                                       {h.current_balance != null ? `Balance: ${formatCurrency(h.current_balance, h.currency)}` : "Balance not set — edit to add"}
                                     </p>
@@ -1072,7 +1206,7 @@ export default function InvestmentsPage() {
                               ) : (
                                 <>
                                   <p>{formatCurrency(calcValue, h.currency)}</p>
-                                  {!isPension && <p className="text-[10px] text-muted-foreground">{h.quantity} × {formatCurrency(h.avg_buy_price, h.currency)}</p>}
+                                  {!isSavingsFund && <p className="text-[10px] text-muted-foreground">{h.quantity} × {formatCurrency(h.avg_buy_price, h.currency)}</p>}
                                 </>
                               )}
                             </td>
@@ -1092,7 +1226,7 @@ export default function InvestmentsPage() {
                             </td>
                             <td className="py-2.5 text-right">
                               <div className="flex justify-end gap-1">
-                                {isPension && (
+                                {isSavingsFund && (
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -1111,7 +1245,7 @@ export default function InvestmentsPage() {
                               </div>
                             </td>
                           </tr>
-                          {isPension && simulatingHoldingId === h.id && (
+                          {isSavingsFund && simulatingHoldingId === h.id && (
                             <tr key={`sim-${h.id}`}>
                               <td colSpan={7} className="pb-3">
                                 <div className="border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-4 bg-blue-50/40 dark:bg-blue-950/20">
@@ -1215,6 +1349,27 @@ export default function InvestmentsPage() {
                                           Age {simResult.current_age} → {simResult.retirement_age} · {simResult.annual_return_rate}% p.a. return
                                         </p>
                                       </div>
+                                      {simResult.asset_type === "study_fund" && (
+                                        <div className="flex flex-wrap gap-4 pt-1 border-t border-border">
+                                          {simResult.tax_status && (
+                                            <span className={`text-xs font-medium ${simResult.tax_status === "Tax-Free" ? "text-green-600" : "text-orange-500"}`}>
+                                              {simResult.tax_status === "Tax-Free" ? "✅ Tax-Free" : `🔒 Locked`}
+                                              {simResult.tax_exemption_date && ` · Eligible ${simResult.tax_exemption_date}`}
+                                              {simResult.years_until_tax_free != null && simResult.years_until_tax_free > 0 && ` · ${simResult.years_until_tax_free}y remaining`}
+                                            </span>
+                                          )}
+                                          {simResult.fund_status === "inactive" && (
+                                            <span className="text-xs text-muted-foreground italic">
+                                              This fund is inactive — no new contributions. Resuming contributions can significantly increase long-term value.
+                                            </span>
+                                          )}
+                                          {simResult.monthly_contribution_employee != null && simResult.monthly_contribution_employer != null && (
+                                            <span className="text-xs text-muted-foreground">
+                                              Employee: {formatCurrency(simResult.monthly_contribution_employee, simResult.currency)}/mo · Employer: {formatCurrency(simResult.monthly_contribution_employer, simResult.currency)}/mo
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -1226,9 +1381,51 @@ export default function InvestmentsPage() {
                               <td colSpan={7} className="pb-3">
                                 <div className="border border-primary/30 rounded-lg p-4 space-y-3 bg-muted/30">
                                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                                    {isPension ? "Edit pension fund" : "Edit holding"}
+                                    {isStudyFund ? "Edit study fund (כה\"ת)" : isPension ? "Edit pension fund" : "Edit holding"}
                                   </p>
-                                  {isPension ? (
+                                  {isStudyFund ? (
+                                    <div className="grid grid-cols-3 gap-3">
+                                      <div className="space-y-1 col-span-3 sm:col-span-1">
+                                        <label className="text-xs text-muted-foreground">Fund name *</label>
+                                        <Input value={editHoldingForm.name} onChange={e => setEditHoldingForm({ ...editHoldingForm, name: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Current balance *</label>
+                                        <Input type="number" value={editHoldingForm.current_balance} onChange={e => setEditHoldingForm({ ...editHoldingForm, current_balance: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Total deposits</label>
+                                        <Input type="number" value={editHoldingForm.total_deposits} onChange={e => setEditHoldingForm({ ...editHoldingForm, total_deposits: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Employee contribution / mo</label>
+                                        <Input type="number" value={editHoldingForm.monthly_contribution_employee} onChange={e => setEditHoldingForm({ ...editHoldingForm, monthly_contribution_employee: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Employer contribution / mo</label>
+                                        <Input type="number" value={editHoldingForm.monthly_contribution_employer} onChange={e => setEditHoldingForm({ ...editHoldingForm, monthly_contribution_employer: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Expected annual return (%)</label>
+                                        <Input type="number" value={editHoldingForm.annual_return_rate} onChange={e => setEditHoldingForm({ ...editHoldingForm, annual_return_rate: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Currency</label>
+                                        <Input maxLength={3} value={editHoldingForm.currency} onChange={e => setEditHoldingForm({ ...editHoldingForm, currency: e.target.value.toUpperCase() })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Start date (for tax calculation)</label>
+                                        <Input type="date" value={editHoldingForm.purchase_date} onChange={e => setEditHoldingForm({ ...editHoldingForm, purchase_date: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Fund status</label>
+                                        <select className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background" value={editHoldingForm.fund_status} onChange={e => setEditHoldingForm({ ...editHoldingForm, fund_status: e.target.value })}>
+                                          <option value="active">Active</option>
+                                          <option value="inactive">Inactive</option>
+                                        </select>
+                                      </div>
+                                    </div>
+                                  ) : isPension ? (
                                     <div className="grid grid-cols-3 gap-3">
                                       <div className="space-y-1 col-span-3 sm:col-span-1">
                                         <label className="text-xs text-muted-foreground">Fund name *</label>
@@ -1276,7 +1473,7 @@ export default function InvestmentsPage() {
                                       <div className="space-y-1">
                                         <label className="text-xs text-muted-foreground">Asset type</label>
                                         <Select value={editHoldingForm.asset_type} onChange={e => setEditHoldingForm({ ...editHoldingForm, asset_type: e.target.value })}>
-                                          {ASSET_TYPES.filter(t => t.value !== "pension_fund").map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                                          {ASSET_TYPES.filter(t => t.value !== "pension_fund" && t.value !== "study_fund").map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                                         </Select>
                                       </div>
                                       <div className="space-y-1">
