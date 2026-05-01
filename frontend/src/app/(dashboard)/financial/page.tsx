@@ -77,6 +77,14 @@ export default function FinancialPage() {
     currency: "ILS",
   });
 
+  // Edit asset
+  const [editingAsset, setEditingAsset] = useState<string | null>(null);
+  const [editAssetForm, setEditAssetForm] = useState({ name: "", asset_type: "cash", current_value: "", currency: "ILS", is_liquid: true });
+
+  // Edit liability
+  const [editingLiability, setEditingLiability] = useState<string | null>(null);
+  const [editLiabilityForm, setEditLiabilityForm] = useState({ name: "", liability_type: "personal_loan", outstanding_balance: "", monthly_payment: "", interest_rate_pct: "", currency: "ILS" });
+
   useEffect(() => {
     if (!investorId) return;
     loadProfile();
@@ -180,6 +188,32 @@ export default function FinancialPage() {
     }
   }
 
+  function startEditAsset(asset: FinancialAsset) {
+    setEditingAsset(asset.id);
+    setEditAssetForm({
+      name: asset.name,
+      asset_type: asset.asset_type,
+      current_value: String(asset.current_value),
+      currency: asset.currency,
+      is_liquid: asset.is_liquid,
+    });
+  }
+
+  async function updateAsset(assetId: string) {
+    const res = await fetch(`/api/v1/investors/${investorId}/financial-profile/assets/${assetId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: editAssetForm.name,
+        asset_type: editAssetForm.asset_type,
+        current_value: parseFloat(editAssetForm.current_value),
+        currency: editAssetForm.currency,
+        is_liquid: editAssetForm.is_liquid,
+      }),
+    });
+    if (res.ok) { setEditingAsset(null); loadProfile(); }
+  }
+
   async function removeAsset(assetId: string) {
     if (!confirm("Remove this asset?")) return;
     await fetch(`/api/v1/investors/${investorId}/financial-profile/assets/${assetId}`, {
@@ -216,6 +250,34 @@ export default function FinancialPage() {
       });
       loadProfile();
     }
+  }
+
+  function startEditLiability(lib: FinancialLiability) {
+    setEditingLiability(lib.id);
+    setEditLiabilityForm({
+      name: lib.name,
+      liability_type: lib.liability_type,
+      outstanding_balance: String(lib.outstanding_balance),
+      monthly_payment: String(lib.monthly_payment),
+      interest_rate_pct: lib.interest_rate_pct != null ? String(lib.interest_rate_pct) : "",
+      currency: lib.currency,
+    });
+  }
+
+  async function updateLiability(liabilityId: string) {
+    const res = await fetch(`/api/v1/investors/${investorId}/financial-profile/liabilities/${liabilityId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: editLiabilityForm.name,
+        liability_type: editLiabilityForm.liability_type,
+        outstanding_balance: parseFloat(editLiabilityForm.outstanding_balance),
+        monthly_payment: parseFloat(editLiabilityForm.monthly_payment || "0"),
+        interest_rate_pct: editLiabilityForm.interest_rate_pct ? parseFloat(editLiabilityForm.interest_rate_pct) : null,
+        currency: editLiabilityForm.currency,
+      }),
+    });
+    if (res.ok) { setEditingLiability(null); loadProfile(); }
   }
 
   async function removeLiability(liabilityId: string) {
@@ -579,22 +641,62 @@ export default function FinancialPage() {
             ) : (
               <div className="space-y-2">
                 {profile.assets.map((asset) => (
-                  <div key={asset.id} className="flex items-center justify-between py-2.5 px-3 rounded-md border border-border">
-                    <div>
-                      <p className="text-sm font-medium">{asset.name}</p>
-                      <p className="text-xs text-muted-foreground capitalize">
-                        {asset.asset_type.replace(/_/g, " ")}
-                        {asset.is_liquid && " · liquid"}
-                      </p>
+                  <div key={asset.id}>
+                    <div className="flex items-center justify-between py-2.5 px-3 rounded-md border border-border">
+                      <div>
+                        <p className="text-sm font-medium">{asset.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {asset.asset_type.replace(/_/g, " ")}
+                          {asset.is_liquid && " · liquid"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm font-semibold mr-2">
+                          {formatCurrency(asset.current_value, asset.currency)}
+                        </span>
+                        <Button variant="ghost" size="icon" onClick={() => editingAsset === asset.id ? setEditingAsset(null) : startEditAsset(asset)}>
+                          <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => removeAsset(asset.id)}>
+                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold">
-                        {formatCurrency(asset.current_value, asset.currency)}
-                      </span>
-                      <Button variant="ghost" size="icon" onClick={() => removeAsset(asset.id)}>
-                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                      </Button>
-                    </div>
+                    {editingAsset === asset.id && (
+                      <div className="mt-1 p-3 rounded-md border border-primary/30 bg-muted/40 space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Name">
+                            <Input value={editAssetForm.name} onChange={e => setEditAssetForm({ ...editAssetForm, name: e.target.value })} />
+                          </Field>
+                          <Field label="Type">
+                            <Select value={editAssetForm.asset_type} onChange={e => setEditAssetForm({ ...editAssetForm, asset_type: e.target.value })}>
+                              <option value="cash">Cash</option>
+                              <option value="stocks">Stocks</option>
+                              <option value="bonds">Bonds</option>
+                              <option value="etf">ETF</option>
+                              <option value="real_estate">Real estate</option>
+                              <option value="crypto">Crypto</option>
+                              <option value="pension">Pension</option>
+                              <option value="other">Other</option>
+                            </Select>
+                          </Field>
+                          <Field label="Value">
+                            <Input type="number" value={editAssetForm.current_value} onChange={e => setEditAssetForm({ ...editAssetForm, current_value: e.target.value })} />
+                          </Field>
+                          <Field label="Currency">
+                            <Input maxLength={3} value={editAssetForm.currency} onChange={e => setEditAssetForm({ ...editAssetForm, currency: e.target.value.toUpperCase() })} />
+                          </Field>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input type="checkbox" id={`liquid-${asset.id}`} checked={editAssetForm.is_liquid} onChange={e => setEditAssetForm({ ...editAssetForm, is_liquid: e.target.checked })} className="h-4 w-4" />
+                          <label htmlFor={`liquid-${asset.id}`} className="text-xs">Liquid asset</label>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => updateAsset(asset.id)} disabled={!editAssetForm.name || !editAssetForm.current_value}>Save</Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditingAsset(null)}>Cancel</Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -691,29 +793,69 @@ export default function FinancialPage() {
             ) : (
               <div className="space-y-2">
                 {profile.liabilities.map((lib) => (
-                  <div key={lib.id} className="flex items-center justify-between py-2.5 px-3 rounded-md border border-border">
-                    <div>
-                      <p className="text-sm font-medium">{lib.name}</p>
-                      <p className="text-xs text-muted-foreground capitalize">
-                        {lib.liability_type.replace(/_/g, " ")}
-                        {lib.interest_rate_pct != null && ` · ${lib.interest_rate_pct}% p.a.`}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <span className="text-sm font-semibold">
-                          {formatCurrency(lib.outstanding_balance, lib.currency)}
-                        </span>
-                        {lib.monthly_payment > 0 && (
-                          <p className="text-xs text-muted-foreground">
-                            {formatCurrency(lib.monthly_payment, lib.currency)}/mo
-                          </p>
-                        )}
+                  <div key={lib.id}>
+                    <div className="flex items-center justify-between py-2.5 px-3 rounded-md border border-border">
+                      <div>
+                        <p className="text-sm font-medium">{lib.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {lib.liability_type.replace(/_/g, " ")}
+                          {lib.interest_rate_pct != null && ` · ${lib.interest_rate_pct}% p.a.`}
+                        </p>
                       </div>
-                      <Button variant="ghost" size="icon" onClick={() => removeLiability(lib.id)}>
-                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <div className="text-right mr-2">
+                          <span className="text-sm font-semibold">
+                            {formatCurrency(lib.outstanding_balance, lib.currency)}
+                          </span>
+                          {lib.monthly_payment > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              {formatCurrency(lib.monthly_payment, lib.currency)}/mo
+                            </p>
+                          )}
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => editingLiability === lib.id ? setEditingLiability(null) : startEditLiability(lib)}>
+                          <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => removeLiability(lib.id)}>
+                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+                      </div>
                     </div>
+                    {editingLiability === lib.id && (
+                      <div className="mt-1 p-3 rounded-md border border-primary/30 bg-muted/40 space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Name">
+                            <Input value={editLiabilityForm.name} onChange={e => setEditLiabilityForm({ ...editLiabilityForm, name: e.target.value })} />
+                          </Field>
+                          <Field label="Type">
+                            <Select value={editLiabilityForm.liability_type} onChange={e => setEditLiabilityForm({ ...editLiabilityForm, liability_type: e.target.value })}>
+                              <option value="mortgage">Mortgage</option>
+                              <option value="personal_loan">Personal loan</option>
+                              <option value="credit_card">Credit card</option>
+                              <option value="car_loan">Car loan</option>
+                              <option value="student_loan">Student loan</option>
+                              <option value="other">Other</option>
+                            </Select>
+                          </Field>
+                          <Field label="Outstanding balance">
+                            <Input type="number" value={editLiabilityForm.outstanding_balance} onChange={e => setEditLiabilityForm({ ...editLiabilityForm, outstanding_balance: e.target.value })} />
+                          </Field>
+                          <Field label="Monthly payment">
+                            <Input type="number" value={editLiabilityForm.monthly_payment} onChange={e => setEditLiabilityForm({ ...editLiabilityForm, monthly_payment: e.target.value })} />
+                          </Field>
+                          <Field label="Interest rate %">
+                            <Input type="number" placeholder="Optional" value={editLiabilityForm.interest_rate_pct} onChange={e => setEditLiabilityForm({ ...editLiabilityForm, interest_rate_pct: e.target.value })} />
+                          </Field>
+                          <Field label="Currency">
+                            <Input maxLength={3} value={editLiabilityForm.currency} onChange={e => setEditLiabilityForm({ ...editLiabilityForm, currency: e.target.value.toUpperCase() })} />
+                          </Field>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => updateLiability(lib.id)} disabled={!editLiabilityForm.name || !editLiabilityForm.outstanding_balance}>Save</Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditingLiability(null)}>Cancel</Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
