@@ -69,6 +69,11 @@ class InvestmentHolding(Base, UUIDMixin, TimestampMixin):
     purchase_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     current_value: Mapped[float | None] = mapped_column(Float, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Pension fund fields (only meaningful when asset_type == "pension_fund")
+    current_balance: Mapped[float | None] = mapped_column(Float, nullable=True)
+    total_deposits: Mapped[float | None] = mapped_column(Float, nullable=True)
+    monthly_contribution: Mapped[float | None] = mapped_column(Float, nullable=True)
+    annual_return_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     account: Mapped["InvestmentAccount"] = relationship(
         "InvestmentAccount", back_populates="holdings"
