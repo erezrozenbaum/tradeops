@@ -1,13 +1,28 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.api.v1.router import api_router
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if settings.WORKERS_ENABLED:
+        from app.workers import scheduler
+        scheduler.start()
+    yield
+    if settings.WORKERS_ENABLED:
+        from app.workers import scheduler
+        scheduler.stop()
+
+
 app = FastAPI(
     title="TradeOps AI",
     version="0.1.0",
     redirect_slashes=False,
+    lifespan=lifespan,
     docs_url="/docs" if not settings.is_production else None,
     redoc_url="/redoc" if not settings.is_production else None,
 )
