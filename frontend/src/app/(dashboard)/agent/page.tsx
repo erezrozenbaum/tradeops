@@ -234,10 +234,10 @@ export default function AgentPage() {
                             {action.ticker && (
                               <span className="font-mono text-xs text-muted-foreground">{action.ticker}</span>
                             )}
-                            <Badge variant="outline" className={`text-xs ${urg.color}`}>
+                            <Badge variant="muted" className={`text-xs ${urg.color}`}>
                               {urg.label}
                             </Badge>
-                            <Badge variant="outline" className="text-xs capitalize">
+                            <Badge variant="muted" className="text-xs capitalize">
                               {action.action.replace("_", " ")}
                             </Badge>
                             {action.suggested_amount != null && action.currency && (
@@ -271,7 +271,7 @@ export default function AgentPage() {
                           <div className="flex items-center gap-2">
                             <span className="font-mono font-semibold text-sm">{opp.ticker}</span>
                             {opp.is_in_portfolio && (
-                              <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-600 border-green-200">
+                              <Badge variant="muted" className="text-[10px] bg-green-500/10 text-green-600 border-green-200">
                                 Owned
                               </Badge>
                             )}

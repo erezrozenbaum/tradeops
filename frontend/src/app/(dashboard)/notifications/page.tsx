@@ -101,7 +101,7 @@ export default function NotificationsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <p className="font-medium text-sm">{n.title}</p>
-                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${cfg.badge}`}>
+                        <Badge variant="muted" className={`text-[10px] px-1.5 py-0 ${cfg.badge}`}>
                           {TYPE_LABELS[n.type] ?? n.type}
                         </Badge>
                       </div>
@@ -137,7 +137,7 @@ export default function NotificationsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <p className="font-medium text-sm">{n.title}</p>
-                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${cfg.badge}`}>
+                        <Badge variant="muted" className={`text-[10px] px-1.5 py-0 ${cfg.badge}`}>
                           {TYPE_LABELS[n.type] ?? n.type}
                         </Badge>
                       </div>
