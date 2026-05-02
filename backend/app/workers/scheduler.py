@@ -20,6 +20,7 @@ _started = False
 def _register_jobs() -> None:
     from app.workers.jobs.price_refresh import refresh_all_prices
     from app.workers.jobs.goal_evaluation import evaluate_all_goals
+    from app.workers.jobs.notification_alerts import send_notification_alerts
 
     _scheduler.add_job(
         refresh_all_prices,
@@ -35,6 +36,13 @@ def _register_jobs() -> None:
         replace_existing=True,
         misfire_grace_time=3600,
     )
+    _scheduler.add_job(
+        send_notification_alerts,
+        CronTrigger(hour=8, minute=30),
+        id="notification_alerts",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
 
 
 def start() -> None:
@@ -44,7 +52,7 @@ def start() -> None:
     _register_jobs()
     _scheduler.start()
     _started = True
-    log.info("Workers scheduler started (jobs: price_refresh @ 20:00 UTC, goal_evaluation @ 07:00 UTC)")
+    log.info("Workers scheduler started (jobs: price_refresh @ 20:00 UTC, goal_evaluation @ 07:00 UTC, notification_alerts @ 08:30 UTC)")
 
 
 def stop() -> None:
