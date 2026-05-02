@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -13,6 +13,7 @@ from app.schemas.investment_account import (
     InvestmentHoldingUpdate,
 )
 from app.holdings import service
+from app.holdings.csv_parser import parse_holdings_csv
 
 router = APIRouter()
 
@@ -126,3 +127,26 @@ def delete_holding(
 ):
     if not service.delete_holding(db, investor_id, account_id, holding_id):
         raise HTTPException(status_code=404, detail="Holding not found")
+
+
+@router.post(
+    "/{investor_id}/accounts/{account_id}/holdings/import-csv",
+    status_code=status.HTTP_201_CREATED,
+)
+async def import_holdings_csv(
+    investor_id: uuid.UUID,
+    account_id: uuid.UUID,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    account = service.get_account(db, investor_id, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    content = await file.read()
+    holdings, errors = parse_holdings_csv(content)
+    created = []
+    for h in holdings:
+        result = service.add_holding(db, investor_id, account_id, h)
+        if result:
+            created.append(result)
+    return {"imported": len(created), "errors": errors}

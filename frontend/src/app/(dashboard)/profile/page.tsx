@@ -26,6 +26,8 @@ interface InvestorProfile {
   preferred_assets: string[] | null;
   trading_frequency: string | null;
   guardian_required: boolean;
+  alert_email: string | null;
+  email_alerts_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -159,11 +161,15 @@ export default function ProfilePage() {
               ? form.preferred_assets
               : null,
           trading_frequency: form.trading_frequency || null,
+          alert_email: form.alert_email || null,
+          email_alerts_enabled: form.email_alerts_enabled ?? false,
         }),
       });
       const updated = await res.json();
       setProfile(updated);
       setEditing(false);
+      // Regenerate risk model silently after profile changes affect risk inputs
+      fetch(`/api/v1/investors/${investorId}/risk-model`, { method: "POST" }).catch(() => {});
     } catch {
       alert("Failed to save");
     } finally {
@@ -312,6 +318,24 @@ export default function ProfilePage() {
                     </div>
                   </dl>
                 </div>
+                {/* Alert settings (view mode) */}
+                {(profile.alert_email || profile.email_alerts_enabled) && (
+                  <div className="pt-4 border-t border-border">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                      Email Alerts
+                    </p>
+                    <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
+                      <div>
+                        <dt className="text-xs text-muted-foreground font-medium mb-0.5">Alert email</dt>
+                        <dd className="text-sm">{profile.alert_email ?? "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-muted-foreground font-medium mb-0.5">Daily alerts</dt>
+                        <dd className="text-sm">{profile.email_alerts_enabled ? "Enabled" : "Disabled"}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -475,6 +499,36 @@ export default function ProfilePage() {
                         })}
                       </div>
                     </Field>
+                  </div>
+                </div>
+
+                {/* Alert settings */}
+                <div className="pt-2 border-t border-border">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                    Email Alerts
+                  </p>
+                  <div className="space-y-3">
+                    <Field label="Alert email address">
+                      <input
+                        type="email"
+                        placeholder="you@example.com"
+                        value={form.alert_email ?? ""}
+                        onChange={(e) => setForm({ ...form, alert_email: e.target.value })}
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      />
+                    </Field>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="email_alerts_enabled"
+                        checked={form.email_alerts_enabled ?? false}
+                        onChange={(e) => setForm({ ...form, email_alerts_enabled: e.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      <label htmlFor="email_alerts_enabled" className="text-sm">
+                        Send daily email alerts for at-risk goals
+                      </label>
+                    </div>
                   </div>
                 </div>
 

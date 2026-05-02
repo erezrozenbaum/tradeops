@@ -10,6 +10,27 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.28.0] — 2026-05-02
+
+### Fixed
+- **Risk model auto-regeneration** — profile save now fires `POST /risk-model` in background so the risk model stays in sync with profile changes (experience level, risk tolerance, time horizon, etc.)
+- **Vehicle as a financial asset type** — added `vehicle` to the `AssetType` enum; migration 0014 adds it to the PostgreSQL enum; financial profile add/edit dropdowns now include "Vehicle"
+
+### Added
+- **Email alerts (TASK 20)** — daily goal at-risk notifications via SMTP
+  - Migration 0015: adds `alert_email` (VARCHAR 255) and `email_alerts_enabled` (BOOLEAN, default false) to `investor_profiles`
+  - `app/notifications/email.py` — `send_alert_email()` using `smtplib` + STARTTLS; silent no-op when SMTP env vars are absent
+  - `goal_evaluation` worker now sends personalised alert email to any investor who has `email_alerts_enabled=true` and at-risk goals
+  - Profile page: "Email Alerts" section with alert email address field + enable checkbox in edit form; view mode shows current settings
+  - Configure via env: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `ALERT_FROM_EMAIL`
+- **CSV import for holdings (TASK 21)** — bulk import holdings from a CSV file
+  - Backend: `POST /api/v1/investors/{id}/accounts/{account_id}/holdings/import-csv` — accepts multipart CSV upload; returns `{ imported, errors }`
+  - `app/holdings/csv_parser.py` — parses rows, validates `asset_type`, handles UTF-8/BOM/Latin-1, returns per-row errors for invalid rows while continuing to import valid ones
+  - CSV format: `name`, `asset_type`, `currency` (required); `ticker`, `isin`, `quantity`, `avg_buy_price`, `purchase_date`, `notes` (optional)
+  - Investments page: "CSV" button on each account card header triggers a hidden file picker; result banner shows imported count and any row errors
+
+---
+
 ## [0.27.0] — 2026-05-01
 
 ### Added

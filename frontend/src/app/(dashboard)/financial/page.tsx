@@ -596,6 +596,7 @@ export default function FinancialPage() {
                       <option value="real_estate">Real estate</option>
                       <option value="crypto">Crypto</option>
                       <option value="pension">Pension</option>
+                      <option value="vehicle">Vehicle</option>
                       <option value="other">Other</option>
                     </Select>
                   </Field>
@@ -677,6 +678,7 @@ export default function FinancialPage() {
                               <option value="real_estate">Real estate</option>
                               <option value="crypto">Crypto</option>
                               <option value="pension">Pension</option>
+                              <option value="vehicle">Vehicle</option>
                               <option value="other">Other</option>
                             </Select>
                           </Field>

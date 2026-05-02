@@ -39,6 +39,8 @@ class InvestorProfileUpdate(BaseModel):
     preferred_assets: list[str] | None = None
     trading_frequency: TradingFrequency | None = None
     guardian_required: bool | None = None
+    alert_email: str | None = None
+    email_alerts_enabled: bool | None = None
 
 
 class InvestorProfileOut(BaseModel):
@@ -58,6 +60,8 @@ class InvestorProfileOut(BaseModel):
     preferred_assets: list[str] | None
     trading_frequency: TradingFrequency | None
     guardian_required: bool
+    alert_email: str | None
+    email_alerts_enabled: bool
     created_at: datetime
     updated_at: datetime
 
