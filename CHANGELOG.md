@@ -10,6 +10,32 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.30.0] — 2026-05-02
+
+### Added
+- **Portfolio value history** — `price_refresh` worker now saves a portfolio snapshot for every investor after daily price refresh; chart on investments page populates automatically over time
+- **Debt Payoff Planner (TASK C)** — `GET /api/v1/investors/{id}/debt-planner?strategy=avalanche|snowball&extra_monthly=N`
+  - Avalanche (highest-interest-first) and snowball (smallest-balance-first) strategies
+  - Returns per-debt payoff order, months to debt-free, total interest, debt-free date
+  - `/debt-planner` page: strategy selector, extra payment input, summary cards, ordered debt cards
+- **Watchlist (TASK D)** — track market instruments without owning them
+  - Migration 0017: `watchlist_items` table with unique constraint per investor+ticker
+  - `GET/POST/DELETE /api/v1/investors/{id}/watchlist` — cached price and age enriched on read
+  - Daily `price_refresh` worker now also fetches prices for watchlist tickers
+  - `/watchlist` page: add by ticker/name/type, shows current price and data age
+- **In-app Notification Center (TASK B)** — computed on-the-fly from existing data
+  - `GET /api/v1/investors/{id}/notifications` — returns at-risk goals, rebalance alerts, stale prices, setup suggestions
+  - `/notifications` page: severity-grouped list with direct navigation links
+  - Sidebar: Notifications link in System section
+- **AI Investment Agent (TASK 23)** — flagship multi-context Claude agent
+  - `GET /api/v1/investors/{id}/agent` — gathers full investor context (profile, portfolio, goals, stability score, risk model, 40+ catalog instruments with live prices) and calls Claude Sonnet
+  - Returns: `portfolio_health_score` (0-100), `market_pulse`, `portfolio_assessment`, `action_plan` (concrete actions with amounts), `top_opportunities` (fit-scored instruments), `capital_thresholds` (step-by-step plan at each savings milestone), `risk_warnings`
+  - Capital thresholds: tells you exactly what to buy with 500 / 1000 / 2500 / 5000 base-currency units — the plan is ready when you have the capital
+  - `/agent` page: health score ring, market pulse, action cards with urgency badges, opportunity grid with fit scores, visual capital ladder, risk warnings
+  - Sidebar: "AI Agent" as the first item in the Intelligence section
+
+---
+
 ## [0.29.0] — 2026-05-02
 
 ### Fixed

@@ -19,6 +19,10 @@ import {
   Briefcase,
   ScanSearch,
   Wand2,
+  Bell,
+  Eye,
+  Bot,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -46,11 +50,16 @@ const sections = [
   },
   {
     label: "Portfolio",
-    items: [{ label: "Investments", href: "/investments", icon: Briefcase }],
+    items: [
+      { label: "Investments", href: "/investments", icon: Briefcase },
+      { label: "Watchlist", href: "/watchlist", icon: Eye },
+      { label: "Debt Planner", href: "/debt-planner", icon: CreditCard },
+    ],
   },
   {
     label: "Intelligence",
     items: [
+      { label: "AI Agent", href: "/agent", icon: Bot },
       { label: "Recommendations", href: "/recommendations", icon: Wand2 },
       { label: "Market Scan", href: "/market-scan", icon: ScanSearch },
       { label: "AI Report", href: "/reports", icon: Sparkles },
@@ -59,6 +68,7 @@ const sections = [
   {
     label: "System",
     items: [
+      { label: "Notifications", href: "/notifications", icon: Bell },
       { label: "Audit Log", href: "/audit", icon: FileText },
       { label: "Settings", href: "/settings", icon: Settings },
     ],
