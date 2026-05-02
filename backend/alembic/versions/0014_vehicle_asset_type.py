@@ -14,7 +14,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute(sa.text("ALTER TYPE asset_type ADD VALUE IF NOT EXISTS 'vehicle'"))
+    op.execute(sa.text("ALTER TYPE assettype ADD VALUE IF NOT EXISTS 'vehicle'"))
 
 
 def downgrade() -> None:

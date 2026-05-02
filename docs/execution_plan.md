@@ -1,6 +1,6 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.28.0
+**Version:** 0.29.0
 **Last updated:** 2026-05-02
 
 ---
@@ -280,6 +280,7 @@ TASK 12 (market scanner)   → deferred; depends on TASK 11
 | 0013 | study fund fields (monthly_contribution_employee, monthly_contribution_employer, fund_status) |
 | 0014 | vehicle value added to asset_type enum |
 | 0015 | alert_email + email_alerts_enabled on investor_profiles |
+| 0016 | widen nationality + tax_residency from VARCHAR(3) to VARCHAR(100) |
 
 ---
 

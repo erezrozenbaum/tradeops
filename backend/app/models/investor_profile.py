@@ -44,8 +44,8 @@ class InvestorProfile(Base, UUIDMixin, TimestampMixin):
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     date_of_birth: Mapped[date] = mapped_column(Date, nullable=False)
     country: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 3166-1 alpha-2/3
-    nationality: Mapped[str | None] = mapped_column(String(3), nullable=True)
-    tax_residency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    nationality: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    tax_residency: Mapped[str | None] = mapped_column(String(100), nullable=True)
     base_currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
     local_currency: Mapped[str] = mapped_column(String(3), nullable=False)
     experience_level: Mapped[ExperienceLevel] = mapped_column(
