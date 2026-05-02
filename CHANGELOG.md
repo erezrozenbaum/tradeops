@@ -10,6 +10,13 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.35.0] — 2026-05-02
+
+### Changed
+- **Investment Recommendations — Actionable Roadmap redesign** — AI now generates a structured `investment_roadmap` with three risk tiers (Conservative / Balanced / Growth), each showing exact monthly amounts per instrument and a phase timeline (where you are now → what comes next). Frontend redesigned to lead with the roadmap: tabbed tier selector, per-instrument "Add to watchlist" button, phase progress cards, and a compact situation summary. Removes wall-of-text guidance in favour of concrete, numbers-first layout.
+
+---
+
 ## [0.34.0] — 2026-05-02
 
 ### Added
