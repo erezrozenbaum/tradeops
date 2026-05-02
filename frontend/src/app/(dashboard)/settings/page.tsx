@@ -5,7 +5,8 @@ import { useInvestorId } from "@/hooks/useInvestorId";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { AlertCircle, RefreshCw, Bell, BellOff, CheckCircle2 } from "lucide-react";
 
 interface InvestorProfile {
   id: string;
@@ -15,6 +16,8 @@ interface InvestorProfile {
   local_currency: string;
   experience_level: string;
   is_minor: boolean;
+  alert_email: string | null;
+  email_alerts_enabled: boolean;
 }
 
 interface HoldingInfo {
@@ -35,11 +38,22 @@ export default function SettingsPage() {
   const [quoteCache, setQuoteCache] = useState<Record<string, { price: number; currency: string; cached: boolean } | null>>({});
   const [refreshingCache, setRefreshingCache] = useState(false);
 
+  const [alertEmail, setAlertEmail] = useState("");
+  const [alertsEnabled, setAlertsEnabled] = useState(false);
+  const [savingAlerts, setSavingAlerts] = useState(false);
+  const [alertsSaved, setAlertsSaved] = useState(false);
+
   useEffect(() => {
     if (!investorId) return;
     fetch(`/api/v1/investors/${investorId}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then(setProfile)
+      .then((p: InvestorProfile | null) => {
+        setProfile(p);
+        if (p) {
+          setAlertEmail(p.alert_email ?? "");
+          setAlertsEnabled(p.email_alerts_enabled ?? false);
+        }
+      })
       .catch((e) => setError(e.message));
 
     fetch(`/api/v1/investors/${investorId}/accounts`)
@@ -82,6 +96,26 @@ export default function SettingsPage() {
       setQuoteCache(map);
     } finally {
       setRefreshingCache(false);
+    }
+  }
+
+  async function saveAlertSettings() {
+    if (!investorId) return;
+    setSavingAlerts(true);
+    setAlertsSaved(false);
+    try {
+      await fetch(`/api/v1/investors/${investorId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          alert_email: alertEmail.trim() || null,
+          email_alerts_enabled: alertsEnabled,
+        }),
+      });
+      setAlertsSaved(true);
+      setTimeout(() => setAlertsSaved(false), 3000);
+    } finally {
+      setSavingAlerts(false);
     }
   }
 
@@ -162,6 +196,77 @@ export default function SettingsPage() {
           <Row label="AI analysis" value={<Badge variant="success">Available</Badge>} />
           <Row label="Paper trading" value={<Badge variant="success">Available</Badge>} />
           <Row label="Backtesting" value={<Badge variant="success">Available</Badge>} />
+        </CardContent>
+      </Card>
+
+      {/* Email notifications */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {alertsEnabled ? (
+              <Bell className="h-4 w-4 text-primary" />
+            ) : (
+              <BellOff className="h-4 w-4 text-muted-foreground" />
+            )}
+            Email Notifications
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <p className="text-sm text-muted-foreground">
+            Receive a daily digest of actionable alerts — at-risk goals, portfolio rebalancing, stale prices — directly in your inbox. Sent at 08:30 UTC each morning.
+          </p>
+
+          {/* Toggle */}
+          <div className="flex items-center justify-between py-2 border-y border-border">
+            <div>
+              <p className="text-sm font-medium">Enable email alerts</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Only sent when there are actionable warnings</p>
+            </div>
+            <button
+              onClick={() => setAlertsEnabled(!alertsEnabled)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                alertsEnabled ? "bg-primary" : "bg-muted"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  alertsEnabled ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Email input */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Alert email address</label>
+            <Input
+              type="email"
+              placeholder="you@example.com"
+              value={alertEmail}
+              onChange={(e) => setAlertEmail(e.target.value)}
+            />
+          </div>
+
+          {/* Save */}
+          <div className="flex items-center gap-3">
+            <Button onClick={saveAlertSettings} disabled={savingAlerts} size="sm">
+              {savingAlerts ? "Saving…" : "Save"}
+            </Button>
+            {alertsSaved && (
+              <span className="flex items-center gap-1.5 text-sm text-green-600">
+                <CheckCircle2 className="h-4 w-4" />
+                Saved
+              </span>
+            )}
+          </div>
+
+          <p className="text-xs text-muted-foreground border-t border-border pt-3">
+            Delivery requires SMTP configuration in the backend environment (
+            <span className="font-mono">SMTP_HOST</span>,{" "}
+            <span className="font-mono">SMTP_USER</span>,{" "}
+            <span className="font-mono">SMTP_PASS</span>). See{" "}
+            <span className="font-mono">.env.example</span> for setup instructions.
+          </p>
         </CardContent>
       </Card>
 

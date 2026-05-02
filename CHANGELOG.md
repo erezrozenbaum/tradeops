@@ -10,6 +10,18 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.34.0] — 2026-05-02
+
+### Added
+- **Email alert digest** — new `notification_alerts` worker job runs daily at 08:30 UTC; queries all investors with `email_alerts_enabled=true`, calls the notification center for all actionable warnings (goals at risk, rebalancing needed, stale prices), and sends a single plain-text digest email per investor; requires `SMTP_HOST/USER/PASS` env vars
+- **Settings page — Email Notifications section** — toggle to enable/disable alerts, email address input, Save button (calls `PUT /api/v1/investors/{id}`); inline SMTP setup guidance
+- **`.env.example`** updated with SMTP configuration block and Gmail App Password instructions
+
+### Changed
+- `goal_evaluation` worker: removed per-alert email sending (now handled by `notification_alerts`); logging-only sweep remains at 07:00 UTC
+
+---
+
 ## [0.33.0] — 2026-05-02
 
 ### Added
