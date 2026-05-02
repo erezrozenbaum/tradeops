@@ -190,7 +190,7 @@ export default function RecommendationsPage() {
         }),
       });
       if (r.ok || r.status === 409) {
-        setAddedTickers(prev => new Set([...prev, alloc.ticker]));
+        setAddedTickers(prev => new Set(Array.from(prev).concat(alloc.ticker)));
       }
     } finally {
       setAddingTicker(null);
