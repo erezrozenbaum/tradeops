@@ -1,7 +1,7 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.27.0
-**Last updated:** 2026-05-01
+**Version:** 0.28.0
+**Last updated:** 2026-05-02
 
 ---
 
@@ -277,6 +277,9 @@ TASK 12 (market scanner)   → deferred; depends on TASK 11
 | 0010 | portfolio_snapshots |
 | 0011 | goal tracking modes + progress logs |
 | 0012 | pension fund fields (current_balance, total_deposits, monthly_contribution, annual_return_rate) |
+| 0013 | study fund fields (monthly_contribution_employee, monthly_contribution_employer, fund_status) |
+| 0014 | vehicle value added to asset_type enum |
+| 0015 | alert_email + email_alerts_enabled on investor_profiles |
 
 ---
 
