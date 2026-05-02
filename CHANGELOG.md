@@ -10,6 +10,14 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.33.0] — 2026-05-02
+
+### Added
+- **Dashboard "Today's priorities" card** — loads top AI action items from the Investment Agent on demand; shows action, ticker, suggested amount, urgency icon (Immediate / Soon / When ready); links to full `/agent` page
+- **Pension & Study Fund projection card on dashboard** — new `GET /portfolio/pension-projection` endpoint; pure compound-growth engine (`pension_projection.py`) projects all `pension_fund` and `study_fund` holdings to retirement age (67); shows total projected value, years to retirement, combined monthly contribution, and estimated monthly retirement income (20-year drawdown); per-fund breakdown with assumed annual return rate
+
+---
+
 ## [0.32.0] — 2026-05-02
 
 ### Changed
