@@ -10,6 +10,16 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.32.0] — 2026-05-02
+
+### Changed
+- **AI Recommendations — progress over paralysis**: Prompt rewritten to always deliver a concrete forward investment plan with specific instruments and monthly amounts, even for low-stability investors. Removed "focus on emergency fund only" hard rule. Now mandates 4-6 recommendations including stocks and dividends, not just ETFs. `max_tokens` raised to 3500 for richer output.
+- **Market Scanner — full catalog visible**: Removed `education_only` preservation-only gate; "Not Ready" investors now see the full instrument list ranked by their risk model, with a warning note instead of a hard filter. Shows real stocks, growth ETFs, crypto alongside preservation instruments.
+- **Recommendations context** — `build_recommendation_context` now includes `spouse_income` in household income / surplus calculation (was using primary income only).
+- **Investments page** — Family member section is always shown when creating an account (previously hidden when no members exist); now shows a link to the Family Profile page when no members are set up.
+
+---
+
 ## [0.31.0] — 2026-05-02
 
 ### Added
