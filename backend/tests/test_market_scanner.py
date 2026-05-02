@@ -93,11 +93,11 @@ class TestHorizonScore:
 # ── Full scan tests ───────────────────────────────────────────────────────────
 
 class TestScan:
-    def test_not_ready_returns_empty(self):
+    def test_not_ready_shows_instruments_with_warning(self):
         investor = _investor()
         suggestions, notes = scan(investor, _risk_model(), "not_ready", {})
-        assert suggestions == []
-        assert any("not_ready" in n.lower() or "unavailable" in n.lower() for n in notes)
+        assert len(suggestions) > 0
+        assert any("too low" in n.lower() or "emergency fund" in n.lower() for n in notes)
 
     def test_education_only_returns_full_catalog(self):
         investor = _investor()
