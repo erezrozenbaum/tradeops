@@ -889,9 +889,9 @@ export default function InvestmentsPage() {
                   onChange={e => setAccountForm({ ...accountForm, currency: e.target.value.toUpperCase() })}
                 />
               </div>
-              {familyMembers.length > 0 && (
-                <div className="space-y-1 col-span-2">
-                  <label className="text-xs font-medium text-muted-foreground">Belongs to (optional)</label>
+              <div className="space-y-1 col-span-2">
+                <label className="text-xs font-medium text-muted-foreground">Belongs to (optional)</label>
+                {familyMembers.length > 0 ? (
                   <Select
                     value={accountForm.family_member_id}
                     onChange={e => setAccountForm({ ...accountForm, family_member_id: e.target.value })}
@@ -901,8 +901,14 @@ export default function InvestmentsPage() {
                       <option key={m.id} value={m.id}>{m.name} ({m.relationship_type})</option>
                     ))}
                   </Select>
-                </div>
-              )}
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    No family members found.{" "}
+                    <a href="/family" className="text-primary underline underline-offset-2">Set up your family profile</a>{" "}
+                    to assign accounts to a specific person.
+                  </p>
+                )}
+              </div>
             </div>
             <div className="flex gap-2">
               <Button onClick={createAccount} disabled={!accountForm.provider_name || savingAccount}>

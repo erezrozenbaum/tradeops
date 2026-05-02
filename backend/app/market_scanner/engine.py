@@ -143,7 +143,7 @@ def scan(
         )
 
     if readiness_classification == "education_only":
-        notes.append("Education-only mode: showing capital preservation instruments only.")
+        notes.append("Showing full instrument list. Start small — even 500 ILS/month builds momentum.")
 
     if investor.preferred_assets:
         notes.append(f"Filtered to preferred assets: {', '.join(investor.preferred_assets)}.")
@@ -155,10 +155,6 @@ def scan(
     scored: list[tuple[CatalogInstrument, float]] = []
 
     for instr in CATALOG:
-        # Education-only gate
-        if readiness_classification == "education_only" and instr.asset_family != "preservation":
-            continue
-
         # Risk level gate
         if instr.risk_level not in allowed_risk_levels:
             continue
