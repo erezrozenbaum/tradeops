@@ -195,7 +195,7 @@ export default function WatchlistPage() {
                     <div className="flex flex-col min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-semibold text-sm">{item.ticker}</span>
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="muted" className="text-xs">
                           {ASSET_TYPE_LABELS[item.asset_type] ?? item.asset_type}
                         </Badge>
                       </div>
