@@ -45,6 +45,11 @@ class InvestmentAccount(Base, UUIDMixin, TimestampMixin):
     account_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    family_member_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("family_members.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     holdings: Mapped[list["InvestmentHolding"]] = relationship(
         "InvestmentHolding", back_populates="account", cascade="all, delete-orphan"
