@@ -19,10 +19,10 @@ def get_analysis(db: Session, investor_id: uuid.UUID) -> GoalsAnalysisResult | N
     financial_profile = get_financial_profile(db, investor_id)
 
     monthly_surplus: float | None = None
-    if financial_profile and financial_profile.monthly_income > 0:
-        monthly_surplus = round(
-            financial_profile.monthly_income - financial_profile.monthly_expenses, 2
-        )
+    if financial_profile:
+        household_income = financial_profile.monthly_income + (financial_profile.spouse_income or 0.0)
+        if household_income > 0:
+            monthly_surplus = round(household_income - financial_profile.monthly_expenses, 2)
 
     goal_ids = [g.id for g in goals]
     logs = (

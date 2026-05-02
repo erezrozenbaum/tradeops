@@ -1,6 +1,6 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.30.0
+**Version:** 0.31.0
 **Last updated:** 2026-05-02
 
 ---
@@ -282,6 +282,7 @@ TASK 12 (market scanner)   → deferred; depends on TASK 11
 | 0015 | alert_email + email_alerts_enabled on investor_profiles |
 | 0016 | widen nationality + tax_residency from VARCHAR(3) to VARCHAR(100) |
 | 0017 | watchlist_items table |
+| 0018 | spouse_income on financial_profiles + family_member_id on investment_accounts |
 
 ---
 

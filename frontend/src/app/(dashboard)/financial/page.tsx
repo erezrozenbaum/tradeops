@@ -33,6 +33,7 @@ interface FinancialLiability {
 interface FinancialProfile {
   id: string;
   monthly_income: number;
+  spouse_income: number | null;
   monthly_expenses: number;
   liquid_savings: number;
   emergency_fund_months: number;
@@ -113,6 +114,7 @@ export default function FinancialPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           monthly_income: parseFloat(String(form.monthly_income ?? 0)),
+          spouse_income: form.spouse_income != null && String(form.spouse_income) !== "" ? parseFloat(String(form.spouse_income)) : null,
           monthly_expenses: parseFloat(String(form.monthly_expenses ?? 0)),
           liquid_savings: parseFloat(String(form.liquid_savings ?? 0)),
           emergency_fund_months: parseFloat(String(form.emergency_fund_months ?? 0)),
@@ -143,6 +145,7 @@ export default function FinancialPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           monthly_income: parseFloat(String(form.monthly_income)),
+          spouse_income: form.spouse_income != null && String(form.spouse_income) !== "" ? parseFloat(String(form.spouse_income)) : null,
           monthly_expenses: parseFloat(String(form.monthly_expenses)),
           liquid_savings: parseFloat(String(form.liquid_savings)),
           emergency_fund_months: parseFloat(String(form.emergency_fund_months)),
@@ -322,12 +325,20 @@ export default function FinancialPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Monthly income">
+                <Field label="Primary (your) monthly income">
                   <Input
                     type="number"
                     placeholder="10000"
                     value={form.monthly_income ?? ""}
                     onChange={(e) => setForm({ ...form, monthly_income: parseFloat(e.target.value) })}
+                  />
+                </Field>
+                <Field label="Partner/Spouse income (optional)">
+                  <Input
+                    type="number"
+                    placeholder="Leave blank if not applicable"
+                    value={form.spouse_income ?? ""}
+                    onChange={(e) => setForm({ ...form, spouse_income: e.target.value === "" ? null : parseFloat(e.target.value) })}
                   />
                 </Field>
                 <Field label="Monthly expenses">
@@ -448,7 +459,16 @@ export default function FinancialPage() {
 
       {/* Cash flow summary */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <StatCard label="Monthly income" value={formatCurrency(profile.monthly_income, profile.currency)} />
+        <StatCard
+          label={profile.spouse_income != null ? "Primary income" : "Monthly income"}
+          value={formatCurrency(profile.monthly_income, profile.currency)}
+        />
+        {profile.spouse_income != null && (
+          <StatCard
+            label="Partner income"
+            value={formatCurrency(profile.spouse_income, profile.currency)}
+          />
+        )}
         <StatCard label="Monthly expenses" value={formatCurrency(profile.monthly_expenses, profile.currency)} />
         <StatCard
           label="Monthly surplus"
@@ -468,11 +488,19 @@ export default function FinancialPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Monthly income">
+              <Field label="Primary (your) monthly income">
                 <Input
                   type="number"
                   value={form.monthly_income ?? ""}
                   onChange={(e) => setForm({ ...form, monthly_income: parseFloat(e.target.value) })}
+                />
+              </Field>
+              <Field label="Partner/Spouse monthly income (optional)">
+                <Input
+                  type="number"
+                  placeholder="Leave blank if not applicable"
+                  value={form.spouse_income ?? ""}
+                  onChange={(e) => setForm({ ...form, spouse_income: e.target.value === "" ? null : parseFloat(e.target.value) })}
                 />
               </Field>
               <Field label="Monthly expenses">

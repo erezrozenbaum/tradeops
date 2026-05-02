@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatPercent, formatCurrency } from "@/lib/utils";
-import { ScanSearch, RefreshCw, Info, TrendingUp, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, Search } from "lucide-react";
+import { ScanSearch, RefreshCw, Info, TrendingUp, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, Search, Zap, Bot } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -94,6 +94,19 @@ interface QuoteResult {
   cached: boolean;
 }
 
+interface AiOpportunity {
+  ticker: string;
+  name: string;
+  asset_type: string;
+  why_now: string;
+  fit_score: number;
+  risk_level: string;
+  is_in_portfolio: boolean;
+  suggested_allocation_pct: number;
+  current_price: number | null;
+  price_currency: string | null;
+}
+
 export default function MarketScanPage() {
   const investorId = useInvestorId();
   const [result, setResult] = useState<MarketScanResult | null>(null);
@@ -103,6 +116,8 @@ export default function MarketScanPage() {
   const [quoteResult, setQuoteResult] = useState<QuoteResult | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+  const [aiSignals, setAiSignals] = useState<AiOpportunity[] | null>(null);
+  const [loadingSignals, setLoadingSignals] = useState(false);
 
   async function fetchScan() {
     if (!investorId) return;
@@ -136,6 +151,20 @@ export default function MarketScanPage() {
       setQuoteError(e instanceof Error ? e.message : "Lookup failed");
     } finally {
       setSearching(false);
+    }
+  }
+
+  async function getAiSignals() {
+    if (!investorId) return;
+    setLoadingSignals(true);
+    try {
+      const res = await fetch(`/api/v1/investors/${investorId}/agent`);
+      if (res.ok) {
+        const report = await res.json();
+        setAiSignals(report.top_opportunities ?? []);
+      }
+    } finally {
+      setLoadingSignals(false);
     }
   }
 
@@ -177,10 +206,22 @@ export default function MarketScanPage() {
             Curated instruments ranked to your risk profile, time horizon, and portfolio gaps.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchScan} className="gap-2">
-          <RefreshCw className="h-3.5 w-3.5" />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={getAiSignals}
+            disabled={loadingSignals || !result}
+            className="gap-2"
+          >
+            {loadingSignals ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5" />}
+            {loadingSignals ? "Analysing…" : "Ask AI"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={fetchScan} className="gap-2">
+            <RefreshCw className="h-3.5 w-3.5" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Ticker search */}
@@ -314,6 +355,51 @@ export default function MarketScanPage() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* AI signals section */}
+      {aiSignals && aiSignals.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Bot className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">AI buy signals for you</h2>
+            <span className="text-xs text-muted-foreground">· Based on your portfolio, goals & risk profile</span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {aiSignals.map((opp) => (
+              <Card key={opp.ticker} className={opp.is_in_portfolio ? "border-green-200/60" : ""}>
+                <CardContent className="pt-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <span className="font-mono font-bold text-sm">{opp.ticker}</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">{opp.name}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="flex items-center gap-0.5 text-amber-400 justify-end text-xs">
+                        {"★".repeat(Math.min(5, Math.round(opp.fit_score / 2)))}
+                        <span className="text-muted-foreground ml-1">{opp.fit_score}/10</span>
+                      </div>
+                      <p className="text-xs font-semibold text-primary mt-0.5">{opp.suggested_allocation_pct}% of portfolio</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2 leading-relaxed">{opp.why_now}</p>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className={`capitalize font-medium ${RISK_COLORS[opp.risk_level] ?? ""}`}>{opp.risk_level.replace("_", " ")} risk</span>
+                    {opp.is_in_portfolio && (
+                      <span className="text-[10px] bg-green-500/10 text-green-600 border border-green-200 rounded-full px-2 py-0.5">Already owned</span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {aiSignals && aiSignals.length === 0 && !loadingSignals && (
+        <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground text-center">
+          AI agent returned no specific buy signals for your current situation.
         </div>
       )}
 

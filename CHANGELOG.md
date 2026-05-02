@@ -10,6 +10,20 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.31.0] — 2026-05-02
+
+### Added
+- **Market scan gate removed** — "Not Ready" investors now see preservation/education instruments instead of a hard block; soft warning banner replaces the empty screen
+- **Household income model** — `spouse_income` field on financial profiles (migration 0018); goals analysis, AI report, and AI agent now use combined household income for surplus/savings-rate calculations; partner income shown as separate stat card on Financial page
+- **Account → family member assignment** (migration 0018) — investment accounts can now be attached to a specific family member; family member name shown on account card header; member selector appears in the "New account" form when a family profile exists
+- **AI signals on Market Scan page** — "Ask AI" button runs the AI Investment Agent and shows personalised buy signals (ticker, why now, suggested allocation %, fit score) inline on the scan page
+
+### Changed
+- Financial page: "Monthly income" renamed to "Primary income" when spouse_income is set; partner income shown as separate summary card
+- Goals analysis surplus calculation uses household income (primary + spouse) instead of primary income only
+
+---
+
 ## [0.30.0] — 2026-05-02
 
 ### Added
