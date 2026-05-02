@@ -12,6 +12,12 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     WORKERS_ENABLED: bool = True
 
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASS: str = ""
+    ALERT_FROM_EMAIL: str = ""
+
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"

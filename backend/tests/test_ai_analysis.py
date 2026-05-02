@@ -22,6 +22,7 @@ def _investor(dob=date(1990, 1, 15), experience="beginner", is_minor=False):
 def _fp(income=10_000, expenses=6_000, savings=30_000, emf=3.0, assets=None, liabilities=None):
     return SimpleNamespace(
         monthly_income=income,
+        spouse_income=None,
         monthly_expenses=expenses,
         liquid_savings=savings,
         emergency_fund_months=emf,
