@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -8,9 +8,10 @@ from app.db.session import get_db
 from app.models.investment_account import InvestmentAccount
 from app.models.investor_profile import InvestorProfile
 from app.market_data.service import refresh_tickers
-from app.currency_engine.rates import force_refresh_rates
+from app.currency_engine.rates import force_refresh_rates, convert as fx_convert
 from app.portfolio_analysis import service
 from app.portfolio_analysis import rebalance_engine
+from app.portfolio_analysis import pension_projection
 from app.portfolio_analysis.schemas import (
     PortfolioSummary,
     PriceRefreshResult,
@@ -80,6 +81,29 @@ def refresh_prices(investor_id: uuid.UUID, db: Session = Depends(get_db)):
         tickers_failed=failed,
         cache_valid_until=datetime.now(timezone.utc) + timedelta(hours=24),
     )
+
+
+@router.get("/pension-projection")
+def get_pension_projection(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+    investor = db.get(InvestorProfile, investor_id)
+    if not investor:
+        raise HTTPException(status_code=404, detail="Investor not found")
+
+    today = date.today()
+    age = today.year - investor.date_of_birth.year - (
+        (today.month, today.day) < (investor.date_of_birth.month, investor.date_of_birth.day)
+    )
+
+    accounts = (
+        db.query(InvestmentAccount)
+        .filter(InvestmentAccount.investor_id == investor_id)
+        .all()
+    )
+
+    def convert_fn(amount: float, from_ccy: str, to_ccy: str) -> float:
+        return fx_convert(db, amount, from_ccy, to_ccy)
+
+    return pension_projection.project(age, accounts, investor.base_currency, convert_fn)
 
 
 @router.get("/history", response_model=PortfolioHistoryResult)
