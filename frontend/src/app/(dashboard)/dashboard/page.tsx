@@ -13,8 +13,38 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { AlertCircle, TrendingUp, TrendingDown, Minus, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, AlertTriangle, CheckCircle2, Circle } from "lucide-react";
+import { AlertCircle, TrendingUp, TrendingDown, Minus, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, AlertTriangle, CheckCircle2, Circle, Zap, Clock, CalendarClock, PiggyBank, Bot } from "lucide-react";
 import Link from "next/link";
+
+interface ActionItem {
+  action: string;
+  instrument_name: string;
+  ticker: string | null;
+  urgency: string;
+  suggested_amount: number | null;
+  currency: string | null;
+  reasoning: string;
+}
+
+interface FundProjection {
+  name: string;
+  asset_type: string;
+  current_balance: number;
+  monthly_contribution: number;
+  annual_return_pct: number;
+  projected_value: number;
+  currency: string;
+}
+
+interface PensionProjection {
+  funds: FundProjection[];
+  total_projected_value: number;
+  total_monthly_contribution: number;
+  currency: string;
+  years_to_retirement: number;
+  retirement_age: number;
+  has_data: boolean;
+}
 
 interface InvestmentDecision {
   can_invest: boolean;
@@ -152,6 +182,9 @@ export default function DashboardPage() {
   const [decision, setDecision] = useState<InvestmentDecision | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [goalsAnalysis, setGoalsAnalysis] = useState<GoalsAnalysisResult | null>(null);
+  const [pension, setPension] = useState<PensionProjection | null>(null);
+  const [actionItems, setActionItems] = useState<ActionItem[] | null>(null);
+  const [loadingActions, setLoadingActions] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -171,16 +204,31 @@ export default function DashboardPage() {
       fetch(`/api/v1/investors/${investorId}/goals-analysis`).then((r) =>
         r.ok ? r.json() : null
       ),
+      fetch(`/api/v1/investors/${investorId}/portfolio/pension-projection`).then((r) =>
+        r.ok ? r.json() : null
+      ),
     ])
-      .then(([dashData, decisionData, portfolioData, goalsAnalysisData]) => {
+      .then(([dashData, decisionData, portfolioData, goalsAnalysisData, pensionData]) => {
         setData(dashData);
         setDecision(decisionData);
         setPortfolio(portfolioData);
         setGoalsAnalysis(goalsAnalysisData);
+        setPension(pensionData);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [investorId]);
+
+  function loadActionPlan() {
+    if (!investorId || loadingActions || actionItems) return;
+    setLoadingActions(true);
+    fetch(`/api/v1/investors/${investorId}/agent`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((report) => {
+        if (report?.action_plan) setActionItems(report.action_plan);
+      })
+      .finally(() => setLoadingActions(false));
+  }
 
   if (!investorId || loading) {
     return (
@@ -258,6 +306,14 @@ export default function DashboardPage() {
           sub={cash_flow ? (cash_flow.emergency_fund_months >= 3 ? "Adequate buffer" : "Build savings first") : "No data"}
         />
       </div>
+
+      {/* Action for today */}
+      <ActionPlanCard
+        items={actionItems}
+        loading={loadingActions}
+        onLoad={loadActionPlan}
+        currency={data.investor.base_currency}
+      />
 
       {/* Row 2: Stability + Risk */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
@@ -410,6 +466,9 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Pension projection */}
+      {pension && pension.has_data && <PensionCard projection={pension} />}
 
       {/* Goals */}
       {goals.length > 0 && (
@@ -642,6 +701,172 @@ function SetupChecklist({
             </Link>
           ))}
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+const URGENCY_ICON: Record<string, React.ReactNode> = {
+  immediate: <Zap className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />,
+  soon: <Clock className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />,
+  when_convenient: <CalendarClock className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />,
+};
+
+const URGENCY_LABEL: Record<string, string> = {
+  immediate: "text-red-500",
+  soon: "text-amber-500",
+  when_convenient: "text-blue-500",
+};
+
+function ActionPlanCard({
+  items,
+  loading,
+  onLoad,
+  currency,
+}: {
+  items: ActionItem[] | null;
+  loading: boolean;
+  onLoad: () => void;
+  currency: string;
+}) {
+  const sorted = items
+    ? [...items].sort((a, b) => {
+        const order = ["immediate", "soon", "when_convenient"];
+        return order.indexOf(a.urgency) - order.indexOf(b.urgency);
+      }).slice(0, 4)
+    : null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <Bot className="h-4 w-4 text-primary" />
+            Today&apos;s priorities
+          </span>
+          {!items && !loading && (
+            <button
+              onClick={onLoad}
+              className="text-xs text-primary hover:underline font-medium"
+            >
+              Load AI plan
+            </button>
+          )}
+          {items && (
+            <Link href="/agent" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Full analysis →
+            </Link>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading && (
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="flex gap-3 animate-pulse">
+                <div className="h-4 w-4 rounded bg-muted mt-0.5" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 bg-muted rounded w-3/4" />
+                  <div className="h-2.5 bg-muted rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {!loading && !items && (
+          <p className="text-sm text-muted-foreground">
+            Get a personalised action plan from the AI Investment Agent.{" "}
+            <button onClick={onLoad} className="text-primary underline underline-offset-2">Load now</button>
+          </p>
+        )}
+        {sorted && (
+          <div className="divide-y divide-border">
+            {sorted.map((item, i) => (
+              <div key={i} className="flex gap-3 py-2.5 first:pt-0 last:pb-0">
+                {URGENCY_ICON[item.urgency] ?? URGENCY_ICON.when_convenient}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-medium leading-snug">{item.action}</p>
+                    {item.ticker && (
+                      <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded text-primary">{item.ticker}</span>
+                    )}
+                    {item.suggested_amount != null && item.currency && (
+                      <span className="text-xs text-muted-foreground">
+                        {formatCurrency(item.suggested_amount, item.currency)}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{item.reasoning}</p>
+                </div>
+                <span className={`text-[10px] font-semibold uppercase tracking-wide shrink-0 mt-0.5 ${URGENCY_LABEL[item.urgency] ?? ""}`}>
+                  {item.urgency === "when_convenient" ? "soon" : item.urgency}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PensionCard({ projection }: { projection: PensionProjection }) {
+  const fmt = (n: number) => formatCurrency(n, projection.currency);
+  const retireIn = projection.years_to_retirement;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2">
+          <PiggyBank className="h-4 w-4 text-primary" />
+          Pension &amp; Study Funds — Projection
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap gap-8 mb-5">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Projected at age {projection.retirement_age}</p>
+            <p className="text-3xl font-bold tracking-tight">{fmt(projection.total_projected_value)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Years to retirement</p>
+            <p className="text-3xl font-bold tracking-tight">{retireIn.toFixed(1)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Monthly contribution</p>
+            <p className="text-2xl font-semibold">{fmt(projection.total_monthly_contribution)}</p>
+          </div>
+          {projection.total_projected_value > 0 && retireIn > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Est. monthly income at retirement</p>
+              <p className="text-2xl font-semibold">
+                {fmt(Math.round(projection.total_projected_value / (20 * 12)))}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Assuming 20-year drawdown</p>
+            </div>
+          )}
+        </div>
+        {projection.funds.length > 0 && (
+          <div className="space-y-2 border-t border-border pt-4">
+            {projection.funds.map((f, i) => (
+              <div key={i} className="flex items-center justify-between text-sm">
+                <div>
+                  <span className="font-medium">{f.name}</span>
+                  <span className="text-xs text-muted-foreground ml-2 capitalize">{f.asset_type.replace(/_/g, " ")}</span>
+                </div>
+                <div className="text-right">
+                  <span className="font-semibold">{fmt(f.projected_value)}</span>
+                  <span className="text-xs text-muted-foreground ml-2">
+                    at {f.annual_return_pct}% p.a.
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="text-[10px] text-muted-foreground mt-4">
+          Projection assumes constant returns and contributions. Actual results may vary.
+        </p>
       </CardContent>
     </Card>
   );
