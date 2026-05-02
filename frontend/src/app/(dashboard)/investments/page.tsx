@@ -282,6 +282,9 @@ export default function InvestmentsPage() {
   const [simResult, setSimResult] = useState<PensionSimResult | null>(null);
   const [simLoading, setSimLoading] = useState(false);
 
+  // CSV import
+  const [csvImportResult, setCsvImportResult] = useState<{ accountId: string; imported: number; errors: string[] } | null>(null);
+
   useEffect(() => {
     if (!investorId) return;
     loadAll();
@@ -535,6 +538,18 @@ export default function InvestmentsPage() {
     if (!confirm("Remove this holding?")) return;
     await fetch(`/api/v1/investors/${investorId}/accounts/${accountId}/holdings/${holdingId}`, { method: "DELETE" });
     loadAll();
+  }
+
+  async function importCsvForAccount(accountId: string, file: File) {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(
+      `/api/v1/investors/${investorId}/accounts/${accountId}/holdings/import-csv`,
+      { method: "POST", body: form }
+    );
+    const data = await res.json();
+    setCsvImportResult({ accountId, imported: data.imported, errors: data.errors ?? [] });
+    if (data.imported > 0) loadAll();
   }
 
   async function openSimulation(h: Holding) {
@@ -889,6 +904,21 @@ export default function InvestmentsPage() {
         </Card>
       )}
 
+      {/* CSV import result banner */}
+      {csvImportResult && (
+        <div className={`rounded-lg border px-4 py-3 text-sm flex items-start justify-between gap-4 ${csvImportResult.errors.length === 0 ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400" : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"}`}>
+          <div>
+            <p className="font-medium">{csvImportResult.imported} holding(s) imported successfully.</p>
+            {csvImportResult.errors.length > 0 && (
+              <ul className="mt-1 space-y-0.5 text-xs">
+                {csvImportResult.errors.map((e, i) => <li key={i}>• {e}</li>)}
+              </ul>
+            )}
+          </div>
+          <button onClick={() => setCsvImportResult(null)} className="shrink-0 opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
+
       {/* Account cards */}
       {accounts.map(account => {
         const analysis = portfolio?.accounts.find(a => a.id === account.id);
@@ -923,6 +953,22 @@ export default function InvestmentsPage() {
                     >
                       <Plus className="h-3.5 w-3.5 mr-1" /> Add holding
                     </Button>
+                    <label
+                      title="Import holdings from CSV"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-input text-xs font-medium cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors"
+                    >
+                      <input
+                        type="file"
+                        accept=".csv"
+                        className="sr-only"
+                        onChange={e => {
+                          const f = e.target.files?.[0];
+                          if (f) importCsvForAccount(account.id, f);
+                          e.target.value = "";
+                        }}
+                      />
+                      CSV
+                    </label>
                     <Button variant="ghost" size="sm" onClick={() => deleteAccount(account.id)}>
                       <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                     </Button>

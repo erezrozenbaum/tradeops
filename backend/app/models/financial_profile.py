@@ -30,6 +30,7 @@ class AssetType(str, enum.Enum):
     real_estate = "real_estate"
     crypto = "crypto"
     pension = "pension"
+    vehicle = "vehicle"
     other = "other"
 
 

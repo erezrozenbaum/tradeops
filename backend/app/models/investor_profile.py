@@ -61,6 +61,10 @@ class InvestorProfile(Base, UUIDMixin, TimestampMixin):
     trading_frequency: Mapped[str | None] = mapped_column(String(10), nullable=True)
     guardian_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
+    # Alert settings
+    alert_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    email_alerts_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
     # Relationships
     financial_profile: Mapped["FinancialProfile | None"] = relationship(
         "FinancialProfile", back_populates="investor", uselist=False, cascade="all, delete-orphan"
