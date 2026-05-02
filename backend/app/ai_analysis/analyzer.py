@@ -61,13 +61,16 @@ def build_context(
     if financial_profile:
         total_assets = sum(a.current_value for a in financial_profile.assets)
         total_liabilities = sum(l.outstanding_balance for l in financial_profile.liabilities)
-        monthly_surplus = financial_profile.monthly_income - financial_profile.monthly_expenses
+        household_income = financial_profile.monthly_income + (financial_profile.spouse_income or 0.0)
+        monthly_surplus = household_income - financial_profile.monthly_expenses
         savings_rate = (
-            round(monthly_surplus / financial_profile.monthly_income * 100, 1)
-            if financial_profile.monthly_income > 0 else 0.0
+            round(monthly_surplus / household_income * 100, 1)
+            if household_income > 0 else 0.0
         )
         ctx["financial_profile"] = {
             "monthly_income": financial_profile.monthly_income,
+            "spouse_income": financial_profile.spouse_income,
+            "household_income": household_income,
             "monthly_expenses": financial_profile.monthly_expenses,
             "monthly_surplus": round(monthly_surplus, 2),
             "savings_rate_pct": savings_rate,

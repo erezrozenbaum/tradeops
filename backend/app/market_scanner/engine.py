@@ -108,10 +108,10 @@ def scan(
 
     if readiness_classification == "not_ready":
         notes.append(
-            "Market scan unavailable — investment readiness score is too low. "
-            "Focus on financial stability first."
+            "Financial stability score is too low for active investing — showing capital preservation "
+            "instruments only (educational). Prioritise your emergency fund and reducing debt first."
         )
-        return [], notes
+        readiness_classification = "education_only"
 
     # Resolve allowed risk levels and blocked families from risk model
     allowed_risk_levels: set[str]

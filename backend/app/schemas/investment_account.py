@@ -85,6 +85,7 @@ class InvestmentAccountCreate(BaseModel):
     account_name: str | None = Field(None, max_length=200)
     currency: str = Field(..., min_length=3, max_length=3)
     notes: str | None = None
+    family_member_id: uuid.UUID | None = None
 
 
 class InvestmentAccountUpdate(BaseModel):
@@ -93,6 +94,7 @@ class InvestmentAccountUpdate(BaseModel):
     account_name: str | None = Field(None, max_length=200)
     currency: str | None = Field(None, min_length=3, max_length=3)
     notes: str | None = None
+    family_member_id: uuid.UUID | None = None
 
 
 class InvestmentAccountOut(BaseModel):
@@ -103,6 +105,7 @@ class InvestmentAccountOut(BaseModel):
     account_name: str | None
     currency: str
     notes: str | None
+    family_member_id: uuid.UUID | None
     holdings: list[InvestmentHoldingOut] = []
     created_at: datetime
     updated_at: datetime

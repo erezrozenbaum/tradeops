@@ -72,6 +72,7 @@ class FinancialProfileCreate(BaseModel):
     income_trend: IncomeTrend = IncomeTrend.stable
     dependents_count: int = Field(0, ge=0)
     investable_capital_pct: float = Field(20.0, ge=0, le=100)
+    spouse_income: float | None = Field(None, ge=0)
     currency: str = Field(..., min_length=3, max_length=3)
 
 
@@ -84,6 +85,7 @@ class FinancialProfileUpdate(BaseModel):
     income_trend: IncomeTrend | None = None
     dependents_count: int | None = Field(None, ge=0)
     investable_capital_pct: float | None = Field(None, ge=0, le=100)
+    spouse_income: float | None = Field(None, ge=0)
 
 
 class FinancialProfileOut(FinancialProfileCreate):

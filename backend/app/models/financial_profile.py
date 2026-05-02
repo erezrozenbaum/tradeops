@@ -61,6 +61,7 @@ class FinancialProfile(Base, UUIDMixin, TimestampMixin):
     )
     dependents_count: Mapped[int] = mapped_column(nullable=False, default=0)
     investable_capital_pct: Mapped[float] = mapped_column(Float, nullable=False, default=20.0)
+    spouse_income: Mapped[float | None] = mapped_column(Float, nullable=True)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
 
     investor: Mapped["InvestorProfile"] = relationship(

@@ -16,6 +16,12 @@ import {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+interface FamilyMember {
+  id: string;
+  name: string;
+  relationship_type: string;
+}
+
 interface Holding {
   id: string;
   account_id: string;
@@ -46,6 +52,7 @@ interface Account {
   account_name: string | null;
   currency: string;
   notes: string | null;
+  family_member_id: string | null;
   holdings: Holding[];
 }
 
@@ -180,7 +187,7 @@ const ASSET_TYPES = [
   { value: "other", label: "Other" },
 ];
 
-const EMPTY_ACCOUNT = { provider_name: "", account_type: "brokerage", account_name: "", currency: "ILS", notes: "" };
+const EMPTY_ACCOUNT = { provider_name: "", account_type: "brokerage", account_name: "", currency: "ILS", notes: "", family_member_id: "" };
 const EMPTY_HOLDING = { ticker: "", isin: "", name: "", asset_type: "stock", quantity: "", avg_buy_price: "", currency: "ILS", fees: "", purchase_date: "", current_value: "", notes: "", current_balance: "", total_deposits: "", monthly_contribution: "", annual_return_rate: "", monthly_contribution_employee: "", monthly_contribution_employer: "", fund_status: "active" };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -256,6 +263,7 @@ export default function InvestmentsPage() {
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [rebalance, setRebalance] = useState<RebalanceResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
 
   // Account form
@@ -292,16 +300,19 @@ export default function InvestmentsPage() {
 
   async function loadAll() {
     setLoading(true);
-    const [accts, port, reb, hist] = await Promise.all([
+    const [accts, port, reb, hist, families] = await Promise.all([
       fetch(`/api/v1/investors/${investorId}/accounts`).then(r => r.ok ? r.json() : []),
       fetch(`/api/v1/investors/${investorId}/portfolio`).then(r => r.ok ? r.json() : null),
       fetch(`/api/v1/investors/${investorId}/portfolio/rebalance`).then(r => r.ok ? r.json() : null),
       fetch(`/api/v1/investors/${investorId}/portfolio/history`).then(r => r.ok ? r.json() : null),
+      fetch(`/api/v1/family-profiles?investor_id=${investorId}`).then(r => r.ok ? r.json() : []),
     ]);
     setAccounts(accts);
     setPortfolio(port);
     setRebalance(reb);
     setHistory(hist?.snapshots ?? []);
+    const members: FamilyMember[] = (families as { members: FamilyMember[] }[]).flatMap(f => f.members ?? []);
+    setFamilyMembers(members);
     setLoading(false);
   }
 
@@ -325,6 +336,7 @@ export default function InvestmentsPage() {
           account_name: accountForm.account_name || null,
           currency: accountForm.currency,
           notes: accountForm.notes || null,
+          family_member_id: accountForm.family_member_id || null,
         }),
       });
       if (res.ok) {
@@ -877,6 +889,20 @@ export default function InvestmentsPage() {
                   onChange={e => setAccountForm({ ...accountForm, currency: e.target.value.toUpperCase() })}
                 />
               </div>
+              {familyMembers.length > 0 && (
+                <div className="space-y-1 col-span-2">
+                  <label className="text-xs font-medium text-muted-foreground">Belongs to (optional)</label>
+                  <Select
+                    value={accountForm.family_member_id}
+                    onChange={e => setAccountForm({ ...accountForm, family_member_id: e.target.value })}
+                  >
+                    <option value="">— Household / shared —</option>
+                    {familyMembers.map(m => (
+                      <option key={m.id} value={m.id}>{m.name} ({m.relationship_type})</option>
+                    ))}
+                  </Select>
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
               <Button onClick={createAccount} disabled={!accountForm.provider_name || savingAccount}>
@@ -935,7 +961,13 @@ export default function InvestmentsPage() {
                   {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                   <div>
                     <p className="font-medium text-sm">{account.account_name ?? account.provider_name}</p>
-                    <p className="text-xs text-muted-foreground">{account.provider_name} · <Badge variant="muted" className="text-[10px] py-0">{accountTypeLabel(account.account_type)}</Badge></p>
+                    <p className="text-xs text-muted-foreground">
+                      {account.provider_name} · <Badge variant="muted" className="text-[10px] py-0">{accountTypeLabel(account.account_type)}</Badge>
+                      {account.family_member_id && (() => {
+                        const m = familyMembers.find(m => m.id === account.family_member_id);
+                        return m ? <> · <span className="text-primary/70">{m.name}</span></> : null;
+                      })()}
+                    </p>
                   </div>
                 </button>
                 <div className="flex items-center gap-4">
