@@ -9,8 +9,12 @@ from app.goals_analysis import service as goals_analysis_service
 from app.investment_recommendations import analyzer
 from app.investment_recommendations.schemas import (
     InstrumentRecommendation,
+    InvestmentRoadmap,
+    MonthlyAllocation,
+    MonthlyPlan,
     PortfolioAction,
     RecommendationReport,
+    RoadmapPhase,
 )
 from app.models.investment_account import InvestmentAccount
 from app.models.investor_profile import InvestorProfile
@@ -69,10 +73,31 @@ def get_recommendations(db: Session, investor_id: uuid.UUID) -> RecommendationRe
         InstrumentRecommendation(**r) for r in raw.get("recommendations", [])
     ]
 
+    investment_roadmap: InvestmentRoadmap | None = None
+    raw_roadmap = raw.get("investment_roadmap")
+    if raw_roadmap:
+        try:
+            raw_plan = raw_roadmap.get("monthly_plan", {})
+            monthly_plan = MonthlyPlan(
+                conservative=[MonthlyAllocation(**a) for a in raw_plan.get("conservative", [])],
+                balanced=[MonthlyAllocation(**a) for a in raw_plan.get("balanced", [])],
+                growth=[MonthlyAllocation(**a) for a in raw_plan.get("growth", [])],
+            )
+            investment_roadmap = InvestmentRoadmap(
+                monthly_investable_amount=raw_roadmap.get("monthly_investable_amount", 0),
+                currency=raw_roadmap.get("currency", ""),
+                current_phase=raw_roadmap.get("current_phase", 1),
+                phases=[RoadmapPhase(**p) for p in raw_roadmap.get("phases", [])],
+                monthly_plan=monthly_plan,
+            )
+        except Exception:
+            investment_roadmap = None
+
     return RecommendationReport(
         investor_id=investor_id,
         overall_guidance=raw.get("overall_guidance", ""),
         portfolio_actions=portfolio_actions,
+        investment_roadmap=investment_roadmap,
         recommendations=recommendations,
         generated_at=datetime.now(timezone.utc),
         disclaimer=raw.get(
