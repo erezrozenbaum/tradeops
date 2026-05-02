@@ -21,6 +21,10 @@ from app.market_scanner.router import router as market_scanner_router
 from app.investment_recommendations.router import router as investment_recommendations_router
 from app.portfolio_analysis.router import router as portfolio_router
 from app.pension_simulation.router import router as pension_simulation_router
+from app.debt_planner.router import router as debt_planner_router
+from app.watchlist.router import router as watchlist_router
+from app.notifications.router import router as notifications_router
+from app.investment_agent.router import router as investment_agent_router
 
 api_router = APIRouter()
 
@@ -36,6 +40,10 @@ api_router.include_router(ai_analysis_router, prefix="/investors/{investor_id}/a
 api_router.include_router(decision_router, prefix="/investors/{investor_id}/decision", tags=["decision"])
 api_router.include_router(portfolio_router, prefix="/investors/{investor_id}/portfolio", tags=["portfolio"])
 api_router.include_router(pension_simulation_router, prefix="/investors/{investor_id}/pension-simulation", tags=["pension-simulation"])
+api_router.include_router(debt_planner_router, prefix="/investors/{investor_id}/debt-planner", tags=["debt-planner"])
+api_router.include_router(watchlist_router, prefix="/investors/{investor_id}/watchlist", tags=["watchlist"])
+api_router.include_router(notifications_router, prefix="/investors/{investor_id}/notifications", tags=["notifications"])
+api_router.include_router(investment_agent_router, prefix="/investors/{investor_id}/agent", tags=["investment-agent"])
 api_router.include_router(goals_analysis_router, prefix="/investors/{investor_id}/goals-analysis", tags=["goals-analysis"])
 api_router.include_router(market_scanner_router, prefix="/investors/{investor_id}/market-scan", tags=["market-scan"])
 api_router.include_router(investment_recommendations_router, prefix="/investors/{investor_id}/recommendations", tags=["recommendations"])

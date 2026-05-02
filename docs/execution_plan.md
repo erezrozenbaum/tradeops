@@ -1,6 +1,6 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.29.0
+**Version:** 0.30.0
 **Last updated:** 2026-05-02
 
 ---
@@ -281,6 +281,7 @@ TASK 12 (market scanner)   → deferred; depends on TASK 11
 | 0014 | vehicle value added to asset_type enum |
 | 0015 | alert_email + email_alerts_enabled on investor_profiles |
 | 0016 | widen nationality + tax_residency from VARCHAR(3) to VARCHAR(100) |
+| 0017 | watchlist_items table |
 
 ---
 
@@ -305,6 +306,24 @@ TASK 12 (market scanner)   → deferred; depends on TASK 11
   - All others → Alpha Vantage (existing)
 - 8 TASE stocks added to market scanner catalog (BEZQ.TA, POLI.TA, LUMI.TA, ICL.TA, TEVA.TA, NICE.TA, ESLT.TA, DLEKG.TA)
 - 4 additional NASDAQ stocks added (AMZN, GOOGL, META, TSLA)
+
+---
+
+---
+
+## Phase 6: Market Intelligence & Growth Tools
+
+### TASK C — Debt Payoff Planner ✅ DONE
+Avalanche/snowball engine on financial liabilities. `/debt-planner` page.
+
+### TASK D — Watchlist ✅ DONE
+`watchlist_items` table (migration 0017). CRUD + daily price refresh. `/watchlist` page.
+
+### TASK B — In-app Notification Center ✅ DONE
+On-the-fly computed alerts (at-risk goals, rebalance, stale prices, setup gaps). `/notifications` page.
+
+### TASK 23 — AI Investment Agent ✅ DONE
+Multi-context Claude Sonnet agent. Gathers full investor context + live market prices. Returns health score, action plan with amounts, top opportunities, capital thresholds ("with 500 ILS, buy X"), risk warnings. `/agent` page.
 
 ---
 

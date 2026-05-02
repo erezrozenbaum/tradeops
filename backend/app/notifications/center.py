@@ -1,0 +1,142 @@
+"""In-app notification center — computed on-the-fly from existing data."""
+import uuid
+from datetime import datetime, timezone
+
+from sqlalchemy.orm import Session
+
+from app.models.financial_profile import FinancialLiability, FinancialProfile
+from app.models.investor_profile import InvestorProfile
+from pydantic import BaseModel
+
+
+class AppNotification(BaseModel):
+    id: str
+    type: str
+    severity: str  # info | warning | danger
+    title: str
+    message: str
+    link: str | None = None
+
+
+def get_notifications(db: Session, investor_id: uuid.UUID) -> list[AppNotification]:
+    notifications: list[AppNotification] = []
+
+    investor = db.get(InvestorProfile, investor_id)
+    if not investor:
+        return []
+
+    # --- Goals analysis ---
+    try:
+        from app.goals_analysis.service import get_analysis
+        goals_result = get_analysis(db, investor_id)
+        if goals_result:
+            at_risk = [g for g in goals_result.goals if g.status == "at_risk"]
+            for g in at_risk:
+                notifications.append(AppNotification(
+                    id=f"goal_at_risk_{g.goal_id}",
+                    type="goal",
+                    severity="warning",
+                    title=f"Goal at risk: {g.goal_name}",
+                    message=f"You need {_fmt(g.monthly_contribution_needed, 'ILS')} / mo but only have {_fmt(g.monthly_surplus_available, 'ILS')} available. Gap: {_fmt(abs(g.gap or 0), 'ILS')}.",
+                    link="/goals",
+                ))
+    except Exception:
+        pass
+
+    # --- Portfolio rebalance ---
+    try:
+        from app.portfolio_analysis.service import get_portfolio
+        from app.portfolio_analysis import rebalance_engine
+        from app.risk_modeling.service import get_latest as get_risk_model
+        portfolio = get_portfolio(db, investor_id)
+        risk_model = get_risk_model(db, investor_id)
+        if portfolio and portfolio.total_current_value > 0:
+            rebalance = rebalance_engine.compute_rebalance(
+                investor_id=investor_id,
+                risk_model=risk_model,
+                asset_allocation=portfolio.asset_allocation,
+                total_value=portfolio.total_current_value,
+                currency=portfolio.base_currency,
+            )
+            if rebalance.rebalance_needed:
+                over = [t for t in rebalance.tiers if t.action == "Reduce"]
+                under = [t for t in rebalance.tiers if t.action == "Buy more"]
+                parts = []
+                if over:
+                    parts.append(f"overweight in {', '.join(t.label for t in over)}")
+                if under:
+                    parts.append(f"underweight in {', '.join(t.label for t in under)}")
+                notifications.append(AppNotification(
+                    id="portfolio_rebalance",
+                    type="portfolio",
+                    severity="warning",
+                    title="Portfolio rebalancing needed",
+                    message=f"Your portfolio is {'; '.join(parts)}. Review your allocation.",
+                    link="/investments",
+                ))
+    except Exception:
+        pass
+
+    # --- Stale prices ---
+    try:
+        from app.models.price_snapshot import PriceSnapshot
+        from app.models.investment_account import InvestmentAccount, InvestmentHolding
+        accounts = db.query(InvestmentAccount).filter(InvestmentAccount.investor_id == investor_id).all()
+        tickers = {h.ticker for acc in accounts for h in acc.holdings if h.ticker}
+        stale = []
+        for ticker in tickers:
+            snap = db.query(PriceSnapshot).filter(PriceSnapshot.ticker == ticker).order_by(PriceSnapshot.fetched_at.desc()).first()
+            if snap:
+                age_h = (datetime.now(timezone.utc) - snap.fetched_at.replace(tzinfo=timezone.utc)).total_seconds() / 3600
+                if age_h > 48:
+                    stale.append(ticker)
+        if stale:
+            notifications.append(AppNotification(
+                id="stale_prices",
+                type="market",
+                severity="info",
+                title="Price data is stale",
+                message=f"{len(stale)} ticker(s) haven't been updated in over 48h: {', '.join(sorted(stale)[:5])}.",
+                link="/investments",
+            ))
+    except Exception:
+        pass
+
+    # --- No financial profile ---
+    try:
+        fp = db.query(FinancialProfile).filter(FinancialProfile.investor_profile_id == investor_id).first()
+        if not fp:
+            notifications.append(AppNotification(
+                id="no_financial_profile",
+                type="setup",
+                severity="info",
+                title="Complete your financial profile",
+                message="Add income, expenses, and assets to unlock goal tracking, stability scoring, and AI recommendations.",
+                link="/financial",
+            ))
+    except Exception:
+        pass
+
+    # --- No risk model ---
+    try:
+        from app.risk_modeling.service import get_latest as get_risk_model
+        rm = get_risk_model(db, investor_id)
+        if not rm:
+            notifications.append(AppNotification(
+                id="no_risk_model",
+                type="setup",
+                severity="info",
+                title="Generate your risk model",
+                message="Your risk model hasn't been generated yet. Go to Risk Model to create one.",
+                link="/risk",
+            ))
+    except Exception:
+        pass
+
+    return notifications
+
+
+def _fmt(amount: float | None, currency: str) -> str:
+    if amount is None:
+        return "—"
+    return f"{currency} {amount:,.0f}"
