@@ -256,7 +256,7 @@ export default function DebtPlannerPage() {
                         <p className="font-semibold text-sm">
                           {formatCurrency(debt.outstanding_balance, debt.currency)}
                         </p>
-                        <Badge variant="outline" className="text-xs mt-0.5">
+                        <Badge variant="muted" className="text-xs mt-0.5">
                           {months(debt.payoff_months)} · {fmtDate(debt.payoff_date)}
                         </Badge>
                       </div>

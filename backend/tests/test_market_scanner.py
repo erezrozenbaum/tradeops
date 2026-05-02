@@ -99,11 +99,12 @@ class TestScan:
         assert suggestions == []
         assert any("not_ready" in n.lower() or "unavailable" in n.lower() for n in notes)
 
-    def test_education_only_returns_preservation_only(self):
+    def test_education_only_returns_full_catalog(self):
         investor = _investor()
         suggestions, notes = scan(investor, _risk_model(), "education_only", {})
-        assert all(s.asset_family == "preservation" for s in suggestions)
         assert len(suggestions) > 0
+        assert not all(s.asset_family == "preservation" for s in suggestions)
+        assert any("start small" in n.lower() for n in notes)
 
     def test_no_risk_model_conservative_only(self):
         investor = _investor(experience_level="intermediate")
