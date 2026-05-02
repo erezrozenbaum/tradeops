@@ -10,6 +10,15 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.29.0] — 2026-05-02
+
+### Fixed
+- **Migration 0014 enum name** — corrected `ALTER TYPE` target from `asset_type` to `assettype` (the actual PostgreSQL type name created in migration 0001); backend now starts cleanly after migration
+- **Profile save failure** — `nationality` and `tax_residency` columns were `VARCHAR(3)` but accept full country names from the UI; migration 0016 widens both to `VARCHAR(100)`
+- **CSV file upload** — added `python-multipart` to `requirements.txt`; FastAPI requires this package for any `UploadFile` / `File(...)` endpoint (the CSV import endpoint introduced in 0.28.0 was broken without it)
+
+---
+
 ## [0.28.0] — 2026-05-02
 
 ### Fixed
