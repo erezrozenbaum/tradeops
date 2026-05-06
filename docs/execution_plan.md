@@ -1,7 +1,7 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.35.0
-**Last updated:** 2026-05-02
+**Version:** 0.36.0
+**Last updated:** 2026-05-06
 
 ---
 
@@ -325,6 +325,9 @@ On-the-fly computed alerts (at-risk goals, rebalance, stale prices, setup gaps).
 
 ### TASK 23 — AI Investment Agent ✅ DONE
 Multi-context Claude Sonnet agent. Gathers full investor context + live market prices. Returns health score, action plan with amounts, top opportunities, capital thresholds ("with 500 ILS, buy X"), risk warnings. `/agent` page.
+
+### TASK 24 — Live Market Opportunity Engine ✅ DONE
+Replaces static catalog recommendations with real market intelligence. New `live_market_intel` module fetches live data from CoinGecko (top crypto, 24h/7d price changes) and Yahoo Finance (stocks/ETFs, 52-week range, 7-day history). Scanner classifies each instrument (`dip / near_low / recovery / momentum / stable`) and ranks by opportunity score. 30-min in-memory cache. AI recommendations engine receives full live price context and references actual market conditions in output. Frontend: "Live Market Signals" grid with price badges, % change, 52w range bar, watchlist button. Catalog expanded to 57 instruments.
 
 ---
 

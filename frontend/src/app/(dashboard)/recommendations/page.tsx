@@ -17,8 +17,11 @@ import {
   ChevronRight,
   Plus,
   TrendingUp,
+  TrendingDown,
   Star,
   ArrowRight,
+  Activity,
+  Minus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +56,21 @@ interface InvestmentRoadmap {
   };
 }
 
+interface LiveSignal {
+  ticker: string;
+  name: string;
+  asset_type: string;
+  current_price: number;
+  currency: string;
+  change_24h_pct: number | null;
+  change_7d_pct: number | null;
+  pct_from_52w_low: number | null;
+  signal_type: string; // "dip" | "near_low" | "recovery" | "momentum" | "stable"
+  signal_note: string;
+  risk_level: string;
+  is_held: boolean;
+}
+
 interface PortfolioAction {
   action: string;
   rationale: string;
@@ -77,6 +95,7 @@ interface RecommendationReport {
   portfolio_actions: PortfolioAction[];
   investment_roadmap: InvestmentRoadmap | null;
   recommendations: InstrumentRecommendation[];
+  market_signals: LiveSignal[];
   generated_at: string;
   disclaimer: string;
 }
@@ -135,6 +154,22 @@ const ACTION_COLOR: Record<string, string> = {
 const ASSET_TYPE_LABEL: Record<string, string> = {
   etf: "ETF", stock: "Stock", crypto: "Crypto", bond: "Bond", fund: "Fund",
 };
+
+const SIGNAL_CONFIG: Record<string, { label: string; border: string; badge: string }> = {
+  dip:      { label: "Dip",      border: "border-l-red-400",    badge: "bg-red-500/10 text-red-600" },
+  near_low: { label: "Near Low", border: "border-l-orange-400", badge: "bg-orange-500/10 text-orange-600" },
+  recovery: { label: "Recovery", border: "border-l-amber-400",  badge: "bg-amber-500/10 text-amber-600" },
+  momentum: { label: "Momentum", border: "border-l-emerald-400", badge: "bg-emerald-500/10 text-emerald-600" },
+  stable:   { label: "Stable",   border: "border-l-border",     badge: "bg-muted text-muted-foreground" },
+};
+
+function formatPct(pct: number | null): { text: string; color: string; Icon: typeof TrendingUp } {
+  if (pct === null) return { text: "—", color: "text-muted-foreground", Icon: Minus };
+  const abs = Math.abs(pct).toFixed(1);
+  if (pct > 0) return { text: `+${abs}%`, color: "text-emerald-600", Icon: TrendingUp };
+  if (pct < 0) return { text: `-${abs}%`, color: "text-red-500", Icon: TrendingDown };
+  return { text: "0.0%", color: "text-muted-foreground", Icon: Minus };
+}
 
 function formatAmount(amount: number, currency: string): string {
   return new Intl.NumberFormat("he-IL", {
@@ -197,6 +232,28 @@ export default function RecommendationsPage() {
     }
   }
 
+  async function addSignalToWatchlist(sig: LiveSignal) {
+    if (!investorId || addedTickers.has(sig.ticker)) return;
+    setAddingTicker(sig.ticker);
+    try {
+      const r = await fetch(`/api/v1/investors/${investorId}/watchlist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticker: sig.ticker,
+          name: sig.name,
+          asset_type: sig.asset_type,
+          notes: sig.signal_note,
+        }),
+      });
+      if (r.ok || r.status === 409) {
+        setAddedTickers(prev => new Set(Array.from(prev).concat(sig.ticker)));
+      }
+    } finally {
+      setAddingTicker(null);
+    }
+  }
+
   const roadmap = report?.investment_roadmap ?? null;
   const tierAllocations = roadmap?.monthly_plan[activeTier] ?? [];
   const discovery = report?.recommendations.filter(r => r.is_new_to_you) ?? [];
@@ -249,7 +306,7 @@ export default function RecommendationsPage() {
           <CardContent className="pt-12 pb-12 flex flex-col items-center gap-3 text-center">
             <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
             <p className="text-sm text-muted-foreground">
-              Analysing your portfolio, goals, and risk model…
+              Fetching live market data and analysing your portfolio…
             </p>
           </CardContent>
         </Card>
@@ -445,6 +502,137 @@ export default function RecommendationsPage() {
                 </CardContent>
               </Card>
             </div>
+          )}
+
+          {/* ── Live Market Signals ── */}
+          {report.market_signals.length > 0 && (
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-primary" />
+                  <h2 className="text-base font-semibold">Live Market Signals</h2>
+                </div>
+                <span className="text-[10px] text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                  Live prices from CoinGecko + Yahoo Finance
+                </span>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {report.market_signals
+                  .filter(s => s.signal_type !== "stable")
+                  .slice(0, 12)
+                  .map((sig) => {
+                    const cfg = SIGNAL_CONFIG[sig.signal_type] ?? SIGNAL_CONFIG.stable;
+                    const d24 = formatPct(sig.change_24h_pct);
+                    const d7 = formatPct(sig.change_7d_pct);
+                    const isAdded = addedTickers.has(sig.ticker);
+                    const isAdding = addingTicker === sig.ticker;
+                    return (
+                      <div
+                        key={sig.ticker}
+                        className={cn(
+                          "rounded-lg border border-l-4 bg-card p-4 space-y-2",
+                          cfg.border,
+                        )}
+                      >
+                        {/* Header row */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                                {sig.ticker}
+                              </span>
+                              <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded", cfg.badge)}>
+                                {cfg.label}
+                              </span>
+                              {sig.is_held && (
+                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600">
+                                  Holding
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm font-medium mt-1 leading-snug truncate">{sig.name}</p>
+                          </div>
+                          <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0", RISK_BADGE[sig.risk_level] ?? "bg-muted text-muted-foreground")}>
+                            {sig.risk_level.replace("_", " ")}
+                          </span>
+                        </div>
+
+                        {/* Price row */}
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-semibold">
+                            {sig.current_price.toLocaleString("en-US", {
+                              style: "currency",
+                              currency: sig.currency,
+                              maximumFractionDigits: sig.current_price < 1 ? 4 : sig.current_price < 100 ? 2 : 0,
+                            })}
+                          </span>
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className={cn("flex items-center gap-0.5", d24.color)}>
+                              <d24.Icon className="h-3 w-3" /> {d24.text} 24h
+                            </span>
+                            <span className={cn("flex items-center gap-0.5 font-medium", d7.color)}>
+                              <d7.Icon className="h-3 w-3" /> {d7.text} 7d
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Signal note */}
+                        <p className="text-xs text-muted-foreground leading-snug">{sig.signal_note}</p>
+
+                        {/* 52w range bar */}
+                        {sig.pct_from_52w_low !== null && (
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-muted-foreground">
+                              <span>52w Low</span>
+                              <span>{sig.pct_from_52w_low.toFixed(0)}% from low</span>
+                              <span>52w High</span>
+                            </div>
+                            <div className="h-1 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className={cn(
+                                  "h-full rounded-full",
+                                  sig.pct_from_52w_low < 20 ? "bg-red-400" :
+                                  sig.pct_from_52w_low < 40 ? "bg-amber-400" : "bg-emerald-400"
+                                )}
+                                style={{ width: `${Math.min(sig.pct_from_52w_low, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Watchlist button */}
+                        <button
+                          onClick={() => addSignalToWatchlist(sig)}
+                          disabled={isAdded || isAdding}
+                          className={cn(
+                            "w-full inline-flex items-center justify-center gap-1 text-[11px] font-medium px-2 py-1.5 rounded transition-colors",
+                            isAdded
+                              ? "bg-emerald-500/10 text-emerald-600 cursor-default"
+                              : "bg-primary/10 text-primary hover:bg-primary/20"
+                          )}
+                        >
+                          {isAdded ? (
+                            <><CheckCircle2 className="h-3 w-3" /> Watchlisted</>
+                          ) : isAdding ? (
+                            "Adding…"
+                          ) : (
+                            <><Plus className="h-3 w-3" /> Add to Watchlist</>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {report.market_signals.filter(s => s.signal_type !== "stable").length === 0 && (
+                <Card className="border-dashed">
+                  <CardContent className="pt-6 pb-6 text-center text-sm text-muted-foreground">
+                    No strong signals detected this week — markets are relatively stable.
+                  </CardContent>
+                </Card>
+              )}
+            </section>
           )}
 
           {/* ── Action Plan ── */}

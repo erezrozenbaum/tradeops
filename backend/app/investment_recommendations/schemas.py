@@ -3,6 +3,8 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.live_market_intel.schemas import LiveSignal  # noqa: F401 — re-exported
+
 
 class PortfolioAction(BaseModel):
     action: str
@@ -59,5 +61,6 @@ class RecommendationReport(BaseModel):
     portfolio_actions: list[PortfolioAction]
     investment_roadmap: InvestmentRoadmap | None = None
     recommendations: list[InstrumentRecommendation]
+    market_signals: list[LiveSignal] = []
     generated_at: datetime
     disclaimer: str
