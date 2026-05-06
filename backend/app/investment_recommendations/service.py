@@ -16,6 +16,7 @@ from app.investment_recommendations.schemas import (
     RecommendationReport,
     RoadmapPhase,
 )
+from app.live_market_intel import scanner as market_scanner
 from app.models.investment_account import InvestmentAccount
 from app.models.investor_profile import InvestorProfile
 from app.portfolio_analysis import rebalance_engine, service as portfolio_service
@@ -54,6 +55,16 @@ def get_recommendations(db: Session, investor_id: uuid.UUID) -> RecommendationRe
         if h.ticker
     }
 
+    # Fetch live market signals (cached 30 min; failures return empty list)
+    try:
+        live_signals = market_scanner.get_opportunity_signals(
+            risk_model=risk_model,
+            current_tickers=current_tickers,
+            max_signals=20,
+        )
+    except Exception:
+        live_signals = []
+
     context = analyzer.build_recommendation_context(
         investor=investor,
         financial_profile=financial_profile,
@@ -62,6 +73,7 @@ def get_recommendations(db: Session, investor_id: uuid.UUID) -> RecommendationRe
         rebalance_result=rebalance_result,
         goals_analysis=goals_analysis,
         current_tickers=current_tickers,
+        live_signals=live_signals,
     )
 
     raw = analyzer.generate_recommendations(context, api_key=settings.ANTHROPIC_API_KEY)
@@ -99,6 +111,7 @@ def get_recommendations(db: Session, investor_id: uuid.UUID) -> RecommendationRe
         portfolio_actions=portfolio_actions,
         investment_roadmap=investment_roadmap,
         recommendations=recommendations,
+        market_signals=live_signals,
         generated_at=datetime.now(timezone.utc),
         disclaimer=raw.get(
             "disclaimer",
