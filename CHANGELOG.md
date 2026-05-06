@@ -10,6 +10,18 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.36.0] — 2026-05-06
+
+### Added
+- **Live Market Opportunity Engine (TASK 24)** — replaces static catalog recommendations with real market intelligence:
+  - New `live_market_intel` module: `fetcher.py` pulls live data from CoinGecko Markets API (top crypto with 24h/7d changes) and Yahoo Finance (stocks/ETFs with 52-week range + 7-day price history); `scanner.py` classifies each instrument as `dip / near_low / recovery / momentum / stable` and ranks by opportunity score; 30-minute in-memory cache to avoid excessive API calls
+  - AI recommendations engine now receives real price data (current price, 24h%, 7d%, 52w position, signal note) for every instrument before generating advice — recommendations now reference actual market conditions
+  - New `Live Market Signals` section on recommendations page: grid of signal cards with current price, 24h/7d % badges (green/red), signal type badge, 52-week range bar, and "Add to Watchlist" button; only shows non-stable signals
+  - Catalog expanded: +3 crypto (SOL-USD, BNB-USD, ADA-USD), +4 high-growth stocks (AMD, PLTR, NFLX, CRM), +3 financial/value stocks (JPM, V, XOM) — total 57 instruments
+  - CoinGecko ID map in `market_data/fetcher.py` extended for SOL, BNB, ADA so individual quote lookups work
+
+---
+
 ## [0.35.0] — 2026-05-02
 
 ### Changed
