@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useInvestorId } from "@/hooks/useInvestorId";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import {
   Bot, TrendingUp, AlertTriangle, Zap, Layers, Target,
-  ArrowRight, RefreshCw, CheckCircle2, Clock, Lightbulb,
+  RefreshCw, CheckCircle2, Clock, Lightbulb, Info, ArrowRight,
 } from "lucide-react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ActionItem {
   action: string;
@@ -54,6 +58,8 @@ interface AgentReport {
   no_data: boolean;
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 const URGENCY_CONFIG: Record<string, { label: string; color: string }> = {
   immediate: { label: "Immediate", color: "bg-red-500/10 text-red-600 border-red-200" },
   soon: { label: "Soon", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
@@ -71,13 +77,36 @@ const RISK_COLORS: Record<string, string> = {
   very_high: "text-red-600",
 };
 
+const CACHE_KEY = (id: string) => `tradeops_agent_${id}`;
+const STALE_HOURS = 12;
+
+function ageLabel(iso: string): string {
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 2) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function isStale(iso: string): boolean {
+  return (Date.now() - new Date(iso).getTime()) > STALE_HOURS * 3600000;
+}
+
+function parseError(status: number, detail?: string): string {
+  if (status === 503) return "AI service not configured — ANTHROPIC_API_KEY is missing.";
+  if (status === 404) return "Investor profile not found. Try logging in again.";
+  if (status === 502) return "Backend server unreachable. Make sure it is running.";
+  if (detail) return detail;
+  return `Agent failed (status ${status}). Please try again.`;
+}
+
 function HealthScore({ score }: { score: number }) {
   const color = score >= 70 ? "text-green-600" : score >= 45 ? "text-amber-600" : "text-red-500";
   const ringColor = score >= 70 ? "stroke-green-500" : score >= 45 ? "stroke-amber-400" : "stroke-red-500";
   const r = 28;
   const circ = 2 * Math.PI * r;
   const dash = (score / 100) * circ;
-
   return (
     <div className="relative flex items-center justify-center h-20 w-20">
       <svg className="absolute -rotate-90" width="80" height="80" viewBox="0 0 80 80">
@@ -92,27 +121,53 @@ function HealthScore({ score }: { score: number }) {
   );
 }
 
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default function AgentPage() {
   const investorId = useInvestorId();
   const [report, setReport] = useState<AgentReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
+
+  // Load cache on mount
+  useEffect(() => {
+    if (!investorId) return;
+    try {
+      const raw = localStorage.getItem(CACHE_KEY(investorId));
+      if (raw) {
+        const { data, savedAt } = JSON.parse(raw);
+        setReport(data);
+        setCachedAt(savedAt);
+      }
+    } catch {}
+  }, [investorId]);
 
   async function runAgent() {
+    if (!investorId) return;
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch(`/api/v1/investors/${investorId}/agent`);
-      if (r.ok) {
-        setReport(await r.json());
-      } else {
-        setError("Agent failed to run. Please try again.");
+      const res = await fetch(`/api/v1/investors/${investorId}/agent`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const detail = typeof body.detail === "string" ? body.detail : undefined;
+        setError(parseError(res.status, detail));
+        return;
       }
+      const data: AgentReport = await res.json();
+      setReport(data);
+      const savedAt = new Date().toISOString();
+      setCachedAt(savedAt);
+      localStorage.setItem(CACHE_KEY(investorId), JSON.stringify({ data, savedAt }));
     } catch {
-      setError("Network error. Please try again.");
+      setError("Network error — check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
+
+  const showStale = cachedAt && isStale(cachedAt);
 
   return (
     <div className="p-8 max-w-5xl space-y-6">
@@ -140,26 +195,71 @@ export default function AgentPage() {
         </button>
       </div>
 
-      {/* Empty state */}
-      {!report && !loading && (
-        <Card className="border-dashed">
-          <CardContent className="py-16 text-center space-y-3">
-            <Bot className="h-14 w-14 mx-auto text-muted-foreground/30" />
-            <p className="font-semibold text-lg">Ready to analyse your situation</p>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              The agent reads your full financial profile, portfolio, goals, and scans 40+ market instruments to generate a personalised action plan with specific amounts.
-            </p>
-            <button
-              onClick={runAgent}
-              className="mt-2 inline-flex items-center gap-2 px-6 py-2.5 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-            >
-              <Zap className="h-4 w-4" /> Run agent now
-            </button>
-            <p className="text-xs text-muted-foreground mt-2">Takes ~10 seconds · Uses Claude AI</p>
-          </CardContent>
-        </Card>
+      {/* Stale cache notice */}
+      {showStale && !loading && (
+        <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3 text-sm text-amber-800">
+          <Clock className="h-4 w-4 shrink-0" />
+          Results from {ageLabel(cachedAt!)} — market conditions may have changed.
+          <button onClick={runAgent} className="ml-auto text-xs font-medium underline underline-offset-2">
+            Refresh now
+          </button>
+        </div>
       )}
 
+      {/* Empty state */}
+      {!report && !loading && (
+        <div className="space-y-4">
+          <Card className="border-dashed">
+            <CardContent className="py-14 text-center space-y-3">
+              <Bot className="h-14 w-14 mx-auto text-muted-foreground/30" />
+              <p className="font-semibold text-lg">Ready to analyse your situation</p>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                The agent reads your full financial profile, portfolio, goals, and scans 40+ market instruments to generate a personalised action plan with specific amounts.
+              </p>
+              <button
+                onClick={runAgent}
+                className="mt-2 inline-flex items-center gap-2 px-6 py-2.5 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+              >
+                <Zap className="h-4 w-4" /> Run agent now
+              </button>
+              <p className="text-xs text-muted-foreground mt-2">Takes ~15 seconds · Uses Claude Sonnet AI</p>
+            </CardContent>
+          </Card>
+
+          {/* Setup hints */}
+          <Card className="border-blue-200/60 bg-blue-50/30">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start gap-3">
+                <Info className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                <div className="space-y-2 flex-1">
+                  <p className="text-sm font-medium text-blue-900">For the best analysis, make sure you have set up:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                    {[
+                      { label: "Financial Profile", href: "/financial", desc: "Income, expenses, savings" },
+                      { label: "Risk Model", href: "/risk", desc: "Investment risk allocation" },
+                      { label: "Holdings", href: "/investments", desc: "Your current investments" },
+                    ].map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="flex items-center gap-2 rounded-md border border-blue-200 bg-white/70 px-3 py-2 hover:bg-white transition-colors"
+                      >
+                        <ArrowRight className="h-3 w-3 text-blue-500 shrink-0" />
+                        <div>
+                          <p className="font-medium text-blue-900">{item.label}</p>
+                          <p className="text-muted-foreground">{item.desc}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Loading */}
       {loading && (
         <Card>
           <CardContent className="py-14 text-center space-y-3">
@@ -172,12 +272,20 @@ export default function AgentPage() {
         </Card>
       )}
 
+      {/* Error */}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-          {error}
+        <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50/50 px-4 py-3 text-sm text-red-700">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p>{error}</p>
+          </div>
+          <button onClick={runAgent} disabled={loading} className="text-xs font-medium underline underline-offset-2 shrink-0">
+            Retry
+          </button>
         </div>
       )}
 
+      {/* Report */}
       {report && !loading && (
         <>
           {/* Top summary bar */}
@@ -193,8 +301,11 @@ export default function AgentPage() {
                   <p className="text-sm text-muted-foreground">{report.market_pulse}</p>
                 </div>
                 <div className="text-right text-xs text-muted-foreground shrink-0">
-                  <p className="flex items-center gap-1 justify-end"><Clock className="h-3 w-3" /> Last run</p>
-                  <p>{new Date(report.generated_at).toLocaleString()}</p>
+                  <p className="flex items-center gap-1 justify-end">
+                    <Clock className="h-3 w-3" />
+                    {cachedAt ? ageLabel(cachedAt) : "just now"}
+                  </p>
+                  <p>{new Date(report.generated_at).toLocaleDateString()}</p>
                 </div>
               </div>
             </CardContent>
@@ -234,7 +345,7 @@ export default function AgentPage() {
                             {action.ticker && (
                               <span className="font-mono text-xs text-muted-foreground">{action.ticker}</span>
                             )}
-                            <Badge variant="muted" className={`text-xs ${urg.color}`}>
+                            <Badge variant="muted" className={cn("text-xs", urg.color)}>
                               {urg.label}
                             </Badge>
                             <Badge variant="muted" className="text-xs capitalize">
@@ -292,7 +403,7 @@ export default function AgentPage() {
                       </div>
                       <p className="text-xs text-muted-foreground mb-2">{opp.why_now}</p>
                       <div className="flex items-center justify-between text-xs">
-                        <span className={`font-medium capitalize ${RISK_COLORS[opp.risk_level] ?? ""}`}>
+                        <span className={cn("font-medium capitalize", RISK_COLORS[opp.risk_level])}>
                           {opp.risk_level.replace("_", " ")} risk
                         </span>
                         <span className="text-muted-foreground">
@@ -306,7 +417,7 @@ export default function AgentPage() {
             </div>
           )}
 
-          {/* Capital thresholds — the centrepiece */}
+          {/* Capital thresholds */}
           {report.capital_thresholds.length > 0 && (
             <div className="space-y-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
@@ -316,7 +427,6 @@ export default function AgentPage() {
                 Know exactly what to do at every savings milestone — from your first investment to a fully diversified portfolio.
               </p>
               <div className="relative">
-                {/* Vertical connector */}
                 <div className="absolute left-5 top-8 bottom-8 w-0.5 bg-border" />
                 <div className="space-y-3">
                   {report.capital_thresholds.map((tier, i) => (
@@ -339,10 +449,7 @@ export default function AgentPage() {
                           {tier.instruments.length > 0 && (
                             <div className="flex flex-wrap gap-1">
                               {tier.instruments.map((inst, j) => (
-                                <span
-                                  key={j}
-                                  className="inline-block px-2 py-0.5 rounded bg-muted text-xs font-mono"
-                                >
+                                <span key={j} className="inline-block px-2 py-0.5 rounded bg-muted text-xs font-mono">
                                   {inst}
                                 </span>
                               ))}
@@ -364,10 +471,7 @@ export default function AgentPage() {
                 <AlertTriangle className="h-4 w-4" /> Risk warnings
               </h2>
               {report.risk_warnings.map((w, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3"
-                >
+                <div key={i} className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3">
                   <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                   <p className="text-sm text-amber-800">{w}</p>
                 </div>

@@ -208,7 +208,7 @@ def generate_report(context: dict, api_key: str) -> dict:
     context_json = json.dumps(context, indent=2, default=str)
 
     message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model="claude-sonnet-4-6",
         max_tokens=2048,
         system=_SYSTEM_PROMPT,
         messages=[
@@ -232,4 +232,17 @@ def generate_report(context: dict, api_key: str) -> dict:
         if raw.endswith("```"):
             raw = raw[:-3].strip()
 
-    return json.loads(raw)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return {
+            "summary": "Unable to generate report at this time. Please try again.",
+            "financial_health": "",
+            "risk_profile": "",
+            "portfolio_analysis": "",
+            "goals_progress": "",
+            "strategy_analysis": "",
+            "backtest_insights": "",
+            "paper_trading_performance": "",
+            "recommendations": "",
+        }

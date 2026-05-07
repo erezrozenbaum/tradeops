@@ -107,12 +107,15 @@ def fetch_stock_signal(ticker: str, name: str, asset_type: str) -> LiveSignalDat
             return None
 
         currency = meta.get("currency", "USD")
-        if currency == "ILA":
+        is_ila = currency == "ILA"
+        if is_ila:
             current_price = current_price / 100
             currency = "ILS"
 
         # 24h change from previousClose
         prev_close = meta.get("previousClose") or meta.get("chartPreviousClose")
+        if is_ila and prev_close:
+            prev_close = prev_close / 100
         change_24h: float | None = None
         if prev_close and prev_close > 0:
             change_24h = round((current_price - prev_close) / prev_close * 100, 2)
@@ -123,9 +126,9 @@ def fetch_stock_signal(ticker: str, name: str, asset_type: str) -> LiveSignalDat
         pct_from_52w_low: float | None = None
         pct_from_52w_high: float | None = None
         if w52_high and w52_low and w52_high > w52_low:
-            if currency == "ILS":
-                w52_high = w52_high / 100 if w52_high > current_price * 10 else w52_high
-                w52_low = w52_low / 100 if w52_low > current_price * 10 else w52_low
+            if is_ila:
+                w52_high = w52_high / 100
+                w52_low = w52_low / 100
             pct_from_52w_low = round((current_price - w52_low) / (w52_high - w52_low) * 100, 1)
             pct_from_52w_high = round((w52_high - current_price) / w52_high * 100, 1)
 
@@ -135,7 +138,7 @@ def fetch_stock_signal(ticker: str, name: str, asset_type: str) -> LiveSignalDat
             .get("quote", [{}])[0]
             .get("close", [])
         )
-        closes = [c for c in closes if c is not None]
+        closes = [c / 100 if is_ila else c for c in closes if c is not None]
         change_7d: float | None = None
         if len(closes) >= 2 and closes[0] and closes[0] > 0:
             change_7d = round((current_price - closes[0]) / closes[0] * 100, 2)
