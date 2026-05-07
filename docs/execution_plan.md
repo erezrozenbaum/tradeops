@@ -1,7 +1,7 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.37.0
-**Last updated:** 2026-05-06
+**Version:** 0.38.0
+**Last updated:** 2026-05-07
 
 ---
 
@@ -342,6 +342,37 @@ Multi-context Claude Sonnet agent. Gathers full investor context + live market p
 - localStorage cache on Agent, Recommendations, and AI Report pages: instant load on revisit, stale banner at 12h/24h threshold
 - Actionable error messages mapped to HTTP status codes (503/502/404) on all AI pages
 - Setup guidance cards in empty states with direct links to required data sources
+
+---
+
+### TASK 26 — Deep Market Research Engine ✅ DONE
+
+**Type:** New module (`market_research/`)
+**Risk:** 🟢 Safe — no DB migration
+
+**Endpoint:** `GET /api/v1/investors/{id}/market-research`
+
+**What it does:** Screens 60+ stocks across 8 sectors for fundamental undervaluation, then uses AI to construct a three-tier investment brief with specific, data-backed theses.
+
+**Screener scoring (0–100):**
+- Analyst conviction (0–30): upside to consensus price target + buy/sell rating
+- Valuation (0–25): forward P/E + PEG ratio
+- Growth (0–25): revenue growth YoY
+- Quality (0–15): net profit margin + ROE
+- Entry point (0–10): price position within 52-week range
+
+**Three tiers:**
+- Stable (30–35%): income, capital preservation, deep value
+- Moderate (40%): quality growth at reasonable price
+- High Opportunity (20–25%): undervalued + catalyst, higher volatility
+
+**Data sources:** `yfinance` (free, no API key) for fundamentals; XLK/XLF/XLV/XLE/XLY/XLI/XLC/XLU sector ETFs for sector performance.
+
+**Cache:** 6-hour in-memory cache; pre-warm background job runs on startup and every 6h.
+
+**Frontend:** `/market-research` page — sector performance grid, three-tier pick cards, key metric pills, expandable thesis panels.
+
+**Tests:** 20 unit tests for screener scoring algorithm.
 
 ---
 

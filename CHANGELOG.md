@@ -10,6 +10,22 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.38.0] — 2026-05-07
+
+### Added
+- **Deep Market Research Engine (TASK 26)** — new `market_research/` backend module + `/market-research` frontend page providing genuine fundamental analysis, not generic ETF advice.
+  - **Fundamental screener**: screens 60+ stocks and ETFs across 8 sectors using `yfinance` (free, no API key). Scores each instrument on 5 axes: analyst conviction (upside to consensus target + rating), valuation (forward P/E, PEG ratio), revenue growth, quality (profit margin, ROE), and 52-week entry position. Results cached 6 hours; concurrent fetching via `ThreadPoolExecutor(max_workers=10)`.
+  - **Sector performance tracking**: live 1M / 3M / 1Y returns for XLK, XLF, XLV, XLE, XLY, XLI, XLC, XLU sector ETFs with bullish/neutral/bearish classification.
+  - **AI investment brief**: Claude Sonnet receives top 25 screened candidates with full fundamentals + sector data + investor profile. Returns specific, data-backed investment theses across three tiers (stable / moderate / high_opportunity). Each thesis references actual P/E ratios, revenue growth, analyst targets, and time-horizon reasoning — not generic advice.
+  - **Three-tier portfolio construction**: stable (30–35%), moderate growth (40%), high opportunity (20–25%) — matching the portfolio allocation the user described.
+  - **Frontend page** at `/market-research`: sector performance grid, three-tier pick cards with expanded "Why now" / "Key risk" panels, key metric pills (forward P/E, revenue growth, net margin, dividend yield, 52w range position), analyst target + upside display, 6h localStorage cache with stale banner.
+  - **Research pre-warm background job**: runs on startup and every 6 hours to keep the fundamental cache warm, eliminating cold-start latency.
+  - **Route Handler** with 120s timeout and 3-attempt retry (8s/16s backoff) for the long-running screener+AI call.
+  - `yfinance>=0.2.36` added to `requirements.txt`.
+  - 20 unit tests for the screener scoring algorithm.
+
+---
+
 ## [0.37.0] — 2026-05-06
 
 ### Fixed

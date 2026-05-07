@@ -25,6 +25,7 @@ from app.debt_planner.router import router as debt_planner_router
 from app.watchlist.router import router as watchlist_router
 from app.notifications.router import router as notifications_router
 from app.investment_agent.router import router as investment_agent_router
+from app.market_research.router import router as market_research_router
 
 api_router = APIRouter()
 
@@ -47,6 +48,7 @@ api_router.include_router(investment_agent_router, prefix="/investors/{investor_
 api_router.include_router(goals_analysis_router, prefix="/investors/{investor_id}/goals-analysis", tags=["goals-analysis"])
 api_router.include_router(market_scanner_router, prefix="/investors/{investor_id}/market-scan", tags=["market-scan"])
 api_router.include_router(investment_recommendations_router, prefix="/investors/{investor_id}/recommendations", tags=["recommendations"])
+api_router.include_router(market_research_router, prefix="/investors/{investor_id}/market-research", tags=["market-research"])
 api_router.include_router(holdings_router, prefix="/investors", tags=["holdings"])
 api_router.include_router(market_data_router, prefix="/market", tags=["market-data"])
 api_router.include_router(dashboard_router, prefix="/investors", tags=["dashboard"])
