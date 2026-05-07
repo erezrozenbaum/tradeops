@@ -23,6 +23,7 @@ import {
   Eye,
   Bot,
   CreditCard,
+  Microscope,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +62,7 @@ const sections = [
     items: [
       { label: "AI Agent", href: "/agent", icon: Bot },
       { label: "Recommendations", href: "/recommendations", icon: Wand2 },
+      { label: "Market Research", href: "/market-research", icon: Microscope },
       { label: "Market Scan", href: "/market-scan", icon: ScanSearch },
       { label: "AI Report", href: "/reports", icon: Sparkles },
     ],

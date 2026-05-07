@@ -26,6 +26,7 @@ def _register_jobs() -> None:
     from app.workers.jobs.goal_evaluation import evaluate_all_goals
     from app.workers.jobs.notification_alerts import send_notification_alerts
     from app.workers.jobs.market_prewarm import prewarm_market_signals
+    from app.workers.jobs.research_prewarm import prewarm_market_research
 
     _scheduler.add_job(
         refresh_all_prices,
@@ -56,6 +57,14 @@ def _register_jobs() -> None:
         misfire_grace_time=600,
         next_run_time=datetime.now(timezone.utc),  # run immediately on startup
     )
+    _scheduler.add_job(
+        prewarm_market_research,
+        IntervalTrigger(hours=6),
+        id="research_prewarm",
+        replace_existing=True,
+        misfire_grace_time=1800,
+        next_run_time=datetime.now(timezone.utc),  # warm cache on startup
+    )
 
 
 def start() -> None:
@@ -65,7 +74,7 @@ def start() -> None:
     _register_jobs()
     _scheduler.start()
     _started = True
-    log.info("Workers scheduler started (jobs: price_refresh @ 20:00 UTC, goal_evaluation @ 07:00 UTC, notification_alerts @ 08:30 UTC, market_prewarm every 30 min)")
+    log.info("Workers scheduler started (jobs: price_refresh, goal_evaluation, notification_alerts, market_prewarm, research_prewarm)")
 
 
 def stop() -> None:
