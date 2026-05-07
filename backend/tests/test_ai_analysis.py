@@ -252,11 +252,13 @@ class TestGenerateReport:
 
         assert result["summary"] == "s"
 
-    def test_raises_on_invalid_json(self):
+    def test_returns_fallback_on_invalid_json(self):
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="not valid json at all")]
 
         with patch("app.ai_analysis.analyzer.anthropic.Anthropic") as mock_cls:
             mock_cls.return_value.messages.create.return_value = mock_response
-            with pytest.raises(Exception):
-                generate_report({}, api_key="test-key")
+            result = generate_report({}, api_key="test-key")
+
+        assert "summary" in result
+        assert "recommendations" in result
