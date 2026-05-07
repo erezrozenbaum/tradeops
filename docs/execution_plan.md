@@ -1,6 +1,6 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.36.0
+**Version:** 0.37.0
 **Last updated:** 2026-05-06
 
 ---
@@ -325,6 +325,25 @@ On-the-fly computed alerts (at-risk goals, rebalance, stale prices, setup gaps).
 
 ### TASK 23 — AI Investment Agent ✅ DONE
 Multi-context Claude Sonnet agent. Gathers full investor context + live market prices. Returns health score, action plan with amounts, top opportunities, capital thresholds ("with 500 ILS, buy X"), risk warnings. `/agent` page.
+
+### TASK 25 — AI Reliability & UX Hardening ✅ DONE
+
+**Type:** Bug fixes + reliability improvements + UX polish  
+**Risk:** 🟢 Safe — no DB migration
+
+**Fixes:**
+- `generate_recommendations` and `generate_report`: unhandled `json.loads` → safe fallback dict on JSON parse failure
+- `AnalysisReportOut` schema: missing `portfolio_analysis` + `goals_progress` fields → Pydantic 422 on every AI report call
+- Dedicated Next.js Route Handlers for `/recommendations` and `/ai-report` with 3-attempt retry + 90s timeout (matching agent handler)
+
+**Changed:**
+- Haiku → Sonnet (`claude-sonnet-4-6`) in `investment_recommendations/analyzer.py` and `ai_analysis/analyzer.py`
+- New `market_prewarm` background job: runs on startup + every 30 min to keep 30-min in-memory signal cache warm; removes 20-40s cold-start latency from recommendations requests
+- localStorage cache on Agent, Recommendations, and AI Report pages: instant load on revisit, stale banner at 12h/24h threshold
+- Actionable error messages mapped to HTTP status codes (503/502/404) on all AI pages
+- Setup guidance cards in empty states with direct links to required data sources
+
+---
 
 ### TASK 24 — Live Market Opportunity Engine ✅ DONE
 Replaces static catalog recommendations with real market intelligence. New `live_market_intel` module fetches live data from CoinGecko (top crypto, 24h/7d price changes) and Yahoo Finance (stocks/ETFs, 52-week range, 7-day history). Scanner classifies each instrument (`dip / near_low / recovery / momentum / stable`) and ranks by opportunity score. 30-min in-memory cache. AI recommendations engine receives full live price context and references actual market conditions in output. Frontend: "Live Market Signals" grid with price badges, % change, 52w range bar, watchlist button. Catalog expanded to 57 instruments.

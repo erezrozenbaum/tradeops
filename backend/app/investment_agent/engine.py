@@ -95,7 +95,8 @@ def _build_context(db: Session, investor_id: uuid.UUID) -> dict | None:
     from app.risk_modeling.service import get_latest as get_risk_model
     from app.portfolio_analysis.service import get_portfolio
     from app.goals_analysis.service import get_analysis as get_goals
-    from app.financial_scoring.service import compute_score
+    from app.financial_scoring.engine import calculate_stability_score
+    from app.financial_scoring.schemas import FinancialScoringInput
     from app.market_scanner.catalog import CATALOG
 
     investor = db.get(InvestorProfile, investor_id)
@@ -117,7 +118,14 @@ def _build_context(db: Session, investor_id: uuid.UUID) -> dict | None:
     stability = None
     if fp:
         try:
-            stability = compute_score(fp)
+            stability = calculate_stability_score(FinancialScoringInput(
+                monthly_income=fp.monthly_income,
+                monthly_expenses=fp.monthly_expenses,
+                emergency_fund_months=fp.emergency_fund_months,
+                job_stability=fp.job_stability,
+                income_trend=fp.income_trend,
+                dependents_count=fp.dependents_count,
+            ))
         except Exception:
             pass
 
@@ -177,7 +185,7 @@ def _build_context(db: Session, investor_id: uuid.UUID) -> dict | None:
         },
         "goals": [
             {
-                "name": g.goal_name,
+                "name": g.name,
                 "status": g.status,
                 "progress_pct": g.progress_pct,
                 "monthly_contribution_needed": g.monthly_contribution_needed,

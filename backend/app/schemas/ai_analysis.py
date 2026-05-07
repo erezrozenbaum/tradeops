@@ -10,6 +10,8 @@ class AnalysisReportOut(BaseModel):
     summary: str
     financial_health: str
     risk_profile: str
+    portfolio_analysis: str
+    goals_progress: str
     strategy_analysis: str
     backtest_insights: str
     paper_trading_performance: str

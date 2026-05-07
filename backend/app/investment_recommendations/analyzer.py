@@ -140,7 +140,7 @@ def generate_recommendations(context: dict, api_key: str) -> dict:
     context_json = json.dumps(context, indent=2, default=str)
 
     message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model="claude-sonnet-4-6",
         max_tokens=3500,
         system=_SYSTEM_PROMPT,
         messages=[
@@ -164,7 +164,16 @@ def generate_recommendations(context: dict, api_key: str) -> dict:
         if raw.endswith("```"):
             raw = raw[:-3].strip()
 
-    return json.loads(raw)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return {
+            "overall_guidance": "Unable to generate recommendations at this time. Please try again.",
+            "portfolio_actions": [],
+            "investment_roadmap": None,
+            "recommendations": [],
+            "disclaimer": "This is educational guidance only.",
+        }
 
 
 def build_recommendation_context(
