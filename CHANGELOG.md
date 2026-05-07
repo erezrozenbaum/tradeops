@@ -10,6 +10,23 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.37.0] — 2026-05-06
+
+### Fixed
+- **AI Recommendations always failing** — `generate_recommendations` called `json.loads(raw)` with no error handling; when Claude returned malformed JSON the unhandled exception propagated through FastAPI → Next.js proxy returned an HTML error page → frontend showed generic "Failed to generate recommendations". Now returns a safe fallback dict on JSON parse failure.
+- **AI Report always failing (schema mismatch)** — `AnalysisReportOut` Pydantic schema was missing `portfolio_analysis` and `goals_progress` fields that the AI prompt generates; Pydantic validation rejected every response → all AI reports returned 422. Both fields added to schema.
+- **AI Report JSON parse error** — `generate_report` had the same unhandled `json.loads` call; fixed with same safe fallback pattern.
+- **Long-running AI requests dropped on uvicorn reload** — Recommendations and AI Report endpoints went through the generic Next.js fallback rewrite (no retry, no timeout). Created dedicated Route Handlers for both with 3-attempt retry logic and 90s timeout, matching the agent endpoint pattern.
+
+### Changed
+- **AI model upgraded: Haiku → Sonnet** — both `investment_recommendations/analyzer.py` and `ai_analysis/analyzer.py` now use `claude-sonnet-4-6` instead of `claude-haiku-4-5-20251001`. Sonnet produces more reliable structured JSON output for complex multi-schema prompts, reducing parse failures.
+- **Market scanner cache pre-warmed on startup** — new `market_prewarm` background job runs immediately on server start and every 30 minutes thereafter, keeping the 30-minute in-memory signal cache warm. Previously, a cold cache added 20-40 seconds to every recommendations request because the parallel Yahoo Finance calls ran inline.
+- **AI pages load instantly from cache** — Agent, Recommendations, and AI Report pages now persist the last successful result to `localStorage`. On next visit the report is shown immediately with a "Generated X ago" label; a "Refresh now" prompt appears when the cache is stale (12h for agent, 24h for recommendations/reports).
+- **Actionable error messages** — all three AI pages now map HTTP status codes to specific messages: 503 → API key not configured; 502 → backend unreachable; 404 → investor not found. Generic "Please try again" replaced throughout.
+- **Setup guidance in empty states** — when no cached report exists, all three AI pages show a setup card with direct links to Financial Profile, Risk Model, Holdings (and Goals/Backtests/Paper Trading for reports), explaining what data improves AI output quality.
+
+---
+
 ## [0.36.0] — 2026-05-06
 
 ### Added

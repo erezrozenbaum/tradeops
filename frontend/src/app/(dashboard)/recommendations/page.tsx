@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useInvestorId } from "@/hooks/useInvestorId";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +22,9 @@ import {
   ArrowRight,
   Activity,
   Minus,
+  Info,
 } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -145,6 +147,30 @@ const ACTION_LABEL: Record<string, string> = {
   consider: "Consider",
 };
 
+const CACHE_KEY = (id: string) => `tradeops_recommendations_${id}`;
+const STALE_HOURS = 24;
+
+function ageLabel(iso: string): string {
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 2) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function isStale(iso: string): boolean {
+  return (Date.now() - new Date(iso).getTime()) > STALE_HOURS * 3600000;
+}
+
+function parseError(status: number, detail?: string): string {
+  if (status === 503) return "AI service not configured — ANTHROPIC_API_KEY is missing.";
+  if (status === 404) return "Investor profile not found. Try logging in again.";
+  if (status === 502) return "Backend server unreachable. Make sure it is running.";
+  if (detail) return detail;
+  return `Failed to generate recommendations (status ${status}). Please try again.`;
+}
+
 const ACTION_COLOR: Record<string, string> = {
   start_position: "bg-primary/10 text-primary",
   increase: "bg-emerald-500/10 text-emerald-600",
@@ -187,9 +213,23 @@ export default function RecommendationsPage() {
   const [report, setReport] = useState<RecommendationReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [activeTier, setActiveTier] = useState<"conservative" | "balanced" | "growth">("balanced");
   const [addingTicker, setAddingTicker] = useState<string | null>(null);
   const [addedTickers, setAddedTickers] = useState<Set<string>>(new Set());
+
+  // Load cache on mount
+  useEffect(() => {
+    if (!investorId) return;
+    try {
+      const raw = localStorage.getItem(CACHE_KEY(investorId));
+      if (raw) {
+        const { data, savedAt } = JSON.parse(raw);
+        setReport(data);
+        setCachedAt(savedAt);
+      }
+    } catch {}
+  }, [investorId]);
 
   async function generate() {
     if (!investorId) return;
@@ -200,9 +240,14 @@ export default function RecommendationsPage() {
       const res = await fetch(`/api/v1/investors/${investorId}/recommendations`);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.detail ?? "Failed to generate recommendations");
+        const detail = typeof body.detail === "string" ? body.detail : undefined;
+        throw new Error(parseError(res.status, detail));
       }
-      setReport(await res.json());
+      const data: RecommendationReport = await res.json();
+      setReport(data);
+      const savedAt = new Date().toISOString();
+      setCachedAt(savedAt);
+      localStorage.setItem(CACHE_KEY(investorId), JSON.stringify({ data, savedAt }));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
@@ -276,29 +321,78 @@ export default function RecommendationsPage() {
       </div>
 
       {error && (
-        <Card className="border-destructive/40 bg-destructive/5">
-          <CardContent className="pt-4 text-sm text-destructive">{error}</CardContent>
-        </Card>
+        <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <div className="flex-1">{error}</div>
+          <button onClick={generate} disabled={loading} className="text-xs font-medium underline underline-offset-2 shrink-0">
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Stale cache notice */}
+      {report && cachedAt && isStale(cachedAt) && !loading && (
+        <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3 text-sm text-amber-800">
+          <Clock className="h-4 w-4 shrink-0" />
+          Showing results from {ageLabel(cachedAt)} — market conditions may have changed.
+          <button onClick={generate} className="ml-auto text-xs font-medium underline underline-offset-2">
+            Refresh now
+          </button>
+        </div>
       )}
 
       {/* Empty state */}
       {!report && !loading && !error && (
-        <Card className="border-dashed">
-          <CardContent className="pt-12 pb-12 flex flex-col items-center gap-4 text-center">
-            <Sparkles className="h-10 w-10 text-muted-foreground/30" />
-            <div>
-              <p className="font-medium">Get your personalised investment roadmap</p>
-              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                Claude analyses your portfolio, risk model, goals, and financial situation —
-                then gives you a specific monthly plan for three risk levels.
-              </p>
-            </div>
-            <Button onClick={generate} size="lg">
-              <Sparkles className="h-4 w-4 mr-2" />
-              Generate my roadmap
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <Card className="border-dashed">
+            <CardContent className="pt-12 pb-12 flex flex-col items-center gap-4 text-center">
+              <Sparkles className="h-10 w-10 text-muted-foreground/30" />
+              <div>
+                <p className="font-medium">Get your personalised investment roadmap</p>
+                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                  Claude analyses your portfolio, risk model, goals, and financial situation —
+                  then gives you a specific monthly plan for three risk levels.
+                </p>
+              </div>
+              <Button onClick={generate} size="lg">
+                <Sparkles className="h-4 w-4 mr-2" />
+                Generate my roadmap
+              </Button>
+              <p className="text-xs text-muted-foreground">Takes ~20 seconds · Uses Claude Sonnet AI</p>
+            </CardContent>
+          </Card>
+
+          {/* Setup hints */}
+          <Card className="border-blue-200/60 bg-blue-50/30">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start gap-3">
+                <Info className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                <div className="space-y-2 flex-1">
+                  <p className="text-sm font-medium text-blue-900">For the best recommendations, make sure you have set up:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                    {[
+                      { label: "Financial Profile", href: "/financial", desc: "Income, expenses, savings" },
+                      { label: "Risk Model", href: "/risk", desc: "Investment risk allocation" },
+                      { label: "Holdings", href: "/investments", desc: "Your current investments" },
+                    ].map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="flex items-center gap-2 rounded-md border border-blue-200 bg-white/70 px-3 py-2 hover:bg-white transition-colors"
+                      >
+                        <ArrowRight className="h-3 w-3 text-blue-500 shrink-0" />
+                        <div>
+                          <p className="font-medium text-blue-900">{item.label}</p>
+                          <p className="text-muted-foreground">{item.desc}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {loading && (
@@ -324,6 +418,7 @@ export default function RecommendationsPage() {
               ))}
               <p className="mt-3 text-xs text-muted-foreground border-t pt-3">
                 Generated {new Date(report.generated_at).toLocaleString()}
+                {cachedAt && ` · ${ageLabel(cachedAt)}`}
               </p>
             </CardContent>
           </Card>
