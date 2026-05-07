@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // standalone: produces a minimal production bundle for Docker (run with `node server.js`).
+  // Incompatible with `next start` CLI — always run via `node .next/standalone/server.js` in prod.
+  output: "standalone",
   async rewrites() {
     return {
       // fallback: checked after all pages and Route Handlers, so dedicated API route
