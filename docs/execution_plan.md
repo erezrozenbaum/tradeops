@@ -1,7 +1,7 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.38.2
-**Last updated:** 2026-05-08
+**Version:** 0.39.0
+**Last updated:** 2026-05-08 (v0.39.0)
 
 ---
 
@@ -381,14 +381,190 @@ Replaces static catalog recommendations with real market intelligence. New `live
 
 ---
 
+---
+
+## Phase 7: Portfolio Intelligence & Tax Awareness
+
+*Gap analysis identified 2026-05-08 from professional trader review.*
+
+---
+
+### TASK 27 — Tax Rules Engine ✅ DONE
+
+**Type:** New module (`tax_rules/`)
+**Risk:** 🟢 Safe — no DB migration
+
+**What it does:** Structured, country-specific tax rules injected into all AI context payloads so the AI gives accurate, jurisdiction-aware tax guidance.
+
+**Countries covered:** Israel (IL), United States (US), United Kingdom (GB), Germany (DE), France (FR)
+
+**Key Israeli corrections made:**
+- Pension fund (קרן פנסיה): NOT taxed at 25% at retirement — taxed as income with monthly exemption ~8,900 ILS (2024)
+- Keren Hishtalmut: COMPLETELY TAX-FREE after 6 years — highlighted as the single best tax shelter for Israeli investors
+- Stocks/ETFs/Crypto: 25% CGT (real gains after CPI adjustment or nominal, whichever is lower)
+
+**Files created:**
+- `backend/app/tax_rules/rules.py` — structured tax rule data (IL, US, GB, DE, FR)
+- `backend/app/tax_rules/service.py` — `get_tax_context_for_investor(investor)` → dict
+- `backend/app/tax_rules/__init__.py`
+
+**Modules updated:**
+- `ai_analysis/analyzer.py` — `build_context()` accepts `tax_context`; system prompt updated with tax accuracy rules
+- `ai_analysis/service.py` — fetches and injects tax context
+- `investment_recommendations/analyzer.py` — `build_recommendation_context()` accepts `tax_context`; system prompt updated
+- `investment_recommendations/service.py` — fetches and injects tax context
+
+---
+
+### TASK 28 — Performance History & Equity Curve
+
+**Type:** New UI page + backend query (DB table exists: `portfolio_snapshots`)
+**Risk:** 🟢 Safe — no DB migration (snapshots table already exists from migration 0010)
+
+**What to build:**
+- Daily portfolio value snapshots stored automatically (currently the table exists but nothing writes to it)
+- Background job: daily snapshot writer (uses existing `portfolio_analysis.service.get_portfolio()`)
+- API endpoint: `GET /api/v1/investors/{id}/portfolio/history?period=1m|3m|6m|1y|all`
+- Response: array of `{date, total_value, cost_basis, unrealized_pnl_pct, asset_allocation}`
+- Frontend: `/performance` page — equity curve chart, period selector, max drawdown indicator, best/worst month
+
+**Priority:** High — every serious investor needs to see their equity curve.
+
+---
+
+### TASK 29 — Core Risk Metrics (Sharpe, Drawdown, Benchmark)
+
+**Type:** New module (`performance_analytics/`)
+**Risk:** 🟢 Safe — no DB migration (reads from portfolio_snapshots)
+
+**What to build:**
+- Sharpe ratio (annualised, using risk-free rate from config)
+- Sortino ratio (downside deviation)
+- Maximum drawdown (peak-to-trough % decline)
+- Benchmark comparison: S&P 500 (SPY) as default, TA-35 for ILS investors
+- Beta vs benchmark (rolling 3-month correlation)
+- Best/worst month, current drawdown from peak
+- API endpoint: `GET /api/v1/investors/{id}/portfolio/analytics`
+- Frontend: analytics card on `/performance` page
+
+**Priority:** High — required for meaningful portfolio assessment.
+
+---
+
+### TASK 30 — Transaction Log / Trade Journal
+
+**Type:** New module + DB schema
+**Risk:** 🔴 Risky — Alembic migration (new `holding_transactions` table)
+
+**What to build:**
+- `holding_transactions` table: holding_id, account_id, investor_id, transaction_type (buy/sell/dividend), quantity, price_per_unit, total_amount, fees, transaction_date, notes
+- API: `GET/POST /api/v1/investors/{id}/transactions`, `GET /api/v1/investors/{id}/accounts/{acc_id}/holdings/{h_id}/transactions`
+- Portfolio analysis updated to compute P&L from transaction history (cost basis = weighted average of buys)
+- Frontend: `/transactions` page — sortable log, filter by account/ticker/date, export to CSV
+
+**Priority:** High — without this, P&L calculations are approximate and taxes cannot be computed correctly.
+
+---
+
+### TASK 31 — Price Alerts on Specific Levels
+
+**Type:** New module + DB schema
+**Risk:** 🔴 Risky — Alembic migration (new `price_alerts` table)
+
+**What to build:**
+- `price_alerts` table: investor_id, ticker, alert_type (above/below), target_price, is_active, triggered_at
+- Worker job: check price alerts daily after price refresh
+- In-app notification when triggered (integrates with existing notifications module)
+- API: CRUD for price alerts
+- Frontend: Alert button on watchlist and holdings; `/alerts` section in notifications
+
+**Priority:** Medium — useful but not blocking core portfolio management.
+
+---
+
+### TASK 32 — Economic Calendar (Earnings Dates & Macro Events)
+
+**Type:** New module (read-only, external API)
+**Risk:** 🟢 Safe — no DB migration
+
+**What to build:**
+- Earnings dates for holdings + watchlist tickers (yfinance `calendar` data)
+- Next earnings date badge on holding cards
+- `GET /api/v1/investors/{id}/calendar` — returns upcoming earnings dates for all held + watched tickers
+- Frontend: upcoming events panel on dashboard; earnings badge on investment holding rows
+
+**Data source:** yfinance `.calendar` property (free, no key required)
+
+**Priority:** Medium — high value for active investors.
+
+---
+
+### TASK 33 — Correlation Matrix & Concentration Risk
+
+**Type:** New module (analytics, no DB migration)
+**Risk:** 🟢 Safe
+
+**What to build:**
+- Compute pairwise correlation between held tickers using 90-day price history (yfinance)
+- Concentration risk score: flag if >40% of portfolio in single sector or >3 tickers with correlation >0.8
+- API: `GET /api/v1/investors/{id}/portfolio/correlation`
+- Frontend: correlation heatmap on `/performance` page; concentration risk warning card
+
+**Priority:** Medium — reveals hidden risk that allocation % doesn't show.
+
+---
+
+### TASK 34 — Position Sizing & Max-Loss Guidance
+
+**Type:** Feature extension (recommendations module)
+**Risk:** 🟢 Safe — no DB migration
+
+**What to build:**
+- Per-recommendation: `suggested_position_size_pct` (% of investable capital), `max_loss_if_wrong` (in base currency at a defined stop-loss distance)
+- Stop-loss suggestion: ATR-based (yfinance 14-day ATR) or 10% below entry as default
+- Show on recommendations page: "Suggested size: 5% (~3,400 ILS) | Max loss: ~340 ILS at 10% stop"
+
+**Priority:** Medium.
+
+---
+
+### TASK 35 — Holdings News Feed
+
+**Type:** New module (external API integration)
+**Risk:** 🟢 Safe — no DB migration
+
+**What to build:**
+- Fetch recent news headlines for held + watched tickers
+- Data source: yfinance `.news` property (free) or Alpha Vantage NEWS_SENTIMENT endpoint
+- API: `GET /api/v1/investors/{id}/news?limit=20`
+- Frontend: news feed widget on dashboard; news tab on individual holding detail
+
+**Priority:** Low — nice to have but doesn't affect core portfolio decisions.
+
+---
+
+### TASK 36 — CSV Import for Holdings
+
+**Type:** New feature (holdings module extension)
+**Risk:** 🟡 Moderate
+
+**What to build:**
+- Parse CSV from common Israeli brokers (Meitav, IBI, Psagot) and generic format
+- Map columns: ticker, quantity, purchase_price, purchase_date, fees, currency
+- Preview before import; validate tickers; dry-run mode
+- API: `POST /api/v1/investors/{id}/accounts/{acc_id}/holdings/import`
+- Frontend: import button on investments page with column-mapping wizard
+
+**Priority:** Low for MVP — but would make the app usable for people with existing portfolios.
+
+---
+
 ## 5. Out of Scope (explicit deferral)
 
 - Broker API integration (IBKR, eToro, Meitav) — much larger lift
-- PDF / CSV statement import
+- PDF statement import
 - Real-time price streaming (daily-close polling sufficient for MVP)
-- Tax engine
 - Live trading execution
-- Workers / background job processing
 - Kubernetes / production deployment
 
 ---
