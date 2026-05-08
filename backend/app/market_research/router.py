@@ -11,7 +11,7 @@ from app.market_research.schemas import MarketResearchReport
 router = APIRouter()
 
 
-@router.get("/", response_model=MarketResearchReport)
+@router.get("", response_model=MarketResearchReport)
 def get_market_research(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     result = service.get_research(db, investor_id)
     if result is None:
