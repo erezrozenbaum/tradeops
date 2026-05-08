@@ -10,6 +10,41 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.40.0] — 2026-05-08
+
+### Added — TASK 28: Performance History & Equity Curve
+- **Daily snapshot writer** (`workers/jobs/snapshot_writer.py`) — runs at 21:00 UTC, captures portfolio state for all investors with holdings; idempotent (one snapshot per investor per day).
+- **`/portfolio/history` period filter** — endpoint now accepts `period=1m|3m|6m|1y|all` instead of just `limit`; returns up to 500 snapshots for the requested range.
+- **`/performance` page** — equity curve (AreaChart), cost-basis overlay, period selector (1M/3M/6M/1Y/All), key metric cards (Total Return, Max Drawdown, Sharpe, Volatility, vs S&P 500).
+
+### Added — TASK 29: Core Risk Metrics
+- **`performance_analytics/` module** — pure-Python engine computing: total return %, annualised CAGR, max drawdown, current drawdown, Sharpe ratio, Sortino ratio, annualised volatility, best/worst snapshot period.
+- **SPY benchmark comparison** — yfinance-fetched cumulative return series normalised to portfolio start date; 24-hour in-memory cache.
+- **`GET /investors/{id}/portfolio/analytics`** — returns `PerformanceAnalytics` JSON; period filter same as history endpoint.
+- **Return vs benchmark chart** — dual-line chart on performance page showing portfolio % return vs S&P 500 from the same starting point.
+
+### Added — TASK 30: Transaction Log / Trade Journal
+- **Migration 0019** — `holding_transactions` table: investor_id, account_id, holding_id (nullable), transaction_type (buy/sell/dividend/fee/split/bonus), ticker, quantity, price_per_unit, total_amount, fees, currency, transaction_date, notes.
+- **`transactions/` module** — full CRUD service + router.
+- **`GET/POST /investors/{id}/transactions`** — list (with filters: account, ticker, type, date range) and create.
+- **`GET/PUT/DELETE /investors/{id}/transactions/{tx_id}`** — read, update, delete.
+- **`/transactions` page** — summary cards (total bought/sold/fees), add-transaction form with auto-computed total (qty × price), filterable table, delete with confirmation.
+
+### Added — TASK 31: Price Alerts on Specific Levels
+- **Migration 0020** — `price_alerts` table: investor_id, ticker, alert_type (above/below), target_price, currency, is_active, triggered_at, triggered_price.
+- **`price_alerts/` module** — service + router.
+- **`GET/POST /investors/{id}/alerts`** — list and create alerts.
+- **`DELETE /investors/{id}/alerts/{alert_id}`** — delete/dismiss an alert.
+- **`price_alert_checker` worker job** — runs at 20:30 UTC daily (after price refresh); checks all active alerts against latest cached prices; sets `triggered_at` + `triggered_price` on match.
+- **Notifications integration** — triggered price alerts from last 7 days appear in the notification center with a link to Watchlist to delete/dismiss.
+- **Watchlist page redesign** — Bell icon on each row opens price alert modal; shows active alert count badge and "Triggered!" badge; alert modal shows existing alerts with delete, and a type selector (above/below) + target price input.
+- `snapshot_writer` and `price_alert_checker` jobs registered in `scheduler.py`.
+
+### Changed
+- `portfolio_analysis/service.py` — `get_history()` now accepts `since: datetime | None` for date-range filtering; added `has_snapshot_today()` deduplication helper.
+
+---
+
 ## [0.39.0] — 2026-05-08
 
 ### Added

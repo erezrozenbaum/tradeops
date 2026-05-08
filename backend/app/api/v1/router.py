@@ -26,6 +26,8 @@ from app.watchlist.router import router as watchlist_router
 from app.notifications.router import router as notifications_router
 from app.investment_agent.router import router as investment_agent_router
 from app.market_research.router import router as market_research_router
+from app.transactions.router import router as transactions_router
+from app.price_alerts.router import router as price_alerts_router
 
 api_router = APIRouter()
 
@@ -55,3 +57,5 @@ api_router.include_router(dashboard_router, prefix="/investors", tags=["dashboar
 api_router.include_router(family_profile_router, prefix="/family-profiles", tags=["family-profiles"])
 api_router.include_router(strategy_library_router, prefix="/strategies/templates", tags=["strategy-templates"])
 api_router.include_router(audit_router, prefix="/investors", tags=["audit"])
+api_router.include_router(transactions_router, prefix="/investors/{investor_id}/transactions", tags=["transactions"])
+api_router.include_router(price_alerts_router, prefix="/investors/{investor_id}/alerts", tags=["price-alerts"])
