@@ -25,21 +25,23 @@ Every recommendation must be grounded in the actual numbers provided.
 
 ─── OUTPUT REQUIREMENTS ────────────────────────────────────────────────────────
 
-You must select 7–10 specific instruments distributed across THREE tiers:
+You must select 12–15 specific instruments distributed across THREE tiers:
 
-TIER 1 — stable (2–3 picks):
+TIER 1 — stable (3–4 picks):
   Income + capital preservation. These are dividend payers, deep value stocks trading
   below historical fair value, or index ETFs during drawdowns.
   Target hold period: 18–36 months.
 
-TIER 2 — moderate (3–4 picks):
+TIER 2 — moderate (5–6 picks):
   Quality growth at a reasonable price. Strong fundamentals, positive revenue growth,
   P/E below 30, clear near-term catalyst (product cycle, sector rotation, earnings recovery).
   Target hold period: 12–24 months.
 
-TIER 3 — high_opportunity (2–3 picks):
+TIER 3 — high_opportunity (3–4 picks):
   Undervalued or deep-discount positions with a specific re-rating catalyst or high-growth
   potential. These carry more volatility. Analyst upside should be >20%.
+  Crypto from `crypto_universe` belongs here — score based on 52-week entry signal and
+  market cycle context. Include 1–2 crypto picks if they show a strong entry opportunity.
   Target hold period: 6–18 months (shorter if the thesis plays out faster).
 
 ─── THESIS QUALITY REQUIREMENTS ────────────────────────────────────────────────
@@ -59,7 +61,8 @@ not generic phrases like "markets can go down."
 
 ─── CONSTRAINTS ────────────────────────────────────────────────────────────────
 
-- Only use tickers from the provided screened_candidates list.
+- For stocks/ETFs: only use tickers from the provided screened_candidates list.
+- For crypto: only use tickers from the provided crypto_universe list (if present).
 - Do not recommend tickers the investor already holds (current_holdings) unless
   there is a strong "increase position" case — if so, flag it explicitly.
 - If the investor's base currency is ILS, include at least 1 TASE-listed stock
@@ -109,8 +112,9 @@ def _build_context(
     candidates: list[StockFundamentals],
     sector_performance: list[SectorPerformance],
     investor_context: dict,
+    crypto_candidates: list[StockFundamentals] | None = None,
 ) -> dict:
-    return {
+    ctx: dict = {
         "investor": investor_context,
         "screened_candidates": [
             {
@@ -151,6 +155,21 @@ def _build_context(
             for s in sector_performance
         ],
     }
+    if crypto_candidates:
+        ctx["crypto_universe"] = [
+            {
+                "ticker": c.ticker,
+                "name": c.name,
+                "asset_type": "crypto",
+                "current_price": c.current_price,
+                "currency": c.currency,
+                "pct_from_52w_low": c.pct_from_52w_low,
+                "pct_from_52w_high": c.pct_from_52w_high,
+                "opportunity_score": c.opportunity_score,
+            }
+            for c in crypto_candidates
+        ]
+    return ctx
 
 
 def _parse_picks(raw_list: list, candidates_map: dict[str, StockFundamentals], tier: str) -> list[OpportunityPick]:
@@ -195,14 +214,15 @@ def generate_research(
     sector_performance: list[SectorPerformance],
     investor_context: dict,
     api_key: str,
+    crypto_candidates: list[StockFundamentals] | None = None,
 ) -> dict:
     client = anthropic.Anthropic(api_key=api_key)
-    context = _build_context(candidates, sector_performance, investor_context)
+    context = _build_context(candidates, sector_performance, investor_context, crypto_candidates)
     context_json = json.dumps(context, indent=2, default=str)
 
     message = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=4096,
+        max_tokens=8096,
         system=_SYSTEM_PROMPT,
         messages=[
             {
@@ -227,7 +247,7 @@ def generate_research(
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
-        log.error("[market_research] Claude returned invalid JSON — using fallback")
+        log.error("[market_research] Claude returned invalid JSON (len=%d, preview=%s) — using fallback", len(raw), raw[:200])
         return {
             "market_overview": "Market analysis temporarily unavailable. Please try again.",
             "stable_picks": [],

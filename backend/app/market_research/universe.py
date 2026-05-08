@@ -12,6 +12,15 @@ SECTOR_ETFS: dict[str, str] = {
     "Utilities": "XLU",
 }
 
+# Crypto assets scored separately (no fundamental metrics — uses price/momentum scoring)
+CRYPTO_UNIVERSE: list[dict] = [
+    {"ticker": "BTC-USD",  "name": "Bitcoin",           "sector": "Crypto", "market": "Crypto", "asset_type": "crypto"},
+    {"ticker": "ETH-USD",  "name": "Ethereum",          "sector": "Crypto", "market": "Crypto", "asset_type": "crypto"},
+    {"ticker": "SOL-USD",  "name": "Solana",            "sector": "Crypto", "market": "Crypto", "asset_type": "crypto"},
+    {"ticker": "BNB-USD",  "name": "BNB (Binance Coin)","sector": "Crypto", "market": "Crypto", "asset_type": "crypto"},
+    {"ticker": "XRP-USD",  "name": "XRP (Ripple)",      "sector": "Crypto", "market": "Crypto", "asset_type": "crypto"},
+]
+
 # Stocks + ETFs scored by the fundamental screener
 STOCK_UNIVERSE: list[dict] = [
     # ── Technology ──────────────────────────────────────────────────

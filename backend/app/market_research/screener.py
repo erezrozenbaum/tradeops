@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 import yfinance as yf
 
 from app.market_research.schemas import SectorPerformance, StockFundamentals
-from app.market_research.universe import SECTOR_ETFS, STOCK_UNIVERSE
+from app.market_research.universe import CRYPTO_UNIVERSE, SECTOR_ETFS, STOCK_UNIVERSE
 
 log = logging.getLogger(__name__)
 
@@ -28,6 +28,7 @@ _CACHE_TTL = 21_600  # 6 hours
 class _Cache:
     fundamentals: list[StockFundamentals]
     sector_performance: list[SectorPerformance]
+    crypto_candidates: list[StockFundamentals]
     fetched_at: float = field(default_factory=time.time)
 
 
@@ -83,6 +84,25 @@ def _score(info: dict) -> float:
     if current and w52h and w52l and w52h > w52l > 0:
         position = (current - w52l) / (w52h - w52l)  # 0 = at low, 1 = at high
         score += max(0.0, (1.0 - position) * 10)
+
+    return round(min(100.0, score), 1)
+
+
+def _score_crypto(info: dict) -> float:
+    """Score crypto on 52-week entry signal (no fundamental metrics available)."""
+    score = 0.0
+    current = info.get("currentPrice") or info.get("regularMarketPrice") or 0.0
+
+    # Entry signal (0–60): nearer to 52w low = better entry
+    w52h = info.get("fiftyTwoWeekHigh")
+    w52l = info.get("fiftyTwoWeekLow")
+    if current and w52h and w52l and w52h > w52l > 0:
+        position = (current - w52l) / (w52h - w52l)
+        score += max(0.0, (1.0 - position) * 60)
+
+    # Base presence score (valid price = 20 pts)
+    if current > 0:
+        score += 20
 
     return round(min(100.0, score), 1)
 
@@ -144,7 +164,7 @@ def _fetch_one(entry: dict) -> StockFundamentals | None:
             dividend_yield_pct=_pct(info.get("dividendYield")),
             pct_from_52w_low=pct_from_low,
             pct_from_52w_high=pct_from_high,
-            opportunity_score=_score(info),
+            opportunity_score=(_score_crypto if entry.get("asset_type") == "crypto" else _score)(info),
         )
     except Exception as exc:
         log.debug("Screener skipped %s: %s", ticker, exc)
@@ -158,7 +178,7 @@ def _fetch_sector_performance() -> list[SectorPerformance]:
             hist = yf.download(etf, period="1y", interval="1mo", progress=False, auto_adjust=True)
             if hist.empty or len(hist) < 2:
                 continue
-            closes = hist["Close"].dropna()
+            closes = hist["Close"].squeeze().dropna()
             if len(closes) < 2:
                 continue
             latest = float(closes.iloc[-1])
@@ -196,14 +216,14 @@ def _fetch_sector_performance() -> list[SectorPerformance]:
     return results
 
 
-def run_screen() -> tuple[list[StockFundamentals], list[SectorPerformance]]:
-    """Fetch fundamentals for all universe members and sector ETF performance.
+def run_screen() -> tuple[list[StockFundamentals], list[SectorPerformance], list[StockFundamentals]]:
+    """Fetch fundamentals for all universe members, sector ETF performance, and crypto candidates.
 
     Results are cached for 6 hours. Concurrent fetching with 10 workers.
     """
     global _cache
     if _cache and (time.time() - _cache.fetched_at) < _CACHE_TTL:
-        return _cache.fundamentals, _cache.sector_performance
+        return _cache.fundamentals, _cache.sector_performance, _cache.crypto_candidates
 
     log.info("[market_research] Starting fundamental screen of %d instruments", len(STOCK_UNIVERSE))
     fundamentals: list[StockFundamentals] = []
@@ -218,11 +238,27 @@ def run_screen() -> tuple[list[StockFundamentals], list[SectorPerformance]]:
     fundamentals.sort(key=lambda x: x.opportunity_score, reverse=True)
     sector_performance = _fetch_sector_performance()
 
-    _cache = _Cache(fundamentals=fundamentals, sector_performance=sector_performance)
-    log.info("[market_research] Screen complete: %d/%d instruments scored", len(fundamentals), len(STOCK_UNIVERSE))
-    return fundamentals, sector_performance
+    crypto_candidates: list[StockFundamentals] = []
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = {pool.submit(_fetch_one, entry): entry for entry in CRYPTO_UNIVERSE}
+        for future in as_completed(futures):
+            result = future.result()
+            if result and result.current_price:
+                crypto_candidates.append(result)
+    crypto_candidates.sort(key=lambda x: x.opportunity_score, reverse=True)
+
+    _cache = _Cache(
+        fundamentals=fundamentals,
+        sector_performance=sector_performance,
+        crypto_candidates=crypto_candidates,
+    )
+    log.info(
+        "[market_research] Screen complete: %d/%d stocks scored, %d crypto",
+        len(fundamentals), len(STOCK_UNIVERSE), len(crypto_candidates),
+    )
+    return fundamentals, sector_performance, crypto_candidates
 
 
-def get_top_candidates(n: int = 25) -> tuple[list[StockFundamentals], list[SectorPerformance]]:
-    fundamentals, sectors = run_screen()
-    return fundamentals[:n], sectors
+def get_top_candidates(n: int = 25) -> tuple[list[StockFundamentals], list[SectorPerformance], list[StockFundamentals]]:
+    fundamentals, sectors, crypto = run_screen()
+    return fundamentals[:n], sectors, crypto

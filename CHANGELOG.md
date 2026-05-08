@@ -10,6 +10,23 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.38.2] — 2026-05-08
+
+### Added
+- **Crypto universe in Market Research** — BTC, ETH, SOL, BNB, XRP fetched from yfinance and passed to Claude as a dedicated `crypto_universe` pool. Claude can now select 1–2 crypto picks for the high-opportunity tier based on 52-week entry signal. A "Crypto Universe" section on the page shows all 5 coins with entry score and 52-week range.
+- **Full Screened Universe table** — collapsible table on the Market Research page showing all 25 scored stock candidates with: opportunity score, ticker, sector, price, analyst upside, forward P/E, revenue growth, net margin, and 52-week position. Users can now see the full screener output, not just AI-selected picks.
+- **Crypto scoring function** (`_score_crypto`) — separate scoring for crypto assets using 52-week range position (0–60 pts) plus a base presence score (20 pts), since crypto has no P/E, analyst targets, or fundamental metrics.
+
+### Changed
+- **AI picks increased from 7–10 to 12–15** — prompt updated: stable tier 3–4 picks, moderate tier 5–6 picks, high-opportunity tier 3–4 picks (including optional 1–2 crypto).
+- **`max_tokens` 4096 → 8096** in market research analyzer — prevents Claude's JSON response from being truncated mid-output on large screener contexts.
+- **Sector ETF fix** — `hist["Close"].squeeze()` applied to handle yfinance multi-level column format; was silently returning 0 sectors on every startup.
+
+### Fixed
+- `research_prewarm` worker now handles the updated `run_screen()` 3-tuple return (fundamentals, sectors, crypto).
+
+---
+
 ## [0.38.1] — 2026-05-08
 
 ### Fixed
