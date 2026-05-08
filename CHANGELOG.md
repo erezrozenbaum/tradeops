@@ -10,6 +10,13 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.40.1] — 2026-05-08
+
+### Fixed
+- **Frontend type errors** — replaced invalid `Badge variant="outline"` with `variant="muted"` / `variant="warning"` in performance and watchlist pages; replaced Radix-style `SelectItem/SelectTrigger/SelectContent/SelectValue` imports with native `<select>` + `<option>` in transactions page to match project's plain HTML select component. Resolves CI type-check failures.
+
+---
+
 ## [0.40.0] — 2026-05-08
 
 ### Added — TASK 28: Performance History & Equity Curve

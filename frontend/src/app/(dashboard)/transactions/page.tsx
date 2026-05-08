@@ -6,13 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select } from "@/components/ui/select";
 import {
   ArrowUpCircle, ArrowDownCircle, DollarSign, FileText,
   Plus, Trash2, X, AlertTriangle, ClipboardList,
@@ -151,30 +145,18 @@ function AddTransactionForm({ investorId, accounts, onCreated, onCancel }: AddFo
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Account *</label>
-            <Select value={form.account_id} onValueChange={(v) => set("account_id", v)}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Select account" />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id} className="text-xs">
-                    {a.account_name || a.provider_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+            <Select value={form.account_id} onChange={(e) => set("account_id", e.target.value)} className="h-8 text-xs">
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>{a.account_name || a.provider_name}</option>
+              ))}
             </Select>
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Type *</label>
-            <Select value={form.transaction_type} onValueChange={(v) => set("transaction_type", v)}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TX_TYPES.map((t) => (
-                  <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
-                ))}
-              </SelectContent>
+            <Select value={form.transaction_type} onChange={(e) => set("transaction_type", e.target.value)} className="h-8 text-xs">
+              {TX_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
             </Select>
           </div>
           <div>
@@ -340,16 +322,11 @@ export default function TransactionsPage() {
           value={filterTicker}
           onChange={(e) => setFilterTicker(e.target.value)}
         />
-        <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="h-8 text-xs w-36">
-            <SelectValue placeholder="All types" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all" className="text-xs">All types</SelectItem>
-            {TX_TYPES.map((t) => (
-              <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
-            ))}
-          </SelectContent>
+        <Select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="h-8 text-xs w-36">
+          <option value="all">All types</option>
+          {TX_TYPES.map((t) => (
+            <option key={t.value} value={t.value}>{t.label}</option>
+          ))}
         </Select>
         <span className="text-xs text-muted-foreground ml-auto">{filtered.length} transactions</span>
       </div>

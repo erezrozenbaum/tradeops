@@ -144,7 +144,7 @@ function AlertModal({
                   </span>
                   <div className="flex items-center gap-2">
                     {a.triggered_at && (
-                      <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/50">
+                      <Badge variant="warning" className="text-[10px]">
                         Triggered
                       </Badge>
                     )}
