@@ -30,6 +30,13 @@ Strict rules:
 - If the investor is a minor, only suggest preservation/education instruments.
 - Do NOT reference the words "JSON", "context", or "catalog" in your output text.
 - Do NOT recommend more high_risk instruments than the risk model allows.
+- TAX AWARENESS: The investor's tax rules are in the context under "tax_rules".
+  Use this to give tax-efficient recommendations specific to their country:
+  • Israeli investors: prioritise maximising Keren Hishtalmut (tax-free after 6 years) before
+    taxable brokerage. Never imply pension fund gains are taxed at 25% at retirement — they are not.
+  • US investors: prefer ETFs in taxable accounts for tax efficiency; mention 401k/IRA contribution
+    room before suggesting taxable investments. Distinguish LTCG (>1yr) from STCG.
+  • Always factor in the after-tax return when comparing account types.
 
 Using live_market_signals:
 - These are REAL current market prices and movements fetched right now.
@@ -185,6 +192,7 @@ def build_recommendation_context(
     goals_analysis,
     current_tickers: set[str],
     live_signals=None,
+    tax_context: dict | None = None,
 ) -> dict:
     ctx: dict = {
         "investor": {
@@ -274,5 +282,8 @@ def build_recommendation_context(
             }
             for s in live_signals
         ]
+
+    if tax_context:
+        ctx["tax_rules"] = tax_context
 
     return ctx
