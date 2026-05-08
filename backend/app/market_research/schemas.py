@@ -71,3 +71,5 @@ class MarketResearchReport(BaseModel):
     screening_universe_size: int
     candidates_scored: int
     disclaimer: str
+    all_stock_candidates: list[StockFundamentals] = []
+    crypto_candidates: list[StockFundamentals] = []

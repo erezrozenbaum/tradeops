@@ -47,7 +47,7 @@ def get_research(db: Session, investor_id: uuid.UUID) -> MarketResearchReport | 
             "high_risk_pct": risk_model.high_risk_pct,
         }
 
-    candidates, sector_perf = screener.get_top_candidates(n=25)
+    candidates, sector_perf, crypto_candidates = screener.get_top_candidates(n=25)
     universe_size = len(screener.run_screen()[0])
 
     raw = analyzer.generate_research(
@@ -55,6 +55,7 @@ def get_research(db: Session, investor_id: uuid.UUID) -> MarketResearchReport | 
         sector_performance=sector_perf,
         investor_context=investor_context,
         api_key=settings.ANTHROPIC_API_KEY,
+        crypto_candidates=crypto_candidates,
     )
 
     candidates_map = {c.ticker: c for c in candidates}
@@ -89,4 +90,6 @@ def get_research(db: Session, investor_id: uuid.UUID) -> MarketResearchReport | 
             "disclaimer",
             "This is for educational purposes only. Not financial advice. Always conduct your own research.",
         ),
+        all_stock_candidates=candidates,
+        crypto_candidates=crypto_candidates,
     )
