@@ -353,7 +353,7 @@ export default function PerformancePage() {
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     Return vs {analytics.benchmark_ticker ?? "S&P 500"}
                   </CardTitle>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="muted" className="text-xs">
                     {analytics.benchmark_ticker ?? "SPY"} benchmark
                   </Badge>
                 </div>
