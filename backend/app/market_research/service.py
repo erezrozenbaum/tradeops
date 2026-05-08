@@ -1,4 +1,5 @@
 """Orchestrates the deep market research pipeline."""
+import time
 import uuid
 from datetime import datetime, timezone
 
@@ -10,6 +11,9 @@ from app.market_research.schemas import MarketResearchReport, SectorPerformance
 from app.models.investment_account import InvestmentAccount
 from app.models.investor_profile import InvestorProfile
 from app.risk_modeling import service as rm_service
+
+_AI_CACHE: dict[str, tuple[dict, float]] = {}
+_AI_CACHE_TTL = 21_600  # 6 hours — same as screener
 
 
 def get_research(db: Session, investor_id: uuid.UUID) -> MarketResearchReport | None:
@@ -47,16 +51,23 @@ def get_research(db: Session, investor_id: uuid.UUID) -> MarketResearchReport | 
             "high_risk_pct": risk_model.high_risk_pct,
         }
 
-    candidates, sector_perf, crypto_candidates = screener.get_top_candidates(n=25)
-    universe_size = len(screener.run_screen()[0])
+    all_stocks, sector_perf, crypto_candidates = screener.run_screen()  # uses 6h cache
+    universe_size = len(all_stocks)
+    candidates = all_stocks[:25]
 
-    raw = analyzer.generate_research(
-        candidates=candidates,
-        sector_performance=sector_perf,
-        investor_context=investor_context,
-        api_key=settings.ANTHROPIC_API_KEY,
-        crypto_candidates=crypto_candidates,
-    )
+    cache_key = str(investor_id)
+    cached = _AI_CACHE.get(cache_key)
+    if cached and (time.time() - cached[1]) < _AI_CACHE_TTL:
+        raw = cached[0]
+    else:
+        raw = analyzer.generate_research(
+            candidates=candidates,
+            sector_performance=sector_perf,
+            investor_context=investor_context,
+            api_key=settings.ANTHROPIC_API_KEY,
+            crypto_candidates=crypto_candidates,
+        )
+        _AI_CACHE[cache_key] = (raw, time.time())
 
     candidates_map = {c.ticker: c for c in candidates}
 

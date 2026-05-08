@@ -26,6 +26,7 @@ import {
   Microscope,
   Activity,
   ClipboardList,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -77,6 +78,7 @@ const sections = [
       { label: "Notifications", href: "/notifications", icon: Bell },
       { label: "Audit Log", href: "/audit", icon: FileText },
       { label: "Settings", href: "/settings", icon: Settings },
+      { label: "Help & Guide", href: "/help", icon: HelpCircle },
     ],
   },
 ];

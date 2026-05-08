@@ -10,6 +10,18 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.41.0] — 2026-05-08
+
+### Fixed
+- **API URL routing** — Performance, Transactions, and Watchlist pages were calling `http://backend:8000` directly from the browser (unresolvable Docker hostname). Changed all three pages to use relative `/api/v1/...` URLs which route through the Next.js rewrite proxy correctly.
+
+### Added
+- **Help & Guide page** (`/help`) — Full user guide surfaced in the UI: recommended onboarding flow (8 steps), per-page descriptions for every section (Personal, Strategy, Portfolio, Intelligence, System), and technical notes (API key setup, snapshot timing, migrations). Accessible via sidebar "Help & Guide".
+- **Market research AI result cache** — Backend now caches the Claude AI analysis output per investor for 6 hours, matching the screener cache TTL. Subsequent requests within the cache window return instantly instead of re-running a 45-60s Claude API call.
+- **Market research loading progress** — Loading state now shows elapsed seconds, phase-based step labels ("Fetching market data…", "Screening fundamentals…", "Generating AI theses…"), and step completion indicators so users know the analysis is still running.
+
+---
+
 ## [0.40.1] — 2026-05-08
 
 ### Fixed

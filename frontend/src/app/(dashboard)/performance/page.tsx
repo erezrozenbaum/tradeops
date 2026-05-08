@@ -15,8 +15,6 @@ import {
 } from "recharts";
 import { formatCurrency } from "@/lib/utils";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface SnapshotPoint {
@@ -156,8 +154,8 @@ export default function PerformancePage() {
     setError(null);
     try {
       const [hRes, aRes] = await Promise.all([
-        fetch(`${API}/api/v1/investors/${investorId}/portfolio/history?period=${period}`),
-        fetch(`${API}/api/v1/investors/${investorId}/portfolio/analytics?period=${period}`),
+        fetch(`/api/v1/investors/${investorId}/portfolio/history?period=${period}`),
+        fetch(`/api/v1/investors/${investorId}/portfolio/analytics?period=${period}`),
       ]);
       if (!hRes.ok || !aRes.ok) throw new Error("Failed to load performance data");
       const [h, a] = await Promise.all([hRes.json(), aRes.json()]);
