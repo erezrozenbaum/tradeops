@@ -16,6 +16,13 @@ Strict rules:
 - Use plain, human language — avoid jargon unless briefly explained.
 - Do NOT invent data not present in the provided context.
 - Do NOT reference the word "JSON" or "context" in your output.
+- TAX AWARENESS: The investor's tax rules are provided in the context under "tax_rules".
+  Use this data to give accurate, country-specific tax guidance. Common mistakes to avoid:
+  • Israeli pension funds (קרן פנסיה) are NOT taxed at 25% at retirement — they are taxed as income
+    with a monthly exemption (~8,900 ILS/month). Do NOT say pension withdrawals are taxed at 25%.
+  • Keren Hishtalmut (קרן השתלמות) is COMPLETELY TAX-FREE after 6 years — this is a key advantage.
+  • US long-term capital gains (held >1 year) are taxed at 0–20%, not at ordinary income rates.
+  • Always mention relevant tax-advantaged accounts when making recommendations.
 
 Respond ONLY with a valid JSON object with exactly these keys:
 {
@@ -47,6 +54,7 @@ def build_context(
     paper_portfolios,
     portfolio_summary=None,
     goals_analysis=None,
+    tax_context: dict | None = None,
 ) -> dict:
     ctx: dict = {
         "investor": {
@@ -199,6 +207,9 @@ def build_context(
                 for g in goals_analysis.goals
             ],
         }
+
+    if tax_context:
+        ctx["tax_rules"] = tax_context
 
     return ctx
 

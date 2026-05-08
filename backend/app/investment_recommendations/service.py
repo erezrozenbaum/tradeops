@@ -21,6 +21,7 @@ from app.models.investment_account import InvestmentAccount
 from app.models.investor_profile import InvestorProfile
 from app.portfolio_analysis import rebalance_engine, service as portfolio_service
 from app.risk_modeling import service as rm_service
+from app.tax_rules.service import get_tax_context_for_investor
 
 
 def get_recommendations(db: Session, investor_id: uuid.UUID) -> RecommendationReport | None:
@@ -65,6 +66,8 @@ def get_recommendations(db: Session, investor_id: uuid.UUID) -> RecommendationRe
     except Exception:
         live_signals = []
 
+    tax_context = get_tax_context_for_investor(investor)
+
     context = analyzer.build_recommendation_context(
         investor=investor,
         financial_profile=financial_profile,
@@ -74,6 +77,7 @@ def get_recommendations(db: Session, investor_id: uuid.UUID) -> RecommendationRe
         goals_analysis=goals_analysis,
         current_tickers=current_tickers,
         live_signals=live_signals,
+        tax_context=tax_context,
     )
 
     raw = analyzer.generate_recommendations(context, api_key=settings.ANTHROPIC_API_KEY)

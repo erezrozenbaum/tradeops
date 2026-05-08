@@ -10,6 +10,28 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.39.0] — 2026-05-08
+
+### Added
+- **Tax Rules Engine** (`backend/app/tax_rules/`) — structured, country-specific tax rules injected into all AI context payloads (AI Report, AI Recommendations).
+  - **Israel (IL):** 25% CGT on stocks/ETFs/crypto; pension fund (קרן פנסיה) retirement income correctly described as taxed as ordinary income with ~8,900 ILS/month exemption (NOT flat 25%); Keren Hishtalmut described as completely tax-free after 6 years; dividend rules; real estate rules; annual reporting requirements.
+  - **United States (US):** STCG vs LTCG bracket table (2024); NIIT 3.8%; wash-sale rule; 401(k) traditional/Roth; IRA traditional/Roth with contribution limits and income phase-outs; crypto as property.
+  - **United Kingdom (GB):** CGT rates by income band; annual exempt amount; ISA tax-free account with £20k limit; SIPP.
+  - **Germany (DE):** 26.375% effective rate (Abgeltungssteuer + solidarity surcharge); €1,000 annual exempt amount.
+  - **France (FR):** 30% PFU; PEA account tax-free after 5 years.
+- `get_tax_context_for_investor(investor)` service — resolves country from `tax_residency` or `country` field and returns structured rules + AI-readable summary text.
+
+### Changed
+- `ai_analysis/analyzer.py` — `build_context()` now accepts `tax_context` kwarg and includes `tax_rules` key in Claude context. System prompt updated with explicit instructions to use country-specific tax rules and correct common Israeli tax misconceptions.
+- `ai_analysis/service.py` — fetches tax context and passes it to `build_context()`.
+- `investment_recommendations/analyzer.py` — `build_recommendation_context()` now accepts `tax_context`; system prompt updated with tax-efficiency guidance (prioritise Keren Hishtalmut for IL, 401k/IRA for US, distinguish LTCG from STCG).
+- `investment_recommendations/service.py` — fetches tax context and passes it to the recommendation context builder.
+
+### Planning
+- Added TASK 28–36 to execution plan: Performance History, Core Risk Metrics (Sharpe/drawdown/benchmark), Transaction Log, Price Alerts, Economic Calendar, Correlation Matrix, Position Sizing, News Feed, CSV Import.
+
+---
+
 ## [0.38.2] — 2026-05-08
 
 ### Added

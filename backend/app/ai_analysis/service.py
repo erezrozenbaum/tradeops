@@ -14,6 +14,7 @@ from app.models.investor_profile import InvestorProfile
 from app.paper_trading import service as pt_service
 from app.portfolio_analysis import service as portfolio_service
 from app.risk_modeling import service as rm_service
+from app.tax_rules.service import get_tax_context_for_investor
 
 
 def generate(db: Session, investor_id: uuid.UUID) -> dict | None:
@@ -28,6 +29,7 @@ def generate(db: Session, investor_id: uuid.UUID) -> dict | None:
     paper_portfolios = pt_service.list_for_investor(db, investor_id)
     portfolio_summary = portfolio_service.get_portfolio(db, investor_id)
     goals_analysis = goals_analysis_service.get_analysis(db, investor_id)
+    tax_context = get_tax_context_for_investor(investor)
 
     context = build_context(
         investor=investor,
@@ -38,6 +40,7 @@ def generate(db: Session, investor_id: uuid.UUID) -> dict | None:
         paper_portfolios=paper_portfolios,
         portfolio_summary=portfolio_summary,
         goals_analysis=goals_analysis,
+        tax_context=tax_context,
     )
 
     report = generate_report(context, api_key=settings.ANTHROPIC_API_KEY)
