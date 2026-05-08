@@ -10,6 +10,13 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.38.1] — 2026-05-08
+
+### Fixed
+- **Market Research page returning 404** — `@router.get("/")` in `market_research/router.py` registered the route with a trailing slash. With `redirect_slashes=False` set globally, requests to `/market-research` (no slash) were never matched. Changed to `@router.get("")` to match all other routers in the project.
+
+---
+
 ## [0.38.0] — 2026-05-07
 
 ### Added
