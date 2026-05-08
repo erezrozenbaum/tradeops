@@ -18,6 +18,8 @@ import {
   Info,
   ArrowRight,
   Target,
+  BarChart2,
+  Bitcoin,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -60,6 +62,22 @@ interface OpportunityPick {
   };
 }
 
+interface StockCandidate {
+  ticker: string;
+  name: string;
+  sector: string;
+  market: string;
+  asset_type: string;
+  current_price: number | null;
+  currency: string;
+  analyst_upside_pct: number | null;
+  forward_pe: number | null;
+  revenue_growth_pct: number | null;
+  profit_margin_pct: number | null;
+  pct_from_52w_low: number | null;
+  opportunity_score: number;
+}
+
 interface MarketResearchReport {
   investor_id: string;
   generated_at: string;
@@ -71,6 +89,8 @@ interface MarketResearchReport {
   screening_universe_size: number;
   candidates_scored: number;
   disclaimer: string;
+  all_stock_candidates: StockCandidate[];
+  crypto_candidates: StockCandidate[];
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -342,6 +362,122 @@ function TierSection({
   );
 }
 
+function ScoreBadge({ score }: { score: number }) {
+  const color =
+    score >= 70 ? "text-emerald-600 bg-emerald-500/10" :
+    score >= 45 ? "text-blue-600 bg-blue-500/10" :
+    "text-muted-foreground bg-muted";
+  return (
+    <span className={cn("text-xs font-semibold tabular-nums px-1.5 py-0.5 rounded", color)}>
+      {score.toFixed(0)}
+    </span>
+  );
+}
+
+function CryptoCard({ c }: { c: StockCandidate }) {
+  return (
+    <div className="rounded-xl border border-violet-300/60 bg-violet-500/5 overflow-hidden">
+      <div className="px-5 py-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Bitcoin className="h-4 w-4 text-violet-500 shrink-0" />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-sm font-bold tracking-tight">{c.ticker.replace("-USD", "")}</span>
+                <span className="text-xs text-muted-foreground">{c.name}</span>
+              </div>
+              <span className="text-[10px] text-violet-600 font-medium bg-violet-500/10 px-1.5 py-0.5 rounded-full">Crypto</span>
+            </div>
+          </div>
+          <div className="text-right space-y-0.5">
+            {c.current_price != null && (
+              <p className="text-sm font-semibold tabular-nums">
+                {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(c.current_price)}
+              </p>
+            )}
+            {c.pct_from_52w_low != null && (
+              <p className="text-[11px] text-muted-foreground">
+                {c.pct_from_52w_low.toFixed(0)}% above 52w low
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="mt-3 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <BarChart2 className="h-3 w-3" />
+            <span>Entry score</span>
+          </div>
+          <ScoreBadge score={c.opportunity_score} />
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Scored on 52-week entry signal. AI may select for high-opportunity tier.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ScreenerTable({ candidates }: { candidates: StockCandidate[] }) {
+  const [open, setOpen] = useState(false);
+  if (candidates.length === 0) return null;
+  return (
+    <div className="space-y-2">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        Full Screened Universe ({candidates.length} instruments)
+      </button>
+      {open && (
+        <div className="rounded-lg border border-border overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-muted/50 border-b border-border">
+                <tr>
+                  {["Score", "Ticker", "Name", "Sector", "Price", "Upside", "Fwd P/E", "Rev Growth", "Margin", "52w Pos"].map((h) => (
+                    <th key={h} className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {candidates.map((c) => (
+                  <tr key={c.ticker} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-3 py-2"><ScoreBadge score={c.opportunity_score} /></td>
+                    <td className="px-3 py-2 font-mono font-semibold">{c.ticker}</td>
+                    <td className="px-3 py-2 text-muted-foreground max-w-[140px] truncate">{c.name}</td>
+                    <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{c.sector}</td>
+                    <td className="px-3 py-2 tabular-nums whitespace-nowrap">
+                      {c.current_price != null ? `${c.currency === "ILS" ? "₪" : "$"}${c.current_price.toFixed(2)}` : "—"}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums">
+                      {c.analyst_upside_pct != null ? (
+                        <span className={c.analyst_upside_pct >= 0 ? "text-emerald-600" : "text-red-500"}>
+                          {c.analyst_upside_pct > 0 ? "+" : ""}{c.analyst_upside_pct.toFixed(1)}%
+                        </span>
+                      ) : "—"}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums">{c.forward_pe != null ? c.forward_pe.toFixed(1) : "—"}</td>
+                    <td className="px-3 py-2 tabular-nums">
+                      {c.revenue_growth_pct != null ? (
+                        <span className={c.revenue_growth_pct >= 0 ? "text-emerald-600" : "text-red-500"}>
+                          {c.revenue_growth_pct > 0 ? "+" : ""}{c.revenue_growth_pct.toFixed(1)}%
+                        </span>
+                      ) : "—"}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums">{c.profit_margin_pct != null ? `${c.profit_margin_pct.toFixed(1)}%` : "—"}</td>
+                    <td className="px-3 py-2 tabular-nums">{c.pct_from_52w_low != null ? `${c.pct_from_52w_low.toFixed(0)}%` : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function MarketResearchPage() {
@@ -548,6 +684,32 @@ export default function MarketResearchPage() {
           <TierSection tier="stable" picks={report.stable_picks} />
           <TierSection tier="moderate" picks={report.moderate_picks} />
           <TierSection tier="high_opportunity" picks={report.opportunity_picks} />
+
+          {/* Crypto universe */}
+          {report.crypto_candidates && report.crypto_candidates.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Bitcoin className="h-4 w-4 text-violet-500" />
+                <div>
+                  <h2 className="text-base font-semibold">
+                    Crypto Universe
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">available for high-opportunity tier</span>
+                  </h2>
+                  <p className="text-xs text-muted-foreground">Scored on 52-week entry signal — included in AI context for tier selection</p>
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {report.crypto_candidates.map((c) => (
+                  <CryptoCard key={c.ticker} c={c} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Full screener universe */}
+          {report.all_stock_candidates && report.all_stock_candidates.length > 0 && (
+            <ScreenerTable candidates={report.all_stock_candidates} />
+          )}
 
           {/* Disclaimer */}
           <p className="text-[11px] text-muted-foreground border-t border-border pt-4">
