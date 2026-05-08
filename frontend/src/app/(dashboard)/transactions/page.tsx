@@ -13,8 +13,6 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface Transaction {
@@ -97,7 +95,7 @@ function AddTransactionForm({ investorId, accounts, onCreated, onCancel }: AddFo
     setSaving(true);
     setErr(null);
     try {
-      const res = await fetch(`${API}/api/v1/investors/${investorId}/transactions`, {
+      const res = await fetch(`/api/v1/investors/${investorId}/transactions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -232,8 +230,8 @@ export default function TransactionsPage() {
     setLoading(true);
     try {
       const [txRes, accRes] = await Promise.all([
-        fetch(`${API}/api/v1/investors/${investorId}/transactions?limit=200`),
-        fetch(`${API}/api/v1/investors/${investorId}/accounts`),
+        fetch(`/api/v1/investors/${investorId}/transactions?limit=200`),
+        fetch(`/api/v1/investors/${investorId}/accounts`),
       ]);
       if (txRes.ok) setTxList(await txRes.json());
       if (accRes.ok) setAccounts(await accRes.json());
@@ -246,7 +244,7 @@ export default function TransactionsPage() {
 
   async function deleteTx(id: string) {
     if (!confirm("Delete this transaction?")) return;
-    await fetch(`${API}/api/v1/investors/${investorId}/transactions/${id}`, { method: "DELETE" });
+    await fetch(`/api/v1/investors/${investorId}/transactions/${id}`, { method: "DELETE" });
     setTxList((prev) => prev.filter((t) => t.id !== id));
   }
 

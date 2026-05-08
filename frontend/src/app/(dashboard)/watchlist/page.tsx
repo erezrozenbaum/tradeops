@@ -9,8 +9,6 @@ import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/utils";
 import { Plus, Trash2, Eye, Clock, Bell, BellOff, X, AlertTriangle } from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface WatchlistItem {
@@ -78,7 +76,7 @@ function AlertModal({
     setSaving(true);
     setErr(null);
     try {
-      const res = await fetch(`${API}/api/v1/investors/${investorId}/alerts`, {
+      const res = await fetch(`/api/v1/investors/${investorId}/alerts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -100,7 +98,7 @@ function AlertModal({
   }
 
   async function deleteAlert(alertId: string) {
-    await fetch(`${API}/api/v1/investors/${investorId}/alerts/${alertId}`, { method: "DELETE" });
+    await fetch(`/api/v1/investors/${investorId}/alerts/${alertId}`, { method: "DELETE" });
     onRefresh();
   }
 
@@ -207,14 +205,14 @@ export default function WatchlistPage() {
 
   const loadAlerts = useCallback(async () => {
     if (!investorId) return;
-    const r = await fetch(`${API}/api/v1/investors/${investorId}/alerts`);
+    const r = await fetch(`/api/v1/investors/${investorId}/alerts`);
     if (r.ok) setAlerts(await r.json());
   }, [investorId]);
 
   const load = useCallback(async () => {
     if (!investorId) return;
     setLoading(true);
-    const r = await fetch(`${API}/api/v1/investors/${investorId}/watchlist`);
+    const r = await fetch(`/api/v1/investors/${investorId}/watchlist`);
     if (r.ok) setItems(await r.json());
     await loadAlerts();
     setLoading(false);
@@ -226,7 +224,7 @@ export default function WatchlistPage() {
     if (!form.ticker.trim() || !form.name.trim()) return;
     setSaving(true);
     setError(null);
-    const r = await fetch(`${API}/api/v1/investors/${investorId}/watchlist`, {
+    const r = await fetch(`/api/v1/investors/${investorId}/watchlist`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -243,7 +241,7 @@ export default function WatchlistPage() {
   }
 
   async function remove(id: string) {
-    await fetch(`${API}/api/v1/investors/${investorId}/watchlist/${id}`, { method: "DELETE" });
+    await fetch(`/api/v1/investors/${investorId}/watchlist/${id}`, { method: "DELETE" });
     setItems((prev) => prev.filter((i) => i.id !== id));
   }
 
