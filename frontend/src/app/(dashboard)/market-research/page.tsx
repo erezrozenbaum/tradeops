@@ -486,6 +486,7 @@ export default function MarketResearchPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cachedAt, setCachedAt] = useState<string | null>(null);
+  const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
     if (!investorId) return;
@@ -499,10 +500,17 @@ export default function MarketResearchPage() {
     } catch {}
   }, [investorId]);
 
+  useEffect(() => {
+    if (!loading) { setElapsed(0); return; }
+    const t = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [loading]);
+
   async function generate() {
     if (!investorId) return;
     setLoading(true);
     setError(null);
+    setElapsed(0);
     try {
       const res = await fetch(`/api/v1/investors/${investorId}/market-research`);
       if (!res.ok) {
@@ -629,12 +637,33 @@ export default function MarketResearchPage() {
       {/* Loading */}
       {loading && (
         <Card>
-          <CardContent className="py-16 text-center space-y-3">
+          <CardContent className="py-14 text-center space-y-4">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto" />
-            <p className="text-sm text-muted-foreground">
-              Screening {60}+ instruments for fundamentals, then generating investment theses…
-            </p>
-            <p className="text-xs text-muted-foreground">This takes about 30 seconds</p>
+            <div className="space-y-1">
+              <p className="text-sm font-medium">
+                {elapsed < 5 ? "Fetching live market data…" :
+                 elapsed < 20 ? "Screening fundamentals across 60+ instruments…" :
+                 elapsed < 40 ? "Generating AI investment theses…" :
+                 "Almost done — finalising analysis…"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {elapsed}s elapsed · typically completes in 45–60 seconds
+              </p>
+            </div>
+            <div className="flex justify-center gap-2 text-xs text-muted-foreground">
+              {[
+                { label: "Market data", done: elapsed >= 5 },
+                { label: "Screening", done: elapsed >= 20 },
+                { label: "AI analysis", done: elapsed >= 40 },
+              ].map((step) => (
+                <span key={step.label} className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-full border",
+                  step.done ? "border-primary/40 text-primary bg-primary/5" : "border-border"
+                )}>
+                  {step.done ? "✓" : "○"} {step.label}
+                </span>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
