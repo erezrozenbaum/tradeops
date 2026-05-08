@@ -17,6 +17,7 @@ from app.portfolio_analysis.schemas import (
     PriceRefreshResult,
     PortfolioHistoryResult,
 )
+from app.performance_analytics.schemas import PerformanceAnalytics
 from app.portfolio_analysis.rebalance_schemas import RebalanceResult
 from app.risk_modeling.service import get_latest as get_latest_risk_model
 
@@ -83,6 +84,29 @@ def refresh_prices(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     )
 
 
+@router.get("/analytics", response_model=PerformanceAnalytics)
+def get_portfolio_analytics(
+    investor_id: uuid.UUID,
+    period: str = "3m",
+    db: Session = Depends(get_db),
+):
+    """Compute Sharpe, Sortino, max drawdown, annualised return, and SPY benchmark comparison."""
+    from app.performance_analytics.engine import compute as compute_analytics
+    from app.models.investor_profile import InvestorProfile
+
+    period_days: dict[str, int | None] = {
+        "1m": 31, "3m": 92, "6m": 183, "1y": 366, "all": None,
+    }
+    days = period_days.get(period, 92)
+    since = datetime.now(timezone.utc) - timedelta(days=days) if days else None
+    snapshots = service.get_history(db, investor_id, since=since)
+
+    investor = db.get(InvestorProfile, investor_id)
+    currency = investor.base_currency if investor else "USD"
+
+    return compute_analytics(snapshots, investor_id=investor_id, currency=currency)
+
+
 @router.get("/pension-projection")
 def get_pension_projection(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     investor = db.get(InvestorProfile, investor_id)
@@ -108,8 +132,18 @@ def get_pension_projection(investor_id: uuid.UUID, db: Session = Depends(get_db)
 
 @router.get("/history", response_model=PortfolioHistoryResult)
 def get_portfolio_history(
-    investor_id: uuid.UUID, limit: int = 60, db: Session = Depends(get_db)
+    investor_id: uuid.UUID,
+    period: str = "3m",
+    db: Session = Depends(get_db),
 ):
-    """Return historical portfolio value snapshots (most recent `limit` entries, chronological)."""
-    snapshots = service.get_history(db, investor_id, limit=limit)
+    """Return historical portfolio value snapshots for the given period.
+
+    period: 1m | 3m | 6m | 1y | all
+    """
+    period_days: dict[str, int | None] = {
+        "1m": 31, "3m": 92, "6m": 183, "1y": 366, "all": None,
+    }
+    days = period_days.get(period, 92)
+    since = datetime.now(timezone.utc) - timedelta(days=days) if days else None
+    snapshots = service.get_history(db, investor_id, since=since)
     return PortfolioHistoryResult(investor_id=investor_id, snapshots=snapshots)

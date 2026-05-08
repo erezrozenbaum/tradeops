@@ -60,16 +60,19 @@ def save_snapshot(db: Session, portfolio: PortfolioSummary) -> None:
 
 
 def get_history(
-    db: Session, investor_id: uuid.UUID, limit: int = 60
+    db: Session,
+    investor_id: uuid.UUID,
+    since: datetime | None = None,
+    limit: int = 500,
 ) -> list[PortfolioSnapshotPoint]:
     from app.models.portfolio_snapshot import PortfolioSnapshot
-    rows = (
+    q = (
         db.query(PortfolioSnapshot)
         .filter(PortfolioSnapshot.investor_id == investor_id)
-        .order_by(PortfolioSnapshot.snapshot_at.desc())
-        .limit(limit)
-        .all()
     )
+    if since:
+        q = q.filter(PortfolioSnapshot.snapshot_at >= since)
+    rows = q.order_by(PortfolioSnapshot.snapshot_at.desc()).limit(limit).all()
     return [
         PortfolioSnapshotPoint(
             snapshot_at=s.snapshot_at,
@@ -81,3 +84,12 @@ def get_history(
         )
         for s in reversed(rows)
     ]
+
+
+def has_snapshot_today(db: Session, investor_id: uuid.UUID) -> bool:
+    from app.models.portfolio_snapshot import PortfolioSnapshot
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    return db.query(PortfolioSnapshot).filter(
+        PortfolioSnapshot.investor_id == investor_id,
+        PortfolioSnapshot.snapshot_at >= today_start,
+    ).first() is not None
