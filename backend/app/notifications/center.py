@@ -133,6 +133,39 @@ def get_notifications(db: Session, investor_id: uuid.UUID) -> list[AppNotificati
     except Exception:
         pass
 
+    # --- Triggered price alerts ---
+    try:
+        from app.models.price_alert import PriceAlert
+        from datetime import timedelta
+        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+        triggered = (
+            db.query(PriceAlert)
+            .filter(
+                PriceAlert.investor_id == investor_id,
+                PriceAlert.is_active == False,  # noqa: E712
+                PriceAlert.triggered_at >= cutoff,
+            )
+            .order_by(PriceAlert.triggered_at.desc())
+            .limit(5)
+            .all()
+        )
+        for alert in triggered:
+            direction = "hit" if alert.alert_type == "above" else "dropped to"
+            notifications.append(AppNotification(
+                id=f"price_alert_{alert.id}",
+                type="alert",
+                severity="warning",
+                title=f"Price alert triggered: {alert.ticker}",
+                message=(
+                    f"{alert.ticker} {direction} {alert.currency} {alert.triggered_price:,.2f} "
+                    f"(your target: {alert.currency} {alert.target_price:,.2f}). "
+                    f"Delete this alert from the Watchlist page to dismiss."
+                ),
+                link="/watchlist",
+            ))
+    except Exception:
+        pass
+
     return notifications
 
 

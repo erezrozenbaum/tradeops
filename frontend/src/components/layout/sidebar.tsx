@@ -24,6 +24,8 @@ import {
   Bot,
   CreditCard,
   Microscope,
+  Activity,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +55,8 @@ const sections = [
     label: "Portfolio",
     items: [
       { label: "Investments", href: "/investments", icon: Briefcase },
+      { label: "Performance", href: "/performance", icon: Activity },
+      { label: "Transactions", href: "/transactions", icon: ClipboardList },
       { label: "Watchlist", href: "/watchlist", icon: Eye },
       { label: "Debt Planner", href: "/debt-planner", icon: CreditCard },
     ],

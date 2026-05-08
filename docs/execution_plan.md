@@ -1,6 +1,6 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.39.0
+**Version:** 0.40.0
 **Last updated:** 2026-05-08 (v0.39.0)
 
 ---
@@ -416,7 +416,7 @@ Replaces static catalog recommendations with real market intelligence. New `live
 
 ---
 
-### TASK 28 — Performance History & Equity Curve
+### TASK 28 — Performance History & Equity Curve ✅ DONE
 
 **Type:** New UI page + backend query (DB table exists: `portfolio_snapshots`)
 **Risk:** 🟢 Safe — no DB migration (snapshots table already exists from migration 0010)
@@ -432,7 +432,7 @@ Replaces static catalog recommendations with real market intelligence. New `live
 
 ---
 
-### TASK 29 — Core Risk Metrics (Sharpe, Drawdown, Benchmark)
+### TASK 29 — Core Risk Metrics (Sharpe, Drawdown, Benchmark) ✅ DONE
 
 **Type:** New module (`performance_analytics/`)
 **Risk:** 🟢 Safe — no DB migration (reads from portfolio_snapshots)
@@ -451,7 +451,7 @@ Replaces static catalog recommendations with real market intelligence. New `live
 
 ---
 
-### TASK 30 — Transaction Log / Trade Journal
+### TASK 30 — Transaction Log / Trade Journal ✅ DONE
 
 **Type:** New module + DB schema
 **Risk:** 🔴 Risky — Alembic migration (new `holding_transactions` table)
@@ -466,7 +466,7 @@ Replaces static catalog recommendations with real market intelligence. New `live
 
 ---
 
-### TASK 31 — Price Alerts on Specific Levels
+### TASK 31 — Price Alerts on Specific Levels ✅ DONE
 
 **Type:** New module + DB schema
 **Risk:** 🔴 Risky — Alembic migration (new `price_alerts` table)
