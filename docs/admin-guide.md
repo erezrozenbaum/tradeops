@@ -1,9 +1,9 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.8.0  
-**Last updated:** 2026-04-25
+**Version:** 0.42.1  
+**Last updated:** 2026-05-09
 
-This guide covers installation, configuration, database management, and day-to-day operations for running TradeOps AI in a local or self-hosted environment.
+This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
 ---
 
@@ -11,37 +11,52 @@ This guide covers installation, configuration, database management, and day-to-d
 
 1. [Prerequisites](#1-prerequisites)
 2. [Environment configuration](#2-environment-configuration)
-3. [Starting the platform](#3-starting-the-platform)
+3. [Starting with Docker Compose (local/dev)](#3-starting-with-docker-compose-localdev)
 4. [Database management](#4-database-management)
 5. [Managing investor profiles](#5-managing-investor-profiles)
 6. [Strategy templates](#6-strategy-templates)
 7. [Monitoring and logs](#7-monitoring-and-logs)
 8. [Stopping and resetting](#8-stopping-and-resetting)
-9. [Troubleshooting](#9-troubleshooting)
-10. [CI/CD](#10-cicd)
+9. [Kubernetes deployment (Helm)](#9-kubernetes-deployment-helm)
+10. [ArgoCD — GitOps CI/CD](#10-argocd--gitops-cicd)
+11. [GitHub Actions — Docker image pipeline](#11-github-actions--docker-image-pipeline)
+12. [Troubleshooting](#12-troubleshooting)
+13. [Feature reference](#13-feature-reference)
+14. [Maintenance checklist](#14-maintenance-checklist)
 
 ---
 
 ## 1. Prerequisites
+
+### Docker Compose (local development)
 
 | Tool | Minimum version |
 |------|----------------|
 | Docker Desktop | 24.x |
 | Docker Compose plugin | v2 |
 | Git | any recent version |
-| Anthropic API key | required for AI reports |
+| Anthropic API key | required for AI features |
 
-No local Python or Node.js installation is required when using Docker Compose.
+No local Python or Node.js installation is required.
+
+### Kubernetes deployment
+
+| Tool | Notes |
+|------|-------|
+| Kubernetes cluster | 1.27+ (AKS, EKS, GKE, k3s, minikube all work) |
+| Helm | 3.12+ |
+| nginx-ingress controller | for Ingress routing |
+| cert-manager | optional, for automatic TLS |
+| ArgoCD | optional, for GitOps CD |
 
 ---
 
 ## 2. Environment configuration
 
-The only required configuration file is `backend/.env`.
+The only required configuration file for Docker Compose is `backend/.env`.
 
 ```bash
-cp backend/.env.example backend/.env   # copy template if it exists
-# or create from scratch:
+cp backend/.env.example backend/.env
 ```
 
 **`backend/.env` — all variables**
@@ -58,25 +73,25 @@ ENVIRONMENT=development
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | Yes | PostgreSQL connection string. When running via Docker Compose, use `db` as the host. |
-| `ANTHROPIC_API_KEY` | Yes (for AI reports) | Your Anthropic API key. The platform functions without it but the "Generate Report" button will return an error. |
-| `SECRET_KEY` | Recommended | Used for any internal signing. Change before any internet-facing deployment. |
+| `DATABASE_URL` | Yes | PostgreSQL connection string. In Docker Compose the host is `db`. |
+| `ANTHROPIC_API_KEY` | Yes (for AI features) | AI Report, Market Research, Recommendations, and AI Agent all require this. The platform runs without it but those features return errors. |
+| `SECRET_KEY` | Recommended | Change before any internet-facing deployment. |
 
 ---
 
-## 3. Starting the platform
+## 3. Starting with Docker Compose (local/dev)
 
 ```bash
 cd infra
-docker compose up          # foreground, shows all logs
-docker compose up -d       # detached (background)
+docker compose up -f docker-compose.yml          # foreground
+docker compose up -f docker-compose.yml -d       # detached
 ```
 
-Start-up sequence (automatically ordered by health checks):
+Start-up order (automatically ordered by health checks):
 
 1. **PostgreSQL** starts and passes the `pg_isready` health check
-2. **Backend** runs `alembic upgrade head` (idempotent — safe to run on every start), then starts `uvicorn` with `--reload`
-3. **Frontend** installs npm dependencies and starts the Next.js dev server
+2. **Backend** runs `alembic upgrade head` (idempotent), then starts `uvicorn --reload`
+3. **Frontend** installs npm dependencies and starts the Next.js server
 
 First cold start takes 2–3 minutes while npm downloads packages.
 
@@ -84,8 +99,8 @@ First cold start takes 2–3 minutes while npm downloads packages.
 |---------|-----|
 | Frontend | http://localhost:3000 |
 | Backend API | http://localhost:8000 |
-| API docs (Swagger) | http://localhost:8000/docs |
-| API docs (ReDoc) | http://localhost:8000/redoc |
+| Swagger UI | http://localhost:8000/docs |
+| ReDoc | http://localhost:8000/redoc |
 
 ---
 
@@ -94,55 +109,73 @@ First cold start takes 2–3 minutes while npm downloads packages.
 ### Running migrations manually
 
 ```bash
-docker compose exec backend alembic upgrade head
+docker compose -f infra/docker-compose.yml exec backend alembic upgrade head
 ```
 
-This is also run automatically on every container start.
+Migrations also run automatically on every container start.
+
+### Migration history (21 migrations as of v0.42.1)
+
+| # | Description |
+|---|-------------|
+| 0001 | Initial schema (investor_profiles, financial_profiles, etc.) |
+| 0002 | Strategy tables |
+| 0003 | Backtest tables |
+| 0004 | Paper trading tables |
+| 0005 | Investor profile extensions |
+| 0006 | Risk model enforcement fields |
+| 0007 | Holdings (investment_accounts, investment_holdings) |
+| 0008 | Currency rates |
+| 0009 | Price snapshots |
+| 0010 | Portfolio snapshots |
+| 0011 | Goal tracking modes |
+| 0012 | Pension fund fields |
+| 0013 | Study fund fields |
+| 0014 | Vehicle asset type |
+| 0015 | Alert email field |
+| 0016 | Widen nationality columns |
+| 0017 | Watchlist |
+| 0018 | Family financial model |
+| 0019 | Holding transactions |
+| 0020 | Price alerts |
+| 0021 | `is_emergency_fund` flag on `investment_accounts` |
 
 ### Creating a new migration
 
 ```bash
-docker compose exec backend alembic revision --autogenerate -m "description"
+docker compose -f infra/docker-compose.yml exec backend alembic revision --autogenerate -m "description"
 ```
 
 Review the generated file in `backend/alembic/versions/` before applying.
 
-### Rolling back one migration
+### Rolling back
 
 ```bash
-docker compose exec backend alembic downgrade -1
-```
-
-### Viewing migration history
-
-```bash
-docker compose exec backend alembic history
-docker compose exec backend alembic current
+docker compose -f infra/docker-compose.yml exec backend alembic downgrade -1
 ```
 
 ### Connecting to PostgreSQL directly
 
 ```bash
-docker compose exec db psql -U tradeops -d tradeops
+docker compose -f infra/docker-compose.yml exec db psql -U tradeops -d tradeops
 ```
 
-Common queries:
+Useful queries:
 
 ```sql
 -- List all investors
 SELECT id, full_name, country, base_currency, created_at FROM investor_profiles ORDER BY created_at;
+
+-- Accounts marked as emergency fund
+SELECT ia.provider_name, ia.account_type, ia.is_emergency_fund
+FROM investment_accounts ia
+WHERE ia.is_emergency_fund = true;
 
 -- Count audit events per investor
 SELECT investor_profile_id, COUNT(*) FROM audit_events GROUP BY investor_profile_id;
 
 -- View strategy templates
 SELECT id, name, strategy_type, risk_level FROM strategy_templates ORDER BY risk_level;
-
--- View recent backtest runs
-SELECT br.id, ip.full_name, br.period_months, br.total_return_pct, br.created_at
-FROM backtest_runs br
-JOIN investor_profiles ip ON ip.id = br.investor_profile_id
-ORDER BY br.created_at DESC LIMIT 20;
 ```
 
 ---
@@ -151,75 +184,67 @@ ORDER BY br.created_at DESC LIMIT 20;
 
 ### Via the UI
 
-Open http://localhost:3000. If no profiles exist, the creation form opens automatically.  
-Fields required: full name, date of birth, country code (2–3 chars), base currency, local currency, experience level.
+Open http://localhost:3000. If no profiles exist, the creation form opens automatically.
 
-### Via the API (Swagger UI)
+### Via the API
 
-Open http://localhost:8000/docs, find `POST /api/v1/investors/`, and submit:
-
-```json
-{
-  "full_name": "Jane Smith",
-  "date_of_birth": "1990-06-15",
-  "country": "US",
-  "base_currency": "USD",
-  "local_currency": "USD",
-  "experience_level": "beginner",
-  "is_minor": false
-}
+```bash
+curl -X POST http://localhost:8000/api/v1/investors \
+  -H "Content-Type: application/json" \
+  -d '{
+    "full_name": "Jane Smith",
+    "date_of_birth": "1990-06-15",
+    "country": "US",
+    "base_currency": "USD",
+    "local_currency": "USD",
+    "experience_level": "beginner",
+    "is_minor": false
+  }'
 ```
 
 ### Deleting an investor profile
 
-There is no delete endpoint in the MVP. Use SQL directly:
-
 ```sql
--- Replace <id> with the investor UUID
-DELETE FROM investor_profiles WHERE id = '<id>';
+DELETE FROM investor_profiles WHERE id = '<uuid>';
 ```
 
-Note: related rows in financial_profiles, goals, risk_models, etc. will cascade-delete if foreign keys are set with `ON DELETE CASCADE`, otherwise delete child rows first.
+All related rows cascade-delete automatically.
 
 ---
 
 ## 6. Strategy templates
 
-Strategy templates are seeded by migration `0002_strategy_tables.py` and are read-only in the MVP.
-
-To view current templates:
+Templates are seeded by migration `0002_strategy_tables.py`.
 
 ```bash
 curl http://localhost:8000/api/v1/strategies/templates
-```
-
-To add a new template, edit the migration seed data or insert directly:
-
-```sql
-INSERT INTO strategy_templates (id, name, strategy_type, risk_level, description, ...)
-VALUES (gen_random_uuid(), 'My Strategy', 'custom', 'moderate', '...');
 ```
 
 ---
 
 ## 7. Monitoring and logs
 
-### View logs
-
 ```bash
-docker compose logs -f              # all services
-docker compose logs -f backend      # backend only
-docker compose logs -f frontend     # frontend only
-docker compose logs -f db           # postgres only
+docker compose -f infra/docker-compose.yml logs -f              # all services
+docker compose -f infra/docker-compose.yml logs -f backend      # backend only
+docker compose -f infra/docker-compose.yml logs -f frontend     # frontend only
 ```
 
-### Backend log format
+### Background workers (APScheduler)
 
-FastAPI/uvicorn logs to stdout in development mode. Each request is logged with method, path, and status code.
+The backend runs 7 scheduled jobs:
 
-### Audit log (application-level)
+| Job | Schedule | Description |
+|-----|----------|-------------|
+| `price_refresh` | Every 30 min | Refreshes live prices for all held tickers via yfinance |
+| `snapshot_writer` | Daily 21:00 UTC | Captures portfolio snapshot for performance tracking |
+| `price_alert_checker` | Every 15 min | Evaluates price alerts and sends email notifications |
+| `goal_evaluation` | Daily | Evaluates goal progress |
+| `notification_alerts` | Every 30 min | Generates risk/goal notifications |
+| `market_prewarm` | Every 30 min | Pre-warms market scan cache |
+| `research_prewarm` | Every 6 hours | Pre-warms market research cache |
 
-All significant user actions are recorded in the `audit_events` table:
+### Audit log
 
 ```bash
 curl "http://localhost:8000/api/v1/investors/<id>/audit-events?limit=50"
@@ -231,160 +256,325 @@ Or view in the UI at http://localhost:3000/audit.
 
 ## 8. Stopping and resetting
 
-### Stop containers (preserve data)
-
 ```bash
-docker compose down
+# Stop containers, preserve data
+docker compose -f infra/docker-compose.yml down
+
+# Stop and wipe the database
+docker compose -f infra/docker-compose.yml down -v
+
+# Rebuild after code changes
+docker compose -f infra/docker-compose.yml build backend
+docker compose -f infra/docker-compose.yml up -d backend
 ```
-
-### Stop and remove the database volume (full reset)
-
-```bash
-docker compose down -v
-```
-
-This destroys all PostgreSQL data. On next `docker compose up`, migrations run fresh and all investor data is gone.
-
-### Rebuild images after code changes
-
-```bash
-docker compose build backend
-docker compose build
-docker compose up
-```
-
-The frontend dev server reloads automatically on file changes (hot reload via Next.js). The backend also hot-reloads via `uvicorn --reload`.
 
 ---
 
-## 9. Troubleshooting
+## 9. Kubernetes deployment (Helm)
+
+The Helm chart is at `helm/tradeops/`. It deploys:
+
+- **Backend** — FastAPI (Deployment, ClusterIP Service)
+- **Frontend** — Next.js standalone (Deployment, ClusterIP Service)
+- **PostgreSQL** — (StatefulSet + headless Service + PVC) — can be disabled to use an external DB
+- **Ingress** — routes `/api/*` to backend, `/*` to frontend
+- **Secret** — holds `DATABASE_URL` and `ANTHROPIC_API_KEY`
+- **HPA** — optional horizontal pod autoscaler for the backend
+
+### Quick install
+
+```bash
+# 1. Add/pull the repo
+git clone https://github.com/erezrozenbaum/tradeops.git
+cd tradeops
+
+# 2. Install with defaults (uses bundled PostgreSQL, no TLS)
+helm install tradeops ./helm/tradeops \
+  --set secret.anthropicApiKey=sk-ant-... \
+  --set ingress.host=tradeops.example.com
+
+# 3. Watch pods come up
+kubectl get pods -w -l app.kubernetes.io/instance=tradeops
+```
+
+### Custom values example
+
+```yaml
+# my-values.yaml
+backend:
+  image:
+    repository: ghcr.io/erezrozenbaum/tradeops-backend
+    tag: "abc1234"   # specific commit SHA
+  replicas: 2
+
+frontend:
+  image:
+    repository: ghcr.io/erezrozenbaum/tradeops-frontend
+    tag: "abc1234"
+
+ingress:
+  enabled: true
+  className: nginx
+  tls: true
+  host: tradeops.mycompany.com
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+
+secret:
+  anthropicApiKey: "sk-ant-..."
+  postgresPassword: "change-me-strong-password"
+
+postgresql:
+  storage:
+    size: 20Gi
+    storageClass: gp3
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 8
+```
+
+```bash
+helm install tradeops ./helm/tradeops -f my-values.yaml
+helm upgrade tradeops ./helm/tradeops -f my-values.yaml
+```
+
+### Using an external database
+
+```yaml
+# my-values.yaml
+postgresql:
+  enabled: false
+
+secret:
+  databaseUrl: "postgresql://user:pass@your-rds-host:5432/tradeops"
+```
+
+### Building your own images
+
+Images are published to GHCR by GitHub Actions on every push to `main`. To build locally:
+
+```bash
+docker build -t my-registry/tradeops-backend:latest ./backend
+docker build -t my-registry/tradeops-frontend:latest ./frontend
+docker push my-registry/tradeops-backend:latest
+docker push my-registry/tradeops-frontend:latest
+```
+
+Then override in your values:
+
+```yaml
+backend:
+  image:
+    repository: my-registry/tradeops-backend
+    tag: latest
+frontend:
+  image:
+    repository: my-registry/tradeops-frontend
+    tag: latest
+```
+
+---
+
+## 10. ArgoCD — GitOps CI/CD
+
+The ArgoCD Application manifest is at `argocd/application.yaml`. It watches the `helm/tradeops/` path in this repository and auto-syncs on changes.
+
+### Install ArgoCD (one-time cluster setup)
+
+```bash
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+# Wait for pods to be ready
+kubectl wait --for=condition=available --timeout=120s deployment/argocd-server -n argocd
+
+# Get initial admin password
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+```
+
+### Register the TradeOps application
+
+```bash
+# Apply the pre-configured Application manifest
+kubectl apply -f argocd/application.yaml
+
+# Or add via CLI
+argocd app create tradeops \
+  --repo https://github.com/erezrozenbaum/tradeops.git \
+  --path helm/tradeops \
+  --dest-server https://kubernetes.default.svc \
+  --dest-namespace tradeops \
+  --sync-policy automated \
+  --auto-prune \
+  --self-heal
+```
+
+### GitOps flow
+
+```
+Developer push to main
+        │
+        ▼
+GitHub Actions (docker-build-push.yml)
+  • Builds backend + frontend Docker images
+  • Tags with commit SHA (e.g., abc1234)
+  • Pushes to ghcr.io/erezrozenbaum/
+  • Commits updated image tags to helm/tradeops/values.yaml
+        │
+        ▼
+ArgoCD detects values.yaml change
+  • Diffs Helm chart against cluster state
+  • Auto-syncs: rolling update with new images
+  • Prunes resources removed from Git
+```
+
+### Secrets management in GitOps
+
+`ANTHROPIC_API_KEY` and `postgresPassword` must not be committed to Git in plain text. Recommended approaches:
+
+1. **Bitnami Sealed Secrets** — encrypt secrets with the cluster's public key, commit the sealed form, ArgoCD decrypts them
+2. **External Secrets Operator** — pull secrets from AWS Secrets Manager, Azure Key Vault, or HashiCorp Vault at sync time
+3. **ArgoCD Vault Plugin** — templated secrets replaced at sync time
+
+For simple self-hosted setups, set the secret values via `helm upgrade --set secret.anthropicApiKey=...` and keep them out of Git.
+
+---
+
+## 11. GitHub Actions — Docker image pipeline
+
+Workflow file: `.github/workflows/docker-build-push.yml`
+
+**Triggers:** push to `main`, push of `v*` tags
+
+**Jobs:**
+
+| Step | Description |
+|------|-------------|
+| Build & push backend | Multi-arch image (amd64 + arm64) to `ghcr.io/erezrozenbaum/tradeops-backend` |
+| Build & push frontend | Multi-arch image to `ghcr.io/erezrozenbaum/tradeops-frontend` |
+| Update Helm values | Commits updated image tags to `helm/tradeops/values.yaml` with `[skip ci]` |
+
+**Image tags:**
+- `latest` — always points to the last successful `main` build
+- `<short-sha>` (e.g., `abc1234`) — immutable reference to a specific build
+- `<semver>` (e.g., `v0.42.1`) — when pushing a version tag
+
+**Required repository permissions:**  
+No extra secrets needed. The workflow uses `GITHUB_TOKEN` (auto-provided) for both GHCR push and the auto-commit step.
+
+**To trigger a production-tagged release:**
+
+```bash
+git tag v0.43.0
+git push origin v0.43.0
+# → builds images tagged v0.43.0 + latest
+```
+
+---
+
+## 12. Troubleshooting
 
 ### Backend fails to start — "could not connect to server"
 
-PostgreSQL is not ready yet. The backend depends on the `db` service health check, but on very slow machines the first start can take longer than the retry window.
+PostgreSQL is not ready. On very slow machines the health check retry window may expire.
 
 ```bash
-docker compose up db          # start only postgres
+docker compose -f infra/docker-compose.yml up db
 # wait for "database system is ready to accept connections"
-docker compose up backend     # start backend separately
+docker compose -f infra/docker-compose.yml up backend
 ```
 
 ### Backend fails — "relation does not exist"
 
-Migrations did not run. Run manually:
+Migrations did not run.
 
 ```bash
-docker compose exec backend alembic upgrade head
+docker compose -f infra/docker-compose.yml exec backend alembic upgrade head
 ```
 
-### Frontend shows "Could not connect to the API"
+### AI features return errors
 
-The backend is not running or not reachable. Check:
+Verify the key is set and the container sees it:
 
 ```bash
-docker compose ps             # is backend container running?
-docker compose logs backend   # any startup errors?
-curl http://localhost:8000/docs   # is the API responding?
+docker compose -f infra/docker-compose.yml exec backend env | grep ANTHROPIC
+# Should print: ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-### AI report returns error
+### Economic Calendar returns 0 events
 
-Verify `ANTHROPIC_API_KEY` is set in `backend/.env` and the container was restarted after setting it:
+Most ETFs (QQQ, VOO) and crypto have no earnings dates — this is expected. Stocks like NVDA, NEM will show upcoming earnings. If a known earnings stock returns nothing, the in-memory cache may hold a stale failure; restart the backend to clear it.
+
+### News Feed shows empty articles
+
+yfinance periodically changes its news API response structure. The service handles both the old flat format and the new nested `content` format (as of yfinance ≥0.2.x). If articles appear empty, check the yfinance version in `backend/requirements.txt` and update the parser in `backend/app/holdings_news/service.py`.
+
+### Correlation matrix shows `data_quality: partial`
+
+This is normal. Non-tradeable tickers (crypto tickers without Yahoo Finance symbols, Israeli stocks on TLV) cannot fetch 90-day price history. The matrix is computed from whichever tickers have data.
+
+### Kubernetes — backend pods in CrashLoopBackOff
+
+1. Check logs: `kubectl logs deployment/tradeops-backend`
+2. Most common cause: `DATABASE_URL` is wrong. Verify the secret: `kubectl get secret tradeops -o jsonpath='{.data.DATABASE_URL}' | base64 -d`
+3. Migration failure: backend exits if `alembic upgrade head` fails. Check if the DB is reachable from the pod.
+
+### Kubernetes — frontend shows "Could not connect to the API"
+
+The Ingress routes `/api/*` to the backend service. Verify:
 
 ```bash
-docker compose exec backend env | grep ANTHROPIC
-```
-
-### Frontend npm install hangs
-
-The first start downloads all npm packages inside the container. This can take 2–5 minutes on a slow connection. Check with:
-
-```bash
-docker compose logs -f frontend
-```
-
-### Port conflict
-
-If ports 3000 or 8000 are in use, edit `infra/docker-compose.yml`:
-
-```yaml
-ports:
-  - "3001:3000"    # map host 3001 → container 3000
+kubectl get ingress tradeops
+kubectl describe ingress tradeops
+# Check that /api path points to the backend service on port 8000
 ```
 
 ---
 
-## 10. CI/CD
+## 13. Feature reference
 
-### GitHub Actions
+### AI Intelligence features (require ANTHROPIC_API_KEY)
 
-The workflow at `.github/workflows/ci.yml` runs on every push to `main` and on pull requests:
+| Feature | Endpoint | Cache | Notes |
+|---------|----------|-------|-------|
+| AI Report | `/ai-report` | None (on-demand) | Full portfolio analysis |
+| Recommendations | `/recommendations` | None (on-demand) | Tailored to risk model + goals |
+| Market Research | `/market-research` | 6 hours | Screens 63 instruments; takes 45–60 s cold |
+| AI Agent | `/agent` | None | Free-form financial assistant |
 
-| Job | Trigger | Description |
-|-----|---------|-------------|
-| `version` | always | Reads latest version from `CHANGELOG.md`, checks if a GitHub release for that version already exists |
-| `backend-test` | always | Runs `pytest` |
-| `frontend-check` | always | Runs `npm run type-check` |
-| `backend-docker` | push to main only | Builds and pushes backend image to GHCR tagged `latest`, `sha-*`, and the version number |
-| `frontend-docker` | push to main only | Builds and pushes frontend image to GHCR tagged `latest`, `sha-*`, and the version number |
-| `release` | push to main, after both Docker jobs, only if version is new | Creates git tag and GitHub release with notes extracted from `CHANGELOG.md` |
+### Market data features (no API key needed — yfinance)
 
-### How releases are created
+| Feature | Endpoint | Cache | Notes |
+|---------|----------|-------|-------|
+| Price refresh | `/portfolio` (POST) | 30 min | Live prices for held tickers |
+| Market Scan | `/market-scan` | 30 min | Momentum, volume anomaly, sector rotation |
+| Economic Calendar | `/calendar` | 24 hours per ticker | Upcoming earnings for held + watched tickers |
+| Correlation Matrix | `/portfolio/correlation` | 24 hours | 90-day Pearson correlation + sector concentration |
+| News Feed | `/news` | 1 hour per ticker | Latest articles for held + watched tickers |
 
-**The CI creates releases automatically.** The contract is:
+### Emergency fund account linking
 
-1. Add your changes to the `## [Unreleased]` section in `CHANGELOG.md` as you work
-2. When ready to release, rename `## [Unreleased]` → `## [X.Y.Z] — YYYY-MM-DD` and add a new empty `## [Unreleased]` above it
-3. Commit and push to `main`
-4. CI detects the new version, builds pass → release is created automatically with notes from that version's CHANGELOG block
-5. Docker images are tagged with the version number
+Any investment account (e.g., קרן השתלמות / study fund) can be flagged as the emergency fund via the shield icon on the Investments page. When flagged:
 
-Pushing to `main` without bumping the version is safe — the CI detects the release already exists and skips release creation.
+- The account's holding values are summed and divided by monthly expenses to compute emergency fund months
+- This computed value is used in the Financial Stability Score instead of (or in addition to) the manual `emergency_fund_months` field
+- The account displays an amber "Emergency Fund" badge
 
-**To bump and release:**
+### Performance tracking
 
-```bash
-# Edit CHANGELOG.md: move [Unreleased] content to a new version block
-# Example:
-#   ## [0.9.0] — 2026-05-01
-#   ### Added
-#   - My new feature
-
-git add CHANGELOG.md
-git commit -m "Release v0.9.0: <brief description>"
-git push origin main
-# CI runs → tests pass → Docker images built → release created automatically
-```
-
-### Running tests locally
-
-```bash
-# Backend tests
-cd backend
-pip install -r requirements.txt
-DATABASE_URL=postgresql://... pytest
-
-# Or via Docker
-docker compose exec backend pytest
-```
-
-### Building production Docker images locally
-
-```bash
-docker build -t tradeops-backend ./backend
-docker build -t tradeops-frontend ./frontend
-```
-
-The frontend Dockerfile produces a standalone Next.js image. The `public/` directory must contain at least a `.gitkeep` file so the Docker `COPY` step does not fail on an empty directory.
+Portfolio snapshots are captured daily at 21:00 UTC by the `snapshot_writer` worker. The Performance page shows an equity curve, Sharpe ratio, Sortino ratio, max drawdown, and S&P 500 benchmark comparison. New accounts will see data the following day after the first snapshot runs.
 
 ---
 
-## Maintenance checklist
+## 14. Maintenance checklist
 
 When making changes to the platform:
 
-- [ ] If DB schema changed: create an Alembic migration and test `upgrade` + `downgrade`
-- [ ] If a new API endpoint added: update `docs/architecture.md` API table
-- [ ] If a new frontend page added: update the frontend structure section in `docs/architecture.md`
+- [ ] DB schema changed → create an Alembic migration, test `upgrade` + `downgrade`
+- [ ] New API endpoint → document in `docs/architecture.md`
+- [ ] New frontend page → add to sidebar + help page
 - [ ] Add changes to `CHANGELOG.md` under `## [Unreleased]`
-- [ ] When ready to release: promote `[Unreleased]` to a dated version block and push to `main` — CI creates the release automatically
+- [ ] When ready to release → promote `[Unreleased]` to a dated version block and commit to `main`
+- [ ] For K8s release → `git tag vX.Y.Z && git push origin vX.Y.Z` → GitHub Actions builds tagged images

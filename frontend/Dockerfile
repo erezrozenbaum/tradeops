@@ -13,6 +13,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
+# In K8s the ingress routes /api/* directly to the backend, so NEXT_PUBLIC_API_URL
+# is only relevant for local dev (docker-compose). Override via --build-arg if needed.
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN npm run build
 
 # --- runner (minimal production image) ---

@@ -10,6 +10,36 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.43.0] — 2026-05-09
+
+### Added — Emergency Fund Account Linking
+- **`is_emergency_fund` flag on `investment_accounts`** (migration 0021) — any investment account (e.g., קרן השתלמות study fund) can be designated as the user's emergency fund directly from the Investments page.
+- **Risk model integration** — when an account is flagged, the scoring engine sums holding values (`current_balance` → `current_value` → cost basis) and divides by monthly expenses to compute emergency fund months automatically. Takes the higher of computed vs manually entered value.
+- **Investments page UI** — shield icon button on each account card; amber ShieldCheck badge when active; tooltip on hover.
+
+### Added — Kubernetes / Helm chart (`helm/tradeops/`)
+- Full Helm chart: Backend Deployment + Service, Frontend Deployment + Service, PostgreSQL StatefulSet + headless Service + PVC, Ingress (routes `/api/*` to backend, `/*` to frontend), Secret, ServiceAccount, HPA.
+- `values.yaml` covers image references, resource limits, PostgreSQL config, TLS, autoscaling, and external DB support.
+- Ingress design: in K8s, `/api/*` is routed directly by the Ingress controller to the backend — no Next.js proxy needed.
+
+### Added — ArgoCD GitOps (`argocd/application.yaml`)
+- ArgoCD Application manifest targeting the Helm chart in this repo.
+- Automated sync with prune + self-heal; creates the `tradeops` namespace automatically.
+
+### Added — GitHub Actions CI/CD (`.github/workflows/docker-build-push.yml`)
+- Builds multi-arch Docker images (amd64 + arm64) for backend and frontend on every push to `main`.
+- Pushes to GHCR: `ghcr.io/erezrozenbaum/tradeops-backend` and `ghcr.io/erezrozenbaum/tradeops-frontend`.
+- Tags with commit SHA and `latest`; version tags (`v*`) produce semver-tagged images.
+- Commits updated image tags back to `helm/tradeops/values.yaml` so ArgoCD auto-deploys the new image.
+
+### Added — Frontend Dockerfile (`frontend/Dockerfile`)
+- Existing Dockerfile extended with `NEXT_PUBLIC_API_URL` build arg (defaults to `http://localhost:8000` for local dev; in K8s the ingress handles routing so this is irrelevant).
+
+### Updated — Admin Guide (`docs/admin-guide.md`)
+- Fully rewritten to v0.43.0: covers all features through this release, K8s Helm deployment, ArgoCD GitOps flow, GitHub Actions pipeline, all 21 DB migrations, troubleshooting for new features.
+
+---
+
 ## [0.42.1] — 2026-05-09
 
 ### Fixed

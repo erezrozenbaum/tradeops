@@ -1,0 +1,27 @@
+TradeOps AI has been deployed!
+
+1. Get the application URL:
+{{- if .Values.ingress.enabled }}
+  {{- if .Values.ingress.tls }}
+  https://{{ .Values.ingress.host }}
+  {{- else }}
+  http://{{ .Values.ingress.host }}
+  {{- end }}
+{{- else }}
+  kubectl port-forward svc/{{ include "tradeops.fullname" . }}-frontend {{ .Values.frontend.port }}:{{ .Values.frontend.port }}
+  Then open: http://localhost:{{ .Values.frontend.port }}
+{{- end }}
+
+2. Backend API docs:
+  kubectl port-forward svc/{{ include "tradeops.fullname" . }}-backend 8000:8000
+  Then open: http://localhost:8000/docs
+
+3. Check pod status:
+  kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+
+{{- if not .Values.secret.anthropicApiKey }}
+
+WARNING: ANTHROPIC_API_KEY is not set. AI features (Market Research, AI Report,
+Recommendations, AI Agent) will return errors. Set it in your values:
+  helm upgrade {{ .Release.Name }} ./helm/tradeops --set secret.anthropicApiKey=sk-ant-...
+{{- end }}

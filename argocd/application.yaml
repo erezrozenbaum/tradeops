@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tradeops
+  namespace: argocd          # ArgoCD must be installed in this namespace
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/erezrozenbaum/tradeops.git
+    targetRevision: HEAD      # tracks the main branch; pin to a tag for stability
+    path: helm/tradeops
+    helm:
+      # Override these values here or in a separate values file committed to the repo
+      values: |
+        backend:
+          image:
+            tag: latest       # GitHub Actions updates this to the commit SHA on each push
+        frontend:
+          image:
+            tag: latest
+        ingress:
+          host: tradeops.example.com   # replace with your real domain
+        secret:
+          anthropicApiKey: ""          # set via ArgoCD secret or external-secrets-operator
+
+  destination:
+    server: https://kubernetes.default.svc   # in-cluster deployment
+    namespace: tradeops
+
+  syncPolicy:
+    automated:
+      prune: true             # remove resources no longer in Git
+      selfHeal: true          # revert manual cluster changes
+    syncOptions:
+      - CreateNamespace=true  # creates the 'tradeops' namespace if it doesn't exist
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m

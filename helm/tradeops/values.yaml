@@ -1,0 +1,91 @@
+# ─────────────────────────────────────────────────────────────
+# TradeOps AI — Helm values
+# Override any of these in your own values file:
+#   helm install tradeops ./helm/tradeops -f my-values.yaml
+# ─────────────────────────────────────────────────────────────
+
+# -- Global image pull policy
+imagePullPolicy: IfNotPresent
+
+# ── Backend ──────────────────────────────────────────────────
+backend:
+  image:
+    repository: ghcr.io/erezrozenbaum/tradeops-backend
+    tag: latest
+  replicas: 1
+  port: 8000
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  # Liveness / readiness probe path
+  healthPath: /api/v1/health
+  env:
+    ENVIRONMENT: production
+    # DATABASE_URL and ANTHROPIC_API_KEY are supplied via secret (see below)
+
+# ── Frontend ─────────────────────────────────────────────────
+frontend:
+  image:
+    repository: ghcr.io/erezrozenbaum/tradeops-frontend
+    tag: latest
+  replicas: 1
+  port: 3000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# ── PostgreSQL (bundled) ─────────────────────────────────────
+postgresql:
+  # Set enabled: false to use an external database and supply DATABASE_URL in secret
+  enabled: true
+  image:
+    repository: postgres
+    tag: "16-alpine"
+  port: 5432
+  database: tradeops
+  user: tradeops
+  # password is set in secret.postgresPassword
+  storage:
+    size: 10Gi
+    storageClass: ""   # "" = use cluster default
+
+# ── Secrets (base64-encoded or plain — use SealedSecrets/ESO in prod) ──
+secret:
+  # PostgreSQL password (also used to build DATABASE_URL when postgresql.enabled=true)
+  postgresPassword: "tradeops"
+  # Anthropic API key — required for AI features
+  anthropicApiKey: ""
+  # Supply a full DATABASE_URL to use an external database
+  # Leave empty when postgresql.enabled=true (auto-composed from above)
+  databaseUrl: ""
+
+# ── Ingress ──────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: nginx
+  # TLS is strongly recommended for production
+  tls: false
+  # tlsSecretName: tradeops-tls
+  host: tradeops.example.com
+  annotations: {}
+  # cert-manager.io/cluster-issuer: letsencrypt-prod
+
+# ── Horizontal Pod Autoscaler ─────────────────────────────────
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+# ── Service account ──────────────────────────────────────────
+serviceAccount:
+  create: true
+  name: ""
