@@ -1,7 +1,7 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.45.0
-**Last updated:** 2026-05-09 (v0.45.0)
+**Version:** 0.49.0
+**Last updated:** 2026-05-09 (v0.49.0)
 
 ---
 
@@ -650,7 +650,7 @@ Replaces static catalog recommendations with real market intelligence. New `live
 
 ---
 
-### TASK 40 — Tax-Loss Harvesting Alerts
+### TASK 40 — Tax-Loss Harvesting Alerts ✅ DONE
 
 **Type:** Feature extension (tax_rules + portfolio_analysis modules)
 **Risk:** 🟢 Safe — no DB migration
