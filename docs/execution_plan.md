@@ -1,7 +1,7 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.49.0
-**Last updated:** 2026-05-09 (v0.49.0)
+**Version:** 0.50.0
+**Last updated:** 2026-05-09 (v0.50.0)
 
 ---
 
@@ -669,7 +669,7 @@ Replaces static catalog recommendations with real market intelligence. New `live
 
 ---
 
-### TASK 41 — Professional Client Report (PDF Export)
+### TASK 41 — Professional Client Report (PDF Export) ✅ DONE
 
 **Type:** New feature (reporting module)
 **Risk:** 🟡 Moderate — adds `reportlab` or `weasyprint` dependency

@@ -31,6 +31,7 @@ from app.price_alerts.router import router as price_alerts_router
 from app.economic_calendar.router import router as economic_calendar_router
 from app.portfolio_correlation.router import router as portfolio_correlation_router
 from app.holdings_news.router import router as holdings_news_router
+from app.reports.router import router as reports_router
 
 api_router = APIRouter()
 
@@ -65,3 +66,4 @@ api_router.include_router(price_alerts_router, prefix="/investors/{investor_id}/
 api_router.include_router(economic_calendar_router, prefix="/investors/{investor_id}/calendar", tags=["economic-calendar"])
 api_router.include_router(portfolio_correlation_router, prefix="/investors/{investor_id}/portfolio", tags=["portfolio-correlation"])
 api_router.include_router(holdings_news_router, prefix="/investors/{investor_id}/news", tags=["holdings-news"])
+api_router.include_router(reports_router, prefix="/investors/{investor_id}/reports", tags=["reports"])
