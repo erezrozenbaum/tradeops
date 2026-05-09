@@ -21,6 +21,7 @@ from app.performance_analytics.schemas import PerformanceAnalytics, AttributionR
 from app.scenario_analysis.schemas import StressTestResult
 from app.income_projection.schemas import IncomeResult
 from app.portfolio_analysis.rebalance_schemas import RebalanceResult
+from app.tax_harvesting.schemas import TaxOpportunityResult
 from app.risk_modeling.service import get_latest as get_latest_risk_model
 
 router = APIRouter()
@@ -179,6 +180,19 @@ def get_pension_projection(investor_id: uuid.UUID, db: Session = Depends(get_db)
         return fx_convert(db, amount, from_ccy, to_ccy)
 
     return pension_projection.project(age, accounts, investor.base_currency, convert_fn)
+
+
+@router.get("/tax-opportunities", response_model=TaxOpportunityResult)
+def get_tax_opportunities(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Identify tax-loss harvesting opportunities in the current portfolio."""
+    from app.tax_harvesting.service import compute_opportunities
+    from app.models.investor_profile import InvestorProfile
+
+    portfolio = service.get_portfolio(db, investor_id)
+    investor = db.get(InvestorProfile, investor_id)
+    country = investor.country if investor else "US"
+
+    return compute_opportunities(portfolio, investor_id, country)
 
 
 @router.get("/history", response_model=PortfolioHistoryResult)

@@ -18,11 +18,15 @@ Investor Profile → Financial Context → Risk Model → Portfolio Tracking →
 4. **Investment decision engine** — deterministic readiness assessment: ready / ready with limits / not ready / education only
 5. **Portfolio tracking** — manually add existing investment accounts and holdings; track P&L, asset allocation, and currency exposure across all accounts
 6. **Multi-currency support** — FX rates cached from open.er-api.com; all values normalised to investor's base currency
-7. **Market data** — live prices via Alpha Vantage (24h cache); "Refresh prices" updates all tickered holdings; price source shown per holding (`live` / `manual` / `cost_basis`)
+7. **Market data** — live prices via yfinance (24h cache); "Refresh prices" updates all tickered holdings; price source shown per holding (`live` / `manual` / `cost_basis`)
 8. **Strategy recommendations** — ranked list from a curated template library
 9. **Backtesting** — deterministic simulation of strategy performance over configurable periods
 10. **Paper trading** — month-by-month portfolio simulation without real capital
 11. **AI financial report** — Claude-powered 7-section narrative analysis
+12. **Performance attribution** — holding-level contribution to return, rolling returns (1M/3M/6M/1Y), alpha vs TA-35 / S&P 500 benchmark (currency-aware)
+13. **Scenario analysis & stress testing** — 5 historical crash scenarios applied to portfolio tiers + Monte Carlo P10/P50/P90 fan chart to retirement
+14. **Dividend & income calendar** — forward annual dividend income per holding, yield-on-value/cost, upcoming ex-dividend dates (90-day window)
+15. **Tax-loss harvesting alerts** — identifies holdings with unrealized losses >5% that can offset gains; estimates tax saving; flags short-term vs long-term holdings and wash-sale risk
 
 ---
 
@@ -137,6 +141,11 @@ tradeops/
 │   │   ├── holdings/                # Investment accounts + holdings CRUD
 │   │   ├── currency_engine/         # FX rate fetch + conversion
 │   │   ├── portfolio_analysis/      # P&L, allocation, currency exposure
+│   │   ├── performance_analytics/   # Sharpe, Sortino, drawdown, attribution
+│   │   ├── scenario_analysis/       # Historical crash scenarios + Monte Carlo
+│   │   ├── income_projection/       # Dividend income per holding + ex-date calendar
+│   │   ├── tax_harvesting/          # Tax-loss harvesting opportunity detection
+│   │   ├── tax_rules/               # Country-specific CGT rules for AI context
 │   │   ├── ai_analysis/             # Claude integration
 │   │   ├── audit/
 │   │   └── dashboard/
@@ -147,7 +156,9 @@ tradeops/
 │       ├── (auth)/login/            # Login + profile creation
 │       └── (dashboard)/
 │           ├── dashboard/           # Overview + Investment Readiness + Portfolio widget
-│           ├── investments/         # Account + holdings tracking, portfolio summary
+│           ├── investments/         # Account + holdings tracking, portfolio summary, dividend income
+│           ├── performance/         # Equity curve, risk metrics, attribution, tax opportunities
+│           ├── stress-test/         # Scenario analysis + Monte Carlo fan chart
 │           ├── financial/           # Financial profile + assets/liabilities
 │           ├── goals/
 │           ├── family/
@@ -184,6 +195,13 @@ Key endpoints:
 | GET | `/api/v1/investors/{id}/decision` | Investment readiness decision |
 | GET | `/api/v1/investors/{id}/portfolio` | Portfolio analysis (P&L, allocation, exposure) |
 | POST | `/api/v1/investors/{id}/portfolio/refresh-prices` | Force-refresh market prices for all tickered holdings |
+| GET | `/api/v1/investors/{id}/portfolio/analytics` | Risk-adjusted metrics (Sharpe, Sortino, drawdown, benchmark) |
+| GET | `/api/v1/investors/{id}/portfolio/attribution` | Holding-level attribution + rolling returns + alpha |
+| GET | `/api/v1/investors/{id}/portfolio/history` | Historical portfolio snapshots (1m/3m/6m/1y/all) |
+| GET | `/api/v1/investors/{id}/portfolio/stress-test` | Scenario analysis + Monte Carlo simulation |
+| GET | `/api/v1/investors/{id}/portfolio/income` | Dividend income projection + upcoming ex-dates |
+| GET | `/api/v1/investors/{id}/portfolio/tax-opportunities` | Tax-loss harvesting alerts + estimated savings |
+| GET | `/api/v1/investors/{id}/portfolio/rebalance` | Rebalance recommendations vs target allocation |
 | GET | `/api/v1/market/quote/{ticker}` | Get cached or fresh quote for a ticker |
 | GET/POST | `/api/v1/investors/{id}/accounts` | Investment accounts |
 | GET/PUT/DELETE | `/api/v1/investors/{id}/accounts/{id}` | Manage account |
