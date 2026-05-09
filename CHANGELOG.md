@@ -10,6 +10,20 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.46.0] — 2026-05-09
+
+### Added — Phase 8: Professional Investment Intelligence (TASK 37)
+
+**Performance Attribution & Benchmark Comparison**
+- New endpoint `GET /portfolio/attribution` — holding-level attribution + rolling returns + benchmark alpha
+- **Rolling returns strip** on Performance page: 1M / 3M / 6M / 1Y returns from snapshot history in a clean 4-box grid
+- **Alpha badge** — prominent green/red `α +X.XX% vs TA-35 / S&P 500` badge computed over full snapshot history
+- **Top Contributors / Detractors** — two-column card showing which holdings drove portfolio gains and losses, with mini bar chart, weight %, and individual return %
+- **Dynamic benchmark by currency** — ILS investors compare vs `^TA35` (Tel Aviv 35); USD/others compare vs SPY. Applies to both the analytics endpoint (line chart) and the new attribution endpoint
+- `docs/execution_plan.md` — Phase 8 added with TASK 37–41 specs
+
+---
+
 ## [0.45.0] — 2026-05-09
 
 ### Added — Per-holding Emergency Fund flag

@@ -1,7 +1,7 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.42.0
-**Last updated:** 2026-05-08 (v0.42.0)
+**Version:** 0.45.0
+**Last updated:** 2026-05-09 (v0.45.0)
 
 ---
 
@@ -556,6 +556,141 @@ Replaces static catalog recommendations with real market intelligence. New `live
 - Frontend: import button on investments page with column-mapping wizard
 
 **Priority:** Low for MVP — but would make the app usable for people with existing portfolios.
+
+---
+
+---
+
+## Phase 8: Professional Investment Intelligence
+
+*Gap analysis 2026-05-09 — review from the perspective of an experienced investment manager managing client portfolios.*
+
+**Goal:** Elevate from personal finance tracker → elite investment analysis platform. Five pillars: attribution, stress testing, income projection, tax optimization, and client reporting.
+
+---
+
+### TASK 37 — Performance Attribution & Benchmark Comparison
+
+**Type:** New module (`performance_analytics/attribution.py`)
+**Risk:** 🟢 Safe — no DB migration (reads portfolio_snapshots + yfinance for benchmark)
+
+**What it does:**
+- Fetch benchmark OHLCV via yfinance: SPY (USD investors), TA-35 (ILS investors, `^TA35.TA`), with manual fallback to SPY
+- Compute portfolio total return over same window as portfolio_snapshots
+- **Alpha** = portfolio_return − benchmark_return
+- **Rolling returns**: 1M / 3M / 6M / 1Y (annualised)
+- **Holding-level attribution**: each holding's contribution (%) to total portfolio return, sorted best→worst (top 3 contributors, top 3 detractors)
+- **Beta** vs benchmark (already in TASK 29 — reuse)
+
+**API endpoint:** `GET /api/v1/investors/{id}/portfolio/attribution?period=1y`
+
+**Response:**
+```json
+{
+  "portfolio_return_pct": 12.4,
+  "benchmark_return_pct": 9.1,
+  "alpha_pct": 3.3,
+  "benchmark_name": "S&P 500 (SPY)",
+  "rolling_returns": {"1m": 1.2, "3m": 3.8, "6m": 6.1, "1y": 12.4},
+  "contributors": [
+    {"name": "QQQ", "contribution_pct": 4.2, "return_pct": 18.1},
+    ...
+  ],
+  "detractors": [...]
+}
+```
+
+**Frontend:** New "Attribution" tab on `/performance` page:
+- Portfolio vs benchmark line chart (dual series)
+- Alpha badge (green/red)
+- Rolling returns grid (1M / 3M / 6M / 1Y)
+- Top contributors / detractors bar chart
+
+---
+
+### TASK 38 — Scenario Analysis & Stress Testing
+
+**Type:** New module (`scenario_analysis/`)
+**Risk:** 🟢 Safe — no DB migration (applies historical drawdowns to current allocation)
+
+**What it does:**
+- Pre-built historical scenarios with per-asset-class drawdown percentages:
+  - 2008 Financial Crisis: equities −50%, bonds −5%, crypto −60%
+  - COVID Crash (Mar 2020): equities −34%, bonds +8%, crypto −50%
+  - 2022 Rate Hike Cycle: equities −25%, bonds −18%, crypto −65%
+  - 40% Tech Crash: equities(growth) −40%, bonds 0%, crypto −30%
+  - ILS Depreciation (USD/ILS → 4.5): applied to FX-exposed positions
+- Apply each scenario to current portfolio allocation → simulated loss/gain in base currency
+- **Monte Carlo** (long-horizon): 1000 simulations over N years using mean/variance of historical returns
+
+**API:** `GET /api/v1/investors/{id}/portfolio/scenarios`
+
+**Frontend:** `/stress-test` page — scenario cards showing expected portfolio value and % loss; Monte Carlo fan chart (10th, 50th, 90th percentile wealth at retirement age)
+
+---
+
+### TASK 39 — Dividend & Income Calendar
+
+**Type:** New module (`income_projection/`)
+**Risk:** 🟢 Safe — no DB migration
+
+**What it does:**
+- Fetch dividend history + next ex-date via yfinance for held tickers
+- Project annual dividend income for each holding (quantity × forward annual dividend)
+- Total portfolio annual income and yield-on-cost vs yield-on-current-value
+- Upcoming ex-dividend dates calendar (next 90 days)
+
+**API:** `GET /api/v1/investors/{id}/portfolio/income`
+
+**Frontend:** Income card on `/investments` page:
+- Annual income total in base currency
+- Portfolio yield %
+- Upcoming ex-dividend date badges on holding rows
+- Income breakdown by holding (pie chart)
+
+---
+
+### TASK 40 — Tax-Loss Harvesting Alerts
+
+**Type:** Feature extension (tax_rules + portfolio_analysis modules)
+**Risk:** 🟢 Safe — no DB migration
+
+**What it does:**
+- Identify holdings with unrealized loss > threshold (default 5%)
+- Cross-reference with holdings that have unrealized gains of similar magnitude
+- Flag harvest pairs: "sell TSLA (−8%) to offset gains from QQQ (+15%) — estimated tax saving X ILS"
+- Track short vs long-term holding periods (purchase_date → today)
+- After-tax portfolio return at portfolio level (not just per-holding)
+- Respect wash-sale window (30 days) — warn if similar instrument was recently bought
+
+**API:** `GET /api/v1/investors/{id}/portfolio/tax-opportunities`
+
+**Frontend:** Tax card on `/performance` page — harvest opportunities list, holding period badges (short/long term), estimated annual tax saving
+
+---
+
+### TASK 41 — Professional Client Report (PDF Export)
+
+**Type:** New feature (reporting module)
+**Risk:** 🟡 Moderate — adds `reportlab` or `weasyprint` dependency
+
+**What it does:**
+- Generate a professional multi-page PDF report covering:
+  - Cover page: investor name, report period, AUM
+  - Performance summary: portfolio vs benchmark, alpha, rolling returns
+  - Holdings table: name, allocation %, current value, P&L, weight
+  - Risk metrics: Sharpe, Sortino, max drawdown, VaR
+  - Asset allocation chart (rendered as table in PDF)
+  - Goals progress summary
+  - Tax summary (realised gains YTD, unrealised, estimated tax)
+- Monthly / quarterly date range selector
+
+**API:** `GET /api/v1/investors/{id}/reports/pdf?period=monthly|quarterly`  
+Returns `application/pdf` stream.
+
+**Frontend:** "Export PDF" button on `/performance` page; download triggers immediately.
+
+**Library preference:** `reportlab` (pure Python, no system deps, Docker-friendly) over `weasyprint` (needs Cairo/Pango system packages).
 
 ---
 

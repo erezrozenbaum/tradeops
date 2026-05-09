@@ -165,8 +165,8 @@ def compute(
         best_period_pct = round(max(returns) * 100, 2)
         worst_period_pct = round(min(returns) * 100, 2)
 
-    # ── Benchmark ─────────────────────────────────────────────────────────────
-    benchmark_ticker = "SPY"
+    # ── Benchmark — ILS investors compare vs TA-35, others vs S&P 500 ─────────
+    benchmark_ticker = "^TA35" if currency == "ILS" else "SPY"
     bench_series, bench_total = _fetch_benchmark(benchmark_ticker, start_dt)
 
     return PerformanceAnalytics(

@@ -84,6 +84,29 @@ interface PerformanceAnalytics {
   computed_at: string;
 }
 
+interface HoldingContribution {
+  holding_id: string;
+  name: string;
+  ticker: string | null;
+  asset_type: string;
+  weight_pct: number;
+  return_pct: number;
+  contribution_pct: number;
+}
+
+interface AttributionResult {
+  investor_id: string;
+  currency: string;
+  total_return_pct: number;
+  benchmark_ticker: string;
+  benchmark_return_pct: number | null;
+  alpha_pct: number | null;
+  rolling_returns: { "1m": number | null; "3m": number | null; "6m": number | null; "1y": number | null };
+  contributors: HoldingContribution[];
+  detractors: HoldingContribution[];
+  computed_at: string;
+}
+
 // ── Period selector ────────────────────────────────────────────────────────
 
 const PERIODS = [
@@ -176,6 +199,7 @@ export default function PerformancePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [correlation, setCorrelation] = useState<CorrelationResult | null>(null);
+  const [attribution, setAttribution] = useState<AttributionResult | null>(null);
 
   const load = useCallback(async () => {
     if (!investorId) return;
@@ -204,6 +228,9 @@ export default function PerformancePage() {
     fetch(`/api/v1/investors/${investorId}/portfolio/correlation`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d) setCorrelation(d); });
+    fetch(`/api/v1/investors/${investorId}/portfolio/attribution`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setAttribution(d); });
   }, [investorId]);
 
   // ── Build chart data ─────────────────────────────────────────────────────
@@ -332,19 +359,131 @@ export default function PerformancePage() {
             icon={Activity}
           />
           <MetricCard
-            label="vs S&P 500"
+            label={`vs ${analytics.benchmark_ticker === "^TA35" ? "TA-35" : "S&P 500"}`}
             value={analytics.benchmark_total_return_pct !== null
               ? pct(analytics.total_return_pct - analytics.benchmark_total_return_pct)
               : "—"}
             sub={analytics.benchmark_total_return_pct !== null
-              ? `SPY: ${pct(analytics.benchmark_total_return_pct)}`
-              : "SPY data unavailable"}
+              ? `${analytics.benchmark_ticker ?? "SPY"}: ${pct(analytics.benchmark_total_return_pct)}`
+              : "Benchmark unavailable"}
             positive={analytics.benchmark_total_return_pct !== null
               ? analytics.total_return_pct > analytics.benchmark_total_return_pct
               : undefined}
             neutral={analytics.benchmark_total_return_pct === null}
             icon={BarChart2}
           />
+        </div>
+      )}
+
+      {/* Rolling Returns strip */}
+      {attribution && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Rolling Returns</span>
+              {attribution.alpha_pct !== null && (
+                <Badge
+                  variant={attribution.alpha_pct >= 0 ? "success" : "danger"}
+                  className="ml-auto text-xs"
+                >
+                  α {attribution.alpha_pct >= 0 ? "+" : ""}{attribution.alpha_pct.toFixed(2)}% vs {attribution.benchmark_ticker === "^TA35" ? "TA-35" : "S&P 500"}
+                </Badge>
+              )}
+            </div>
+            <div className="grid grid-cols-4 gap-3">
+              {(["1m", "3m", "6m", "1y"] as const).map((window) => {
+                const val = attribution.rolling_returns[window];
+                const isPos = val !== null && val >= 0;
+                const isNeg = val !== null && val < 0;
+                return (
+                  <div key={window} className="text-center bg-muted/40 rounded-lg py-3 px-2">
+                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">
+                      {window === "1m" ? "1 Month" : window === "3m" ? "3 Months" : window === "6m" ? "6 Months" : "1 Year"}
+                    </p>
+                    <p className={`text-lg font-bold ${isPos ? "text-green-500" : isNeg ? "text-red-500" : "text-muted-foreground"}`}>
+                      {val !== null ? pct(val) : "—"}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Performance Attribution */}
+      {attribution && (attribution.contributors.length > 0 || attribution.detractors.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Top Contributors */}
+          {attribution.contributors.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                  Top Contributors
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {attribution.contributors.map((h) => (
+                  <div key={h.holding_id} className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-xs font-medium truncate">{h.ticker ?? h.name}</span>
+                        <span className="text-xs text-green-500 font-semibold ml-2 shrink-0">
+                          +{h.contribution_pct.toFixed(2)}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-green-500"
+                          style={{ width: `${Math.min(Math.abs(h.contribution_pct) * 10, 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {h.weight_pct.toFixed(1)}% weight · {pct(h.return_pct)} return
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Top Detractors */}
+          {attribution.detractors.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                  Top Detractors
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {attribution.detractors.map((h) => (
+                  <div key={h.holding_id} className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-xs font-medium truncate">{h.ticker ?? h.name}</span>
+                        <span className="text-xs text-red-500 font-semibold ml-2 shrink-0">
+                          {h.contribution_pct.toFixed(2)}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-red-500"
+                          style={{ width: `${Math.min(Math.abs(h.contribution_pct) * 10, 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {h.weight_pct.toFixed(1)}% weight · {pct(h.return_pct)} return
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
@@ -405,7 +544,7 @@ export default function PerformancePage() {
                     <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Line type="monotone" dataKey="return_pct" name="My portfolio"
                       stroke="#3b82f6" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="bench_pct" name="S&P 500 (SPY)"
+                    <Line type="monotone" dataKey="bench_pct" name={analytics.benchmark_ticker === "^TA35" ? "TA-35" : "S&P 500 (SPY)"}
                       stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
