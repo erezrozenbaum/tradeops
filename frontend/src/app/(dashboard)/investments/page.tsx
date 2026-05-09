@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatPercent } from "@/lib/utils";
-import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronRight, Briefcase, RefreshCw, Scale, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronRight, Briefcase, RefreshCw, Scale, CheckCircle2, XCircle, ShieldCheck, Shield } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -53,6 +53,7 @@ interface Account {
   currency: string;
   notes: string | null;
   family_member_id: string | null;
+  is_emergency_fund: boolean;
   holdings: Holding[];
 }
 
@@ -359,6 +360,15 @@ export default function InvestmentsPage() {
     } finally {
       setSavingAccount(false);
     }
+  }
+
+  async function toggleEmergencyFund(accountId: string, current: boolean) {
+    await fetch(`/api/v1/investors/${investorId}/accounts/${accountId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_emergency_fund: !current }),
+    });
+    loadAll();
   }
 
   async function deleteAccount(accountId: string) {
@@ -978,7 +988,14 @@ export default function InvestmentsPage() {
                 >
                   {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                   <div>
-                    <p className="font-medium text-sm">{account.account_name ?? account.provider_name}</p>
+                    <p className="font-medium text-sm flex items-center gap-2">
+                      {account.account_name ?? account.provider_name}
+                      {account.is_emergency_fund && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-100 dark:text-amber-400 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
+                          <ShieldCheck className="h-3 w-3" /> Emergency Fund
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {account.provider_name} · <Badge variant="muted" className="text-[10px] py-0">{accountTypeLabel(account.account_type)}</Badge>
                       {account.family_member_id && (() => {
@@ -1019,6 +1036,17 @@ export default function InvestmentsPage() {
                       />
                       CSV
                     </label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      title={account.is_emergency_fund ? "Unmark as emergency fund" : "Mark as emergency fund"}
+                      onClick={() => toggleEmergencyFund(account.id, account.is_emergency_fund)}
+                      className={account.is_emergency_fund ? "text-amber-600 hover:text-amber-700" : ""}
+                    >
+                      {account.is_emergency_fund
+                        ? <ShieldCheck className="h-3.5 w-3.5" />
+                        : <Shield className="h-3.5 w-3.5 text-muted-foreground" />}
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => deleteAccount(account.id)}>
                       <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                     </Button>

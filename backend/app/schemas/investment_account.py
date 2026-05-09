@@ -95,6 +95,7 @@ class InvestmentAccountUpdate(BaseModel):
     currency: str | None = Field(None, min_length=3, max_length=3)
     notes: str | None = None
     family_member_id: uuid.UUID | None = None
+    is_emergency_fund: bool | None = None
 
 
 class InvestmentAccountOut(BaseModel):
@@ -106,6 +107,7 @@ class InvestmentAccountOut(BaseModel):
     currency: str
     notes: str | None
     family_member_id: uuid.UUID | None
+    is_emergency_fund: bool = False
     holdings: list[InvestmentHoldingOut] = []
     created_at: datetime
     updated_at: datetime
