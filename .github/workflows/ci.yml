@@ -108,6 +108,7 @@ jobs:
         with:
           context: ./backend
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
@@ -175,6 +176,7 @@ jobs:
         with:
           context: ./frontend
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
@@ -217,6 +219,19 @@ jobs:
           git tag -a "${{ needs.version.outputs.tag }}" \
             -m "Release ${{ needs.version.outputs.tag }}" || true
           git push origin "${{ needs.version.outputs.tag }}" || true
+
+      - name: Update Helm image tags for ArgoCD
+        run: |
+          TAG="${{ needs.version.outputs.version }}"
+          sed -i "s|tag: .*  # auto-updated by CI|tag: ${TAG}  # auto-updated by CI|g" helm/tradeops/values.yaml || true
+
+      - name: Commit updated Helm values
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "ci: update image tags to ${{ needs.version.outputs.version }} [skip ci]"
+          file_pattern: helm/tradeops/values.yaml
+          commit_user_name: github-actions[bot]
+          commit_user_email: github-actions[bot]@users.noreply.github.com
 
       - name: Publish GitHub release
         env:
