@@ -22,6 +22,9 @@ class InstrumentRecommendation(BaseModel):
     educational_note: str
     action: str       # "consider" | "increase" | "start_position"
     is_new_to_you: bool
+    suggested_position_size_pct: float | None = None  # % of investable capital
+    max_loss_amount: float | None = None              # in base currency at 10% stop
+    stop_loss_note: str | None = None                 # e.g. "10% below entry"
 
 
 class MonthlyAllocation(BaseModel):

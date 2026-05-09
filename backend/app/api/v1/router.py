@@ -28,6 +28,9 @@ from app.investment_agent.router import router as investment_agent_router
 from app.market_research.router import router as market_research_router
 from app.transactions.router import router as transactions_router
 from app.price_alerts.router import router as price_alerts_router
+from app.economic_calendar.router import router as economic_calendar_router
+from app.portfolio_correlation.router import router as portfolio_correlation_router
+from app.holdings_news.router import router as holdings_news_router
 
 api_router = APIRouter()
 
@@ -59,3 +62,6 @@ api_router.include_router(strategy_library_router, prefix="/strategies/templates
 api_router.include_router(audit_router, prefix="/investors", tags=["audit"])
 api_router.include_router(transactions_router, prefix="/investors/{investor_id}/transactions", tags=["transactions"])
 api_router.include_router(price_alerts_router, prefix="/investors/{investor_id}/alerts", tags=["price-alerts"])
+api_router.include_router(economic_calendar_router, prefix="/investors/{investor_id}/calendar", tags=["economic-calendar"])
+api_router.include_router(portfolio_correlation_router, prefix="/investors/{investor_id}/portfolio", tags=["portfolio-correlation"])
+api_router.include_router(holdings_news_router, prefix="/investors/{investor_id}/news", tags=["holdings-news"])
