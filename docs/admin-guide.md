@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.49.0  
+**Version:** 0.50.0  
 **Last updated:** 2026-05-09
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -568,6 +568,7 @@ kubectl describe ingress tradeops
 | Stress Testing | `/portfolio/stress-test` | None | 5 historical crash scenarios + Monte Carlo P10/P50/P90 |
 | Income Projection | `/portfolio/income` | 24 hours per ticker | Annual dividend income + upcoming ex-dividend dates |
 | Tax-Loss Harvesting | `/portfolio/tax-opportunities` | None | Holdings with >5% unrealized loss; estimated tax saving; wash-sale flag |
+| PDF Report Export | `/reports/pdf?period=monthly\|quarterly` | None (on-demand) | Multi-page client-grade PDF: cover, portfolio, performance, stress test, tax summary |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.
@@ -580,6 +581,11 @@ Fetches forward annual dividend rate and next ex-date via yfinance for all ticke
 
 **Tax-Loss Harvesting** — `/portfolio/tax-opportunities`  
 Identifies holdings with unrealized loss >5% (configurable threshold). Uses country-specific capital gains rate from the tax rules engine (IL: 25%, US: 15% long-term, DE: 26.375%, FR: 30%). Reports short-term vs long-term holding period, wash-sale risk (purchased <30 days ago), and estimated tax saving per opportunity.
+
+**PDF Report Export** — `/reports/pdf?period=monthly|quarterly`  
+Generates a multi-page client-grade PDF report using `reportlab` (pure Python; no system-level dependencies; Docker-friendly). Report sections: cover page with investor name / period / base currency / generation timestamp; portfolio overview with full holdings table; performance analytics (Sharpe, Sortino, max drawdown, rolling returns, benchmark alpha, top contributors/detractors); stress test scenarios + Monte Carlo projection; tax-loss harvesting summary. Returns `application/pdf` with a timestamped filename. The "Export PDF" button on the Performance page provides a hover dropdown for Monthly or Quarterly report.
+
+**Dependency note:** `reportlab>=4.2.0` is required and installed from `requirements.txt` during Docker image build. No additional system packages are needed.
 
 ### Emergency fund linking
 
