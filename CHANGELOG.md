@@ -10,6 +10,14 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.42.1] — 2026-05-09
+
+### Fixed
+- **Economic Calendar** — `datetime.date` objects from yfinance no longer silently parse to `None`; fix checks `isinstance(raw, date)` before `isinstance(raw, datetime)` so future earnings dates (e.g., NVDA 2026-05-20, NEM 2026-07-23) are returned correctly.
+- **Holdings News Feed** — yfinance ≥0.2.x nests article data under a `content` key; parser now reads `content.title`, `content.provider.displayName`, `content.canonicalUrl.url`, and `content.pubDate` (ISO 8601) with fallback to the old flat format.
+
+---
+
 ## [0.42.0] — 2026-05-08
 
 ### Added — TASK 32: Economic Calendar

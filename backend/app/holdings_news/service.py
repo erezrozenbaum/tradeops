@@ -67,15 +67,34 @@ def get_news(db: Session, investor_id: uuid.UUID, limit: int = 20) -> NewsFeedRe
         raw_items = _fetch_news(ticker)
         for raw in raw_items:
             try:
-                ts = raw.get("providerPublishTime")
-                published_at = datetime.fromtimestamp(ts, tz=timezone.utc) if ts else None
+                # yfinance ≥0.2.x nests data under 'content'; fall back to flat format
+                content = raw.get("content") if isinstance(raw.get("content"), dict) else raw
+                title = content.get("title", "")
+                if not title:
+                    continue
+                publisher = (
+                    content.get("provider", {}).get("displayName", "")
+                    or content.get("publisher", "")
+                )
+                url = (
+                    content.get("canonicalUrl", {}).get("url", "")
+                    or content.get("clickThroughUrl", {}).get("url", "")
+                    or content.get("link", "")
+                )
+                pub_date = content.get("pubDate") or content.get("displayTime")
+                if pub_date:
+                    published_at = datetime.fromisoformat(pub_date.replace("Z", "+00:00"))
+                else:
+                    ts = content.get("providerPublishTime")
+                    published_at = datetime.fromtimestamp(ts, tz=timezone.utc) if ts else None
+                summary = content.get("summary") or content.get("description")
                 items.append(NewsItem(
                     ticker=ticker,
-                    title=raw.get("title", ""),
-                    publisher=raw.get("publisher", ""),
-                    url=raw.get("link", ""),
+                    title=title,
+                    publisher=publisher,
+                    url=url,
                     published_at=published_at,
-                    summary=raw.get("summary"),
+                    summary=summary or None,
                     source=source,
                 ))
             except Exception:

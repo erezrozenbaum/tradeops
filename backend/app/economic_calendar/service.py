@@ -41,8 +41,10 @@ def _fetch_earnings(ticker: str, source: str) -> EarningsEvent | None:
                 if raw:
                     if isinstance(raw, list) and raw:
                         raw = raw[0]
-                    if hasattr(raw, "date"):
+                    if isinstance(raw, datetime):
                         earnings_date = raw.date()
+                    elif isinstance(raw, date):
+                        earnings_date = raw
                     elif isinstance(raw, str):
                         try:
                             earnings_date = datetime.strptime(raw[:10], "%Y-%m-%d").date()
@@ -57,8 +59,10 @@ def _fetch_earnings(ticker: str, source: str) -> EarningsEvent | None:
                 try:
                     if "Earnings Date" in cal.columns:
                         raw = cal["Earnings Date"].iloc[0]
-                        if hasattr(raw, "date"):
+                        if isinstance(raw, datetime):
                             earnings_date = raw.date()
+                        elif isinstance(raw, date):
+                            earnings_date = raw
                     if "EPS Estimate" in cal.columns:
                         eps_est = float(cal["EPS Estimate"].iloc[0])
                     if "Revenue Estimate" in cal.columns:
