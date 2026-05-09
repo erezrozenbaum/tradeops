@@ -85,6 +85,7 @@ class InvestmentHolding(Base, UUIDMixin, TimestampMixin):
     monthly_contribution_employee: Mapped[float | None] = mapped_column(Float, nullable=True)
     monthly_contribution_employer: Mapped[float | None] = mapped_column(Float, nullable=True)
     fund_status: Mapped[str | None] = mapped_column(String(20), nullable=True)  # "active" | "inactive"
+    is_emergency_fund: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     account: Mapped["InvestmentAccount"] = relationship(
         "InvestmentAccount", back_populates="holdings"

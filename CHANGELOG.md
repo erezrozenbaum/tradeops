@@ -10,6 +10,20 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.45.0] — 2026-05-09
+
+### Added — Per-holding Emergency Fund flag
+- **Migration 0022** — `is_emergency_fund` boolean column added to `investment_holdings` (server default `false`, non-breaking).
+- **Holding-level EF toggle** — each holding row in the Investments page now has its own shield icon button; toggling it marks only that specific holding as emergency fund, rather than the entire account.
+- **Amber "EF" badge** on holding name when the flag is active, consistent with account-level badge styling.
+- **Risk model uses holding-level EF** — the scoring engine queries `investment_holdings.is_emergency_fund` first; falls back to `investment_accounts.is_emergency_fund` for backward compatibility. This means users who previously marked a full account still get correct EF month calculation.
+
+### Fixed — Risk model investment valuation
+- **Net worth now uses live prices** — `risk_modeling/service.py` calls `portfolio_service.get_portfolio()` (which applies live cached market prices + FX conversion) instead of falling back to `avg_buy_price` for holdings without a `current_value`. Previously, cost-basis was used as a proxy for unrealised holdings, overstating or understating actual value.
+- **`total_assets` = manual financial assets + live portfolio total** in base currency.
+
+---
+
 ## [0.44.0] — 2026-05-09
 
 ### Added — Investment portfolio visible in Financial Profile

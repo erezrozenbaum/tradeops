@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.44.0  
+**Version:** 0.45.0  
 **Last updated:** 2026-05-09
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -139,6 +139,7 @@ Migrations also run automatically on every container start.
 | 0019 | Holding transactions |
 | 0020 | Price alerts |
 | 0021 | `is_emergency_fund` flag on `investment_accounts` |
+| 0022 | `is_emergency_fund` flag on `investment_holdings` |
 
 ### Creating a new migration
 
@@ -170,6 +171,11 @@ SELECT id, full_name, country, base_currency, created_at FROM investor_profiles 
 SELECT ia.provider_name, ia.account_type, ia.is_emergency_fund
 FROM investment_accounts ia
 WHERE ia.is_emergency_fund = true;
+
+-- Holdings marked as emergency fund
+SELECT ih.name, ih.asset_type, ih.current_value, ih.current_balance, ih.is_emergency_fund
+FROM investment_holdings ih
+WHERE ih.is_emergency_fund = true;
 
 -- Count audit events per investor
 SELECT investor_profile_id, COUNT(*) FROM audit_events GROUP BY investor_profile_id;
@@ -554,18 +560,25 @@ kubectl describe ingress tradeops
 | Correlation Matrix | `/portfolio/correlation` | 24 hours | 90-day Pearson correlation + sector concentration |
 | News Feed | `/news` | 1 hour per ticker | Latest articles for held + watched tickers |
 
-### Emergency fund account linking
+### Emergency fund linking
 
-Any investment account (e.g., קרן השתלמות / study fund) can be designated as the emergency fund in two ways:
+Emergency fund designation can be set at two granularities:
 
+**Account level** (migration 0021):
 1. **At creation** — check "Use as emergency fund" in the New account form
-2. **On an existing account** — click the amber **EF** shield button in the account card row
+2. **On an existing account** — click the amber **EF** shield button on the account card
 
-When flagged:
+**Holding level** (migration 0022):
+- Each individual holding row has its own **EF** shield button
+- Useful when only part of an account (e.g., the liquid portion of a study fund) acts as emergency savings
+- An amber "EF" badge appears next to the holding name when flagged
 
-- The account's holding values are summed and divided by monthly expenses to compute emergency fund months
-- This computed value is used in the Financial Stability Score instead of (or in addition to) the manual `emergency_fund_months` field
-- The account displays an amber "Emergency Fund" badge
+**Risk model integration:**
+- The scoring engine queries holding-level flags first (`investment_holdings.is_emergency_fund`)
+- Falls back to account-level flags for backward compatibility
+- EF holding values use live portfolio prices (via portfolio service + FX conversion) when available
+- Computed EF months = total EF value ÷ monthly expenses; the higher of computed vs manually entered is used
+- The account and holding cards display an amber "Emergency Fund" badge when flagged
 
 ### Investment portfolio in Financial Profile
 

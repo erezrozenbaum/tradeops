@@ -7,9 +7,10 @@ from app.audit import service as audit
 from app.financial_profiles import service as fp_service
 from app.financial_scoring.engine import calculate_stability_score
 from app.financial_scoring.schemas import FinancialScoringInput
-from app.models.investment_account import InvestmentAccount
+from app.models.investment_account import InvestmentAccount, InvestmentHolding
 from app.models.investor_profile import ExperienceLevel, InvestorProfile
 from app.models.risk_model import RiskModel
+from app.portfolio_analysis import service as portfolio_service
 
 # Allocation table: (risk_modifier, experience_level) → (low_pct, growth_pct, high_pct, max_drawdown_pct)
 _ALLOCATION_TABLE: dict[tuple[str, str], tuple[float, float, float, float]] = {
@@ -181,18 +182,10 @@ def generate(db: Session, investor_id: uuid.UUID) -> RiskModel | None:
     manual_assets = sum(a.current_value for a in fp.assets)
     total_liabilities = sum(l.outstanding_balance for l in fp.liabilities)
 
-    # Sum investment account holding values so the portfolio counts toward net worth.
-    # Uses the same priority chain as the emergency-fund block below.
-    all_accounts = (
-        db.query(InvestmentAccount)
-        .filter(InvestmentAccount.investor_id == investor_id)
-        .all()
-    )
-    investment_total = 0.0
-    for acc in all_accounts:
-        for h in acc.holdings:
-            val = h.current_balance or h.current_value or (h.quantity * h.avg_buy_price)
-            investment_total += val or 0.0
+    # Use the portfolio service (live prices + FX conversion) for an accurate
+    # investment total in base currency. Falls back to 0 if portfolio is empty.
+    portfolio = portfolio_service.get_portfolio(db, investor_id)
+    investment_total = portfolio.total_current_value if portfolio else 0.0
 
     total_assets = manual_assets + investment_total
     total_net_worth = total_assets - total_liabilities
@@ -201,24 +194,46 @@ def generate(db: Session, investor_id: uuid.UUID) -> RiskModel | None:
     )
     investable_capital = round(liquid_capital * fp.investable_capital_pct / 100, 2)
 
-    # If any investment account is flagged as emergency fund, derive months from its holdings value.
-    # This lets users designate a study fund (קרן השתלמות) or other account as their emergency fund
-    # rather than entering a manual months figure. Takes the higher of computed vs manual.
+    # Emergency fund: sum holding-level flags first (more granular), then fall back
+    # to account-level flags if no individual holdings are marked.
+    # Takes the higher of computed vs manually entered emergency_fund_months.
     ef_months = fp.emergency_fund_months
-    ef_accounts = (
-        db.query(InvestmentAccount)
+
+    ef_holdings = (
+        db.query(InvestmentHolding)
+        .join(InvestmentAccount, InvestmentHolding.account_id == InvestmentAccount.id)
         .filter(
             InvestmentAccount.investor_id == investor_id,
-            InvestmentAccount.is_emergency_fund.is_(True),
+            InvestmentHolding.is_emergency_fund.is_(True),
         )
         .all()
     )
-    if ef_accounts and fp.monthly_expenses > 0:
+
+    if not ef_holdings:
+        # Fallback: account-level flag
+        ef_accounts = (
+            db.query(InvestmentAccount)
+            .filter(
+                InvestmentAccount.investor_id == investor_id,
+                InvestmentAccount.is_emergency_fund.is_(True),
+            )
+            .all()
+        )
+        ef_holdings = [h for acc in ef_accounts for h in acc.holdings]
+
+    if ef_holdings and fp.monthly_expenses > 0:
         ef_total = 0.0
-        for acc in ef_accounts:
-            for h in acc.holdings:
-                val = h.current_balance or h.current_value or (h.quantity * h.avg_buy_price)
-                ef_total += val or 0.0
+        for h in ef_holdings:
+            # Use portfolio analysis value if available (live price), else stored values
+            if portfolio:
+                for acc_analysis in portfolio.accounts:
+                    ha = next((ha for ha in acc_analysis.holdings if str(ha.id) == str(h.id)), None)
+                    if ha:
+                        ef_total += ha.current_value_base
+                        break
+            else:
+                val = h.current_balance or h.current_value or 0.0
+                ef_total += val
         computed = ef_total / fp.monthly_expenses
         ef_months = max(ef_months, computed)
 

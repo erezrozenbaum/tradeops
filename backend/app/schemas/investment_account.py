@@ -27,6 +27,7 @@ class InvestmentHoldingCreate(BaseModel):
     monthly_contribution_employee: float | None = Field(None, ge=0)
     monthly_contribution_employer: float | None = Field(None, ge=0)
     fund_status: str | None = None
+    is_emergency_fund: bool = False
 
 
 class InvestmentHoldingUpdate(BaseModel):
@@ -48,6 +49,7 @@ class InvestmentHoldingUpdate(BaseModel):
     monthly_contribution_employee: float | None = Field(None, ge=0)
     monthly_contribution_employer: float | None = Field(None, ge=0)
     fund_status: str | None = None
+    is_emergency_fund: bool | None = None
 
 
 class InvestmentHoldingOut(BaseModel):
@@ -71,6 +73,7 @@ class InvestmentHoldingOut(BaseModel):
     monthly_contribution_employee: float | None
     monthly_contribution_employer: float | None
     fund_status: str | None
+    is_emergency_fund: bool = False
     created_at: datetime
     updated_at: datetime
 
