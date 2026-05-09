@@ -43,6 +43,7 @@ interface Holding {
   monthly_contribution_employee: number | null;
   monthly_contribution_employer: number | null;
   fund_status: string | null;
+  is_emergency_fund: boolean;
 }
 
 interface Account {
@@ -365,6 +366,15 @@ export default function InvestmentsPage() {
 
   async function toggleEmergencyFund(accountId: string, current: boolean) {
     await fetch(`/api/v1/investors/${investorId}/accounts/${accountId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_emergency_fund: !current }),
+    });
+    loadAll();
+  }
+
+  async function toggleHoldingEmergencyFund(accountId: string, holdingId: string, current: boolean) {
+    await fetch(`/api/v1/investors/${investorId}/accounts/${accountId}/holdings/${holdingId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ is_emergency_fund: !current }),
@@ -1267,6 +1277,11 @@ export default function InvestmentsPage() {
                                     {taxInfo.status === "Tax-Free" ? "✅ Tax-Free" : `🔒 Locked${taxInfo.yearsLeft ? ` · ${taxInfo.yearsLeft}y` : ""}`}
                                   </span>
                                 )}
+                                {h.is_emergency_fund && (
+                                  <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                                    <ShieldCheck className="h-2.5 w-2.5" /> EF
+                                  </span>
+                                )}
                                 {isStudyFund && h.fund_status === "inactive" && (
                                   <span className="inline-flex items-center rounded-full bg-muted px-1.5 py-0 text-[10px] font-medium text-muted-foreground">Inactive</span>
                                 )}
@@ -1385,6 +1400,17 @@ export default function InvestmentsPage() {
                                     Simulate
                                   </Button>
                                 )}
+                                <Button
+                                  variant={h.is_emergency_fund ? "outline" : "ghost"}
+                                  size="sm"
+                                  title={h.is_emergency_fund ? "Unmark as emergency fund" : "Mark as emergency fund"}
+                                  onClick={() => toggleHoldingEmergencyFund(account.id, h.id, h.is_emergency_fund)}
+                                  className={h.is_emergency_fund ? "text-amber-600 border-amber-300 hover:text-amber-700 gap-1" : "gap-1 text-muted-foreground"}
+                                >
+                                  {h.is_emergency_fund
+                                    ? <><ShieldCheck className="h-3.5 w-3.5" /><span className="text-[10px] font-medium">EF</span></>
+                                    : <><Shield className="h-3.5 w-3.5" /><span className="text-[10px]">EF</span></>}
+                                </Button>
                                 <Button variant="ghost" size="sm" onClick={() => startEditHolding(account.id, h)}>
                                   <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
                                 </Button>
