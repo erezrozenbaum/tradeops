@@ -17,7 +17,7 @@ from app.portfolio_analysis.schemas import (
     PriceRefreshResult,
     PortfolioHistoryResult,
 )
-from app.performance_analytics.schemas import PerformanceAnalytics
+from app.performance_analytics.schemas import PerformanceAnalytics, AttributionResult
 from app.portfolio_analysis.rebalance_schemas import RebalanceResult
 from app.risk_modeling.service import get_latest as get_latest_risk_model
 
@@ -105,6 +105,20 @@ def get_portfolio_analytics(
     currency = investor.base_currency if investor else "USD"
 
     return compute_analytics(snapshots, investor_id=investor_id, currency=currency)
+
+
+@router.get("/attribution", response_model=AttributionResult)
+def get_portfolio_attribution(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Holding-level performance attribution + rolling returns (1M/3M/6M/1Y) + benchmark alpha."""
+    from app.performance_analytics.attribution import compute_attribution
+    from app.models.investor_profile import InvestorProfile
+
+    all_snapshots = service.get_history(db, investor_id, since=None)
+    portfolio = service.get_portfolio(db, investor_id)
+    investor = db.get(InvestorProfile, investor_id)
+    currency = investor.base_currency if investor else "USD"
+
+    return compute_attribution(all_snapshots, portfolio, investor_id, currency)
 
 
 @router.get("/pension-projection")

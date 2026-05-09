@@ -35,3 +35,28 @@ class PerformanceAnalytics(BaseModel):
     benchmark_series: list[BenchmarkPoint]
 
     computed_at: datetime
+
+
+# ── Attribution ───────────────────────────────────────────────────────────────
+
+class HoldingContribution(BaseModel):
+    holding_id: uuid.UUID
+    name: str
+    ticker: str | None
+    asset_type: str
+    weight_pct: float       # % of portfolio cost basis
+    return_pct: float       # this holding's unrealized return %
+    contribution_pct: float # contribution to total portfolio return (gain / total_cost_basis × 100)
+
+
+class AttributionResult(BaseModel):
+    investor_id: uuid.UUID
+    currency: str
+    total_return_pct: float
+    benchmark_ticker: str
+    benchmark_return_pct: float | None
+    alpha_pct: float | None
+    rolling_returns: dict[str, float | None]  # "1m", "3m", "6m", "1y"
+    contributors: list[HoldingContribution]
+    detractors: list[HoldingContribution]
+    computed_at: datetime
