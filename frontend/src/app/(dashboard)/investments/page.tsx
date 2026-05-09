@@ -293,9 +293,21 @@ export default function InvestmentsPage() {
   // CSV import
   const [csvImportResult, setCsvImportResult] = useState<{ accountId: string; imported: number; errors: string[] } | null>(null);
 
+  // Earnings calendar
+  const [earningsMap, setEarningsMap] = useState<Record<string, string>>({});
+
   useEffect(() => {
     if (!investorId) return;
     loadAll();
+    fetch(`/api/v1/investors/${investorId}/calendar`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.events) {
+          const map: Record<string, string> = {};
+          for (const ev of d.events) map[ev.ticker] = ev.earnings_date;
+          setEarningsMap(map);
+        }
+      });
   }, [investorId]);
 
   async function loadAll() {
@@ -1214,6 +1226,15 @@ export default function InvestmentsPage() {
                                 {isStudyFund && h.fund_status === "inactive" && (
                                   <span className="inline-flex items-center rounded-full bg-muted px-1.5 py-0 text-[10px] font-medium text-muted-foreground">Inactive</span>
                                 )}
+                                {!isSavingsFund && h.ticker && earningsMap[h.ticker.toUpperCase()] && (() => {
+                                  const earningsDate = earningsMap[h.ticker.toUpperCase()];
+                                  const daysUntil = Math.ceil((new Date(earningsDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                                  return (
+                                    <span className={`inline-flex items-center rounded-full px-1.5 py-0 text-[10px] font-medium ${daysUntil <= 7 ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"}`}>
+                                      Earnings {daysUntil <= 0 ? "today" : `in ${daysUntil}d`}
+                                    </span>
+                                  );
+                                })()}
                               </div>
                             </td>
                             <td className="py-2.5 pr-3">

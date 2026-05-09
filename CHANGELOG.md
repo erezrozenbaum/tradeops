@@ -10,6 +10,35 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.42.0] — 2026-05-08
+
+### Added — TASK 32: Economic Calendar
+- **`economic_calendar/` module** — fetches upcoming earnings dates for all held + watched tickers via yfinance `.calendar`. Cached 24h per ticker.
+- **`GET /api/v1/investors/{id}/calendar`** — returns `EarningsEvent` list sorted by date ascending.
+- **Dashboard earnings panel** — "Upcoming Earnings" card showing ticker, company, date, and days-until indicator (amber ≤7d, blue ≤14d).
+- **Investments page earnings badge** — each holding row shows an inline "Earnings in Xd" badge for tickers with upcoming earnings.
+
+### Added — TASK 33: Correlation Matrix & Concentration Risk
+- **`portfolio_correlation/` module** — computes pairwise Pearson correlation using 90-day daily return history from yfinance. Flags pairs >0.8 as high-correlation. Sector concentration analysis: >40% in single sector is flagged. Risk score 0–100.
+- **`GET /api/v1/investors/{id}/portfolio/correlation`** — returns full correlation matrix + concentration risk.
+- **Performance page heatmap** — colour-coded correlation matrix (red=high, amber=moderate, green=negative). Concentration Risk card with sector weight bars, warnings, and risk score badge. Loads independently (non-blocking).
+
+### Added — TASK 34: Position Sizing & Max-Loss Guidance
+- **`InstrumentRecommendation` schema extended** — adds `suggested_position_size_pct`, `max_loss_amount`, `stop_loss_note` fields (all optional for backward compatibility).
+- **Analyzer prompt updated** — Claude now provides per-recommendation position sizing: % of investable capital (capped at 10% per position) + monetary max loss at a 10% stop-loss.
+- **Recommendations page** — position size and max-loss badges rendered on each instrument card.
+
+### Added — TASK 35: Holdings News Feed
+- **`holdings_news/` module** — fetches recent headlines for held + watched tickers via yfinance `.news`. Cached 1h per ticker.
+- **`GET /api/v1/investors/{id}/news?limit=20`** — returns `NewsItem` list sorted by date descending.
+- **`/news` page** — standalone news feed page, grouped by ticker with clickable headlines and publisher metadata. Accessible via sidebar "News Feed".
+- **Dashboard news widget** — "Holdings News" card showing top 5 headlines with ticker labels and dates.
+
+### Note — TASK 36: CSV Import
+- Already fully implemented in a prior session. Backend: `holdings/csv_parser.py` + `POST /import-csv` endpoint. Frontend: per-account CSV upload button on investments page.
+
+---
+
 ## [0.41.0] — 2026-05-08
 
 ### Fixed

@@ -13,8 +13,26 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { AlertCircle, TrendingUp, TrendingDown, Minus, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, AlertTriangle, CheckCircle2, Circle, Zap, Clock, CalendarClock, PiggyBank, Bot } from "lucide-react";
+import { AlertCircle, TrendingUp, TrendingDown, Minus, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, AlertTriangle, CheckCircle2, Circle, Zap, Clock, CalendarClock, PiggyBank, Bot, Calendar, Newspaper, ExternalLink } from "lucide-react";
 import Link from "next/link";
+
+interface EarningsEvent {
+  ticker: string;
+  company_name: string;
+  earnings_date: string;
+  eps_estimate: number | null;
+  revenue_estimate: number | null;
+  source: string;
+}
+
+interface NewsItem {
+  ticker: string;
+  title: string;
+  publisher: string;
+  url: string;
+  published_at: string | null;
+  source: string;
+}
 
 interface ActionItem {
   action: string;
@@ -187,6 +205,8 @@ export default function DashboardPage() {
   const [loadingActions, setLoadingActions] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [earningsEvents, setEarningsEvents] = useState<EarningsEvent[]>([]);
+  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
 
   useEffect(() => {
     if (!investorId) return;
@@ -217,6 +237,15 @@ export default function DashboardPage() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
+
+    // Calendar and news load independently (non-blocking, slow yfinance calls)
+    fetch(`/api/v1/investors/${investorId}/calendar`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.events) setEarningsEvents(d.events.slice(0, 6)); });
+
+    fetch(`/api/v1/investors/${investorId}/news?limit=8`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.items) setNewsItems(d.items); });
   }, [investorId]);
 
   function loadActionPlan() {
@@ -469,6 +498,78 @@ export default function DashboardPage() {
 
       {/* Pension projection */}
       {pension && pension.has_data && <PensionCard projection={pension} />}
+
+      {/* Earnings calendar + News feed */}
+      {(earningsEvents.length > 0 || newsItems.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Earnings calendar */}
+          {earningsEvents.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  Upcoming Earnings
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {earningsEvents.map((ev, i) => {
+                    const daysUntil = Math.ceil((new Date(ev.earnings_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                    const urgency = daysUntil <= 7 ? "text-amber-500" : daysUntil <= 14 ? "text-blue-500" : "text-muted-foreground";
+                    return (
+                      <div key={i} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-mono text-xs font-semibold text-primary shrink-0">{ev.ticker}</span>
+                          <span className="text-xs text-muted-foreground truncate">{ev.company_name}</span>
+                          <Badge variant="muted" className="text-[10px] py-0 shrink-0">{ev.source}</Badge>
+                        </div>
+                        <div className="text-right shrink-0 ml-2">
+                          <p className="text-xs font-medium">{new Date(ev.earnings_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</p>
+                          <p className={`text-[10px] ${urgency}`}>{daysUntil <= 0 ? "Today" : `in ${daysUntil}d`}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* News feed */}
+          {newsItems.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <Newspaper className="h-4 w-4 text-primary" />
+                  Holdings News
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2.5">
+                  {newsItems.slice(0, 5).map((item, i) => (
+                    <div key={i} className="space-y-0.5">
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-start gap-1.5 group"
+                      >
+                        <span className="font-mono text-[10px] font-semibold text-primary shrink-0 mt-0.5">{item.ticker}</span>
+                        <span className="text-xs text-foreground group-hover:text-primary transition-colors leading-snug line-clamp-2">{item.title}</span>
+                        <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </a>
+                      <p className="text-[10px] text-muted-foreground pl-7">
+                        {item.publisher}
+                        {item.published_at && ` · ${new Date(item.published_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Goals */}
       {goals.length > 0 && (

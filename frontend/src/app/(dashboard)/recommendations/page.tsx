@@ -89,6 +89,9 @@ interface InstrumentRecommendation {
   educational_note: string;
   action: "consider" | "increase" | "start_position";
   is_new_to_you: boolean;
+  suggested_position_size_pct: number | null;
+  max_loss_amount: number | null;
+  stop_loss_note: string | null;
 }
 
 interface RecommendationReport {
@@ -835,6 +838,21 @@ function InstrumentCard({ rec }: { rec: InstrumentRecommendation }) {
           <p className="text-xs text-muted-foreground">
             Suggested allocation: <span className="font-medium text-foreground">{rec.suggested_allocation_pct}%</span> of investable capital
           </p>
+        )}
+
+        {(rec.suggested_position_size_pct != null || rec.max_loss_amount != null) && (
+          <div className="flex items-center gap-3 flex-wrap">
+            {rec.suggested_position_size_pct != null && (
+              <span className="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full font-medium">
+                Size: {rec.suggested_position_size_pct.toFixed(1)}% of capital
+              </span>
+            )}
+            {rec.max_loss_amount != null && (
+              <span className="text-[10px] bg-red-500/10 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full font-medium">
+                Max loss: ~{Math.round(rec.max_loss_amount).toLocaleString()} · {rec.stop_loss_note ?? "10% stop"}
+              </span>
+            )}
+          </div>
         )}
 
         <button
