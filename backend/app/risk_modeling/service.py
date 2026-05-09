@@ -178,8 +178,23 @@ def generate(db: Session, investor_id: uuid.UUID) -> RiskModel | None:
     # Age < 18 overrides the stored is_minor flag
     effective_is_minor = investor.is_minor or age_tier == "minor"
 
-    total_assets = sum(a.current_value for a in fp.assets)
+    manual_assets = sum(a.current_value for a in fp.assets)
     total_liabilities = sum(l.outstanding_balance for l in fp.liabilities)
+
+    # Sum investment account holding values so the portfolio counts toward net worth.
+    # Uses the same priority chain as the emergency-fund block below.
+    all_accounts = (
+        db.query(InvestmentAccount)
+        .filter(InvestmentAccount.investor_id == investor_id)
+        .all()
+    )
+    investment_total = 0.0
+    for acc in all_accounts:
+        for h in acc.holdings:
+            val = h.current_balance or h.current_value or (h.quantity * h.avg_buy_price)
+            investment_total += val or 0.0
+
+    total_assets = manual_assets + investment_total
     total_net_worth = total_assets - total_liabilities
     liquid_capital = fp.liquid_savings + sum(
         a.current_value for a in fp.assets if a.is_liquid

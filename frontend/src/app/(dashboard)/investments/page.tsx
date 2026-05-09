@@ -188,7 +188,7 @@ const ASSET_TYPES = [
   { value: "other", label: "Other" },
 ];
 
-const EMPTY_ACCOUNT = { provider_name: "", account_type: "brokerage", account_name: "", currency: "ILS", notes: "", family_member_id: "" };
+const EMPTY_ACCOUNT = { provider_name: "", account_type: "brokerage", account_name: "", currency: "ILS", notes: "", family_member_id: "", is_emergency_fund: false };
 const EMPTY_HOLDING = { ticker: "", isin: "", name: "", asset_type: "stock", quantity: "", avg_buy_price: "", currency: "ILS", fees: "", purchase_date: "", current_value: "", notes: "", current_balance: "", total_deposits: "", monthly_contribution: "", annual_return_rate: "", monthly_contribution_employee: "", monthly_contribution_employer: "", fund_status: "active" };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -350,6 +350,7 @@ export default function InvestmentsPage() {
           currency: accountForm.currency,
           notes: accountForm.notes || null,
           family_member_id: accountForm.family_member_id || null,
+          is_emergency_fund: accountForm.is_emergency_fund,
         }),
       });
       if (res.ok) {
@@ -931,6 +932,21 @@ export default function InvestmentsPage() {
                   </p>
                 )}
               </div>
+              <div className="col-span-2">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={accountForm.is_emergency_fund}
+                    onChange={e => setAccountForm({ ...accountForm, is_emergency_fund: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-sm font-medium flex items-center gap-1.5">
+                    <ShieldCheck className="h-4 w-4 text-amber-500" />
+                    Use as emergency fund
+                  </span>
+                  <span className="text-xs text-muted-foreground">(e.g. Keren Hishtalmut / study fund)</span>
+                </label>
+              </div>
             </div>
             <div className="flex gap-2">
               <Button onClick={createAccount} disabled={!accountForm.provider_name || savingAccount}>
@@ -1037,15 +1053,15 @@ export default function InvestmentsPage() {
                       CSV
                     </label>
                     <Button
-                      variant="ghost"
+                      variant={account.is_emergency_fund ? "outline" : "ghost"}
                       size="sm"
                       title={account.is_emergency_fund ? "Unmark as emergency fund" : "Mark as emergency fund"}
                       onClick={() => toggleEmergencyFund(account.id, account.is_emergency_fund)}
-                      className={account.is_emergency_fund ? "text-amber-600 hover:text-amber-700" : ""}
+                      className={account.is_emergency_fund ? "text-amber-600 border-amber-300 hover:text-amber-700 gap-1" : "gap-1 text-muted-foreground"}
                     >
                       {account.is_emergency_fund
-                        ? <ShieldCheck className="h-3.5 w-3.5" />
-                        : <Shield className="h-3.5 w-3.5 text-muted-foreground" />}
+                        ? <><ShieldCheck className="h-3.5 w-3.5" /><span className="text-[10px] font-medium">EF</span></>
+                        : <><Shield className="h-3.5 w-3.5" /><span className="text-[10px]">EF</span></>}
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => deleteAccount(account.id)}>
                       <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
