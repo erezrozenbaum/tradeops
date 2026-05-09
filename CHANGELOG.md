@@ -10,6 +10,21 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.48.0] — 2026-05-09
+
+### Added — TASK 39: Dividend & Income Calendar
+
+- New module `income_projection/` — fetches forward annual dividend rate + next ex-date via yfinance for all tickered holdings
+- FX conversion: dividend income converted to investor base currency
+- New endpoint `GET /portfolio/income`
+- **Dividend Income card** on Investments page:
+  - Annual income total, yield on value, yield on cost (3-box summary)
+  - Upcoming ex-dividend dates in next 90 days with estimated payment
+  - Top income-generating holdings ranked by annual income with mini bar chart + yield %
+- Only appears when portfolio has dividend-paying holdings
+
+---
+
 ## [0.47.0] — 2026-05-09
 
 ### Added — TASK 38: Scenario Analysis & Stress Testing

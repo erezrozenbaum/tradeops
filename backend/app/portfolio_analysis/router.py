@@ -19,6 +19,7 @@ from app.portfolio_analysis.schemas import (
 )
 from app.performance_analytics.schemas import PerformanceAnalytics, AttributionResult
 from app.scenario_analysis.schemas import StressTestResult
+from app.income_projection.schemas import IncomeResult
 from app.portfolio_analysis.rebalance_schemas import RebalanceResult
 from app.risk_modeling.service import get_latest as get_latest_risk_model
 
@@ -120,6 +121,19 @@ def get_portfolio_attribution(investor_id: uuid.UUID, db: Session = Depends(get_
     currency = investor.base_currency if investor else "USD"
 
     return compute_attribution(all_snapshots, portfolio, investor_id, currency)
+
+
+@router.get("/income", response_model=IncomeResult)
+def get_income(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Dividend income projection for all tickered holdings."""
+    from app.income_projection.service import compute_income
+    from app.models.investor_profile import InvestorProfile
+
+    portfolio = service.get_portfolio(db, investor_id)
+    investor = db.get(InvestorProfile, investor_id)
+    currency = investor.base_currency if investor else "USD"
+
+    return compute_income(portfolio, investor_id, currency, db)
 
 
 @router.get("/stress-test", response_model=StressTestResult)
