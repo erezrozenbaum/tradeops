@@ -10,6 +10,19 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.44.0] — 2026-05-09
+
+### Added — Investment portfolio visible in Financial Profile
+- **Financial profile page** now shows a live "Investment Portfolio" card: pulls from the Investments module, lists each account with its current value, total unrealized P&L, and links to the Investments page.
+- **Risk model net worth fix** — investment account holding values are now included in `total_assets` when computing net worth and Financial Stability Score. Previously only manually entered `financial_assets` counted — the portfolio was invisible to the scoring engine.
+
+### Improved — Emergency Fund account linking discoverability
+- **Create form** — "Use as emergency fund" labeled checkbox added directly to the "New investment account" form so the flag can be set at creation time, not only toggled after the fact.
+- **`InvestmentAccountCreate` schema** — `is_emergency_fund: bool = False` field added.
+- **Account card toggle** — the shield icon button now shows a labeled "EF" badge and uses an outlined amber style when active; previously it was an unlabeled ghost icon indistinguishable from other action buttons.
+
+---
+
 ## [0.43.0] — 2026-05-09
 
 ### Added — Emergency Fund Account Linking
