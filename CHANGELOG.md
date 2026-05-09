@@ -10,6 +10,20 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.49.0] — 2026-05-09
+
+### Added — TASK 40: Tax-Loss Harvesting Alerts
+
+- New module `tax_harvesting/` — detects portfolio holdings with unrealized losses above the 5% threshold that can offset capital gains
+- Country-aware capital gains rate from the `tax_rules` engine (IL: 25%, US: 15% long-term, DE: 26.4%, FR: 30%)
+- Per-opportunity fields: unrealized loss in base currency, loss %, holding period (days), short-term vs long-term flag, wash-sale risk warning (purchased <30 days ago), estimated tax saving
+- Gain offsets: top 5 holdings with unrealized gains that could be partially offset by harvested losses
+- New endpoint `GET /portfolio/tax-opportunities`
+- **Tax Opportunities card** on Performance page: summary strip (total harvestable loss, estimated saving, offsettable gains count), per-candidate rows with all flags, gain offset chips, disclaimer footer
+- README and admin-guide updated to reflect all Phase 8 features (TASK 37–40)
+
+---
+
 ## [0.48.0] — 2026-05-09
 
 ### Added — TASK 39: Dividend & Income Calendar

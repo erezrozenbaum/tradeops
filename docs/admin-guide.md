@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.45.0  
+**Version:** 0.49.0  
 **Last updated:** 2026-05-09
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -114,7 +114,7 @@ docker compose -f infra/docker-compose.yml exec backend alembic upgrade head
 
 Migrations also run automatically on every container start.
 
-### Migration history (21 migrations as of v0.42.1)
+### Migration history (22 migrations as of v0.49.0)
 
 | # | Description |
 |---|-------------|
@@ -559,6 +559,27 @@ kubectl describe ingress tradeops
 | Economic Calendar | `/calendar` | 24 hours per ticker | Upcoming earnings for held + watched tickers |
 | Correlation Matrix | `/portfolio/correlation` | 24 hours | 90-day Pearson correlation + sector concentration |
 | News Feed | `/news` | 1 hour per ticker | Latest articles for held + watched tickers |
+
+### Professional Investment Intelligence (Phase 8)
+
+| Feature | Endpoint | Cache | Notes |
+|---------|----------|-------|-------|
+| Performance Attribution | `/portfolio/attribution` | None (computed on demand) | Holding-level contribution, rolling returns, alpha vs benchmark |
+| Stress Testing | `/portfolio/stress-test` | None | 5 historical crash scenarios + Monte Carlo P10/P50/P90 |
+| Income Projection | `/portfolio/income` | 24 hours per ticker | Annual dividend income + upcoming ex-dividend dates |
+| Tax-Loss Harvesting | `/portfolio/tax-opportunities` | None | Holdings with >5% unrealized loss; estimated tax saving; wash-sale flag |
+
+**Performance Attribution** — `/portfolio/attribution`  
+Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.
+
+**Stress Testing** — `/portfolio/stress-test`  
+Five pre-built historical scenarios (2008 GFC, COVID crash, 2022 rate hike cycle, 40% tech correction, ILS depreciation shock) apply per-tier drawdown percentages to the current portfolio. FX shock layer adjusts USD-denominated exposure for ILS-base-currency portfolios. Monte Carlo runs 1,000 log-normal simulations over years-to-retirement (computed from `date_of_birth`), returning P10/P50/P90 wealth paths.
+
+**Dividend Income** — `/portfolio/income`  
+Fetches forward annual dividend rate and next ex-date via yfinance for all tickered holdings. Converts dividend income to base currency. Returns upcoming ex-dividend dates within 90 days. Results cached 24h per ticker.
+
+**Tax-Loss Harvesting** — `/portfolio/tax-opportunities`  
+Identifies holdings with unrealized loss >5% (configurable threshold). Uses country-specific capital gains rate from the tax rules engine (IL: 25%, US: 15% long-term, DE: 26.375%, FR: 30%). Reports short-term vs long-term holding period, wash-sale risk (purchased <30 days ago), and estimated tax saving per opportunity.
 
 ### Emergency fund linking
 

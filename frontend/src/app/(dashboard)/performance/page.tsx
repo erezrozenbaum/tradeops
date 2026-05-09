@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   TrendingUp, TrendingDown, BarChart2, AlertTriangle,
-  Activity, Award, Calendar, RefreshCw, GitBranch, ShieldAlert,
+  Activity, Award, Calendar, RefreshCw, GitBranch, ShieldAlert, Scissors,
 } from "lucide-react";
 import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -107,6 +107,41 @@ interface AttributionResult {
   computed_at: string;
 }
 
+interface HarvestOpportunity {
+  holding_id: string;
+  name: string;
+  ticker: string | null;
+  asset_type: string;
+  account_name: string;
+  unrealized_loss: number;
+  unrealized_loss_pct: number;
+  holding_days: number | null;
+  is_short_term: boolean;
+  wash_sale_risk: boolean;
+  estimated_tax_saving: number;
+}
+
+interface GainOffset {
+  holding_id: string;
+  name: string;
+  ticker: string | null;
+  asset_type: string;
+  unrealized_gain: number;
+  unrealized_gain_pct: number;
+}
+
+interface TaxOpportunityResult {
+  investor_id: string;
+  currency: string;
+  harvest_opportunities: HarvestOpportunity[];
+  gain_offsets: GainOffset[];
+  total_harvestable_loss: number;
+  total_estimated_tax_saving: number;
+  capital_gains_rate_pct: number;
+  min_loss_threshold_pct: number;
+  computed_at: string;
+}
+
 // ── Period selector ────────────────────────────────────────────────────────
 
 const PERIODS = [
@@ -200,6 +235,7 @@ export default function PerformancePage() {
   const [error, setError] = useState<string | null>(null);
   const [correlation, setCorrelation] = useState<CorrelationResult | null>(null);
   const [attribution, setAttribution] = useState<AttributionResult | null>(null);
+  const [taxOpps, setTaxOpps] = useState<TaxOpportunityResult | null>(null);
 
   const load = useCallback(async () => {
     if (!investorId) return;
@@ -231,6 +267,9 @@ export default function PerformancePage() {
     fetch(`/api/v1/investors/${investorId}/portfolio/attribution`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d) setAttribution(d); });
+    fetch(`/api/v1/investors/${investorId}/portfolio/tax-opportunities`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setTaxOpps(d); });
   }, [investorId]);
 
   // ── Build chart data ─────────────────────────────────────────────────────
@@ -704,6 +743,115 @@ export default function PerformancePage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Tax-Loss Harvesting Opportunities */}
+      {taxOpps && taxOpps.harvest_opportunities.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <Scissors className="h-4 w-4 text-amber-500" />
+                Tax-Loss Harvesting Opportunities
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Badge variant="warning" className="text-xs">
+                  {taxOpps.harvest_opportunities.length} candidate{taxOpps.harvest_opportunities.length > 1 ? "s" : ""}
+                </Badge>
+                <Badge variant="muted" className="text-xs">
+                  {taxOpps.capital_gains_rate_pct}% CGT rate
+                </Badge>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Holdings with unrealized loss &gt;{taxOpps.min_loss_threshold_pct}% that can offset capital gains and reduce your tax bill.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Summary row */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="bg-muted/40 rounded-lg p-3 text-center">
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">Total Harvestable Loss</p>
+                <p className="text-base font-bold text-red-500">
+                  {formatCurrency(taxOpps.total_harvestable_loss, taxOpps.currency)}
+                </p>
+              </div>
+              <div className="bg-muted/40 rounded-lg p-3 text-center">
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">Estimated Tax Saving</p>
+                <p className="text-base font-bold text-green-500">
+                  {formatCurrency(taxOpps.total_estimated_tax_saving, taxOpps.currency)}
+                </p>
+              </div>
+              <div className="bg-muted/40 rounded-lg p-3 text-center sm:col-span-1 col-span-2">
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">Offsettable Gains</p>
+                <p className="text-base font-bold text-foreground">{taxOpps.gain_offsets.length} holdings</p>
+              </div>
+            </div>
+
+            {/* Harvest candidates table */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Harvest candidates</p>
+              {taxOpps.harvest_opportunities.map((op) => (
+                <div key={op.holding_id} className="flex items-start gap-3 p-3 border border-border rounded-lg">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium truncate">{op.ticker ?? op.name}</span>
+                      {op.ticker && op.ticker !== op.name && (
+                        <span className="text-xs text-muted-foreground truncate">{op.name}</span>
+                      )}
+                      <Badge
+                        variant={op.is_short_term ? "warning" : "muted"}
+                        className="text-[10px] py-0 shrink-0"
+                      >
+                        {op.is_short_term ? "Short-term" : "Long-term"}
+                      </Badge>
+                      {op.wash_sale_risk && (
+                        <Badge variant="danger" className="text-[10px] py-0 shrink-0">
+                          Wash-sale risk
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {op.account_name}
+                      {op.holding_days !== null ? ` · ${op.holding_days} days held` : ""}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-red-500">{op.unrealized_loss_pct.toFixed(1)}%</p>
+                    <p className="text-[11px] text-muted-foreground">{formatCurrency(op.unrealized_loss, taxOpps.currency)}</p>
+                    <p className="text-[11px] text-green-600 dark:text-green-400 mt-0.5">
+                      saves {formatCurrency(op.estimated_tax_saving, taxOpps.currency)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Gain offsets */}
+            {taxOpps.gain_offsets.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Holdings with gains to offset</p>
+                <div className="flex flex-wrap gap-2">
+                  {taxOpps.gain_offsets.map((g) => (
+                    <div key={g.holding_id} className="flex items-center gap-1.5 text-xs bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md px-2.5 py-1.5">
+                      <span className="font-medium">{g.ticker ?? g.name}</span>
+                      <span className="text-green-600 dark:text-green-400 font-semibold">
+                        +{g.unrealized_gain_pct.toFixed(1)}%
+                      </span>
+                      <span className="text-muted-foreground">
+                        {formatCurrency(g.unrealized_gain, taxOpps.currency)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <p className="text-[10px] text-muted-foreground border-t border-border pt-3">
+              Estimates use a {taxOpps.capital_gains_rate_pct}% capital gains rate based on your country. Not tax advice — consult a tax professional before acting. Wash-sale rules may defer (not eliminate) recognized losses.
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {loading && (
