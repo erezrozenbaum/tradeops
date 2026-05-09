@@ -6,7 +6,7 @@ import {
   BarChart2, TrendingUp, Briefcase, Activity, ClipboardList,
   Eye, CreditCard, Bot, Wand2, Microscope, ScanSearch,
   Sparkles, Bell, FileText, HelpCircle, ArrowRight, Terminal,
-  Database, Zap,
+  Database, Zap, Newspaper,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -108,6 +108,10 @@ const SECTIONS = [
       {
         label: "AI Report", href: "/reports", icon: Sparkles,
         desc: "Comprehensive AI financial report covering your full profile, risk exposure, goals progress, and forward-looking recommendations.",
+      },
+      {
+        label: "News Feed", href: "/news", icon: Newspaper,
+        desc: "Latest news headlines for all your held tickers and watchlist. Grouped by ticker, refreshed every hour. No API key required — uses Yahoo Finance news.",
       },
     ],
   },

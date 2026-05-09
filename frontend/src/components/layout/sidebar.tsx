@@ -27,6 +27,7 @@ import {
   Activity,
   ClipboardList,
   HelpCircle,
+  Newspaper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -70,6 +71,7 @@ const sections = [
       { label: "Market Research", href: "/market-research", icon: Microscope },
       { label: "Market Scan", href: "/market-scan", icon: ScanSearch },
       { label: "AI Report", href: "/reports", icon: Sparkles },
+      { label: "News Feed", href: "/news", icon: Newspaper },
     ],
   },
   {

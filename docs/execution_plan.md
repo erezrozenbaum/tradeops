@@ -1,7 +1,7 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.40.0
-**Last updated:** 2026-05-08 (v0.39.0)
+**Version:** 0.42.0
+**Last updated:** 2026-05-08 (v0.42.0)
 
 ---
 
@@ -482,7 +482,7 @@ Replaces static catalog recommendations with real market intelligence. New `live
 
 ---
 
-### TASK 32 — Economic Calendar (Earnings Dates & Macro Events)
+### TASK 32 — Economic Calendar (Earnings Dates & Macro Events) ✅ DONE
 
 **Type:** New module (read-only, external API)
 **Risk:** 🟢 Safe — no DB migration
@@ -499,7 +499,7 @@ Replaces static catalog recommendations with real market intelligence. New `live
 
 ---
 
-### TASK 33 — Correlation Matrix & Concentration Risk
+### TASK 33 — Correlation Matrix & Concentration Risk ✅ DONE
 
 **Type:** New module (analytics, no DB migration)
 **Risk:** 🟢 Safe
@@ -514,7 +514,7 @@ Replaces static catalog recommendations with real market intelligence. New `live
 
 ---
 
-### TASK 34 — Position Sizing & Max-Loss Guidance
+### TASK 34 — Position Sizing & Max-Loss Guidance ✅ DONE
 
 **Type:** Feature extension (recommendations module)
 **Risk:** 🟢 Safe — no DB migration
@@ -528,7 +528,7 @@ Replaces static catalog recommendations with real market intelligence. New `live
 
 ---
 
-### TASK 35 — Holdings News Feed
+### TASK 35 — Holdings News Feed ✅ DONE
 
 **Type:** New module (external API integration)
 **Risk:** 🟢 Safe — no DB migration
@@ -543,7 +543,7 @@ Replaces static catalog recommendations with real market intelligence. New `live
 
 ---
 
-### TASK 36 — CSV Import for Holdings
+### TASK 36 — CSV Import for Holdings ✅ DONE
 
 **Type:** New feature (holdings module extension)
 **Risk:** 🟡 Moderate

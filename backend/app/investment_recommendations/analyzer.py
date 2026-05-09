@@ -76,6 +76,13 @@ recommendations array rules:
 - Use action="increase" only for tickers already in current_holdings; "start_position" for new high-conviction; "consider" for secondary.
 - Do not recommend very_high risk to conservative or beginner investors.
 - why_fits must reference actual market data when available: current price, % change this week, signal note.
+- suggested_position_size_pct: % of the investor's investable capital to put in this position.
+  Use the Kelly-fraction concept but cap at 10% for any single position. Smaller for high-risk instruments.
+  Example: low-risk ETF → 8-10%; moderate-risk stock → 4-6%; high-risk crypto → 1-3%.
+- max_loss_amount: compute as (investable_capital × suggested_position_size_pct / 100) × 0.10.
+  This represents the monetary loss if the position drops 10% to a stop-loss.
+  Express in the investor's base currency.
+- stop_loss_note: short note, e.g. "10% below entry as stop-loss".
 
 Respond ONLY with a valid JSON object with exactly these keys:
 {
@@ -114,7 +121,10 @@ Respond ONLY with a valid JSON object with exactly these keys:
       "suggested_allocation_pct": <float or null>,
       "educational_note": "<1-2 plain-language sentences for someone who may not know this instrument>",
       "action": "<consider|increase|start_position>",
-      "is_new_to_you": <true|false>
+      "is_new_to_you": <true|false>,
+      "suggested_position_size_pct": <float — % of investable capital to allocate, e.g. 5.0>,
+      "max_loss_amount": <float — max loss in base currency at a 10% stop-loss from current price>,
+      "stop_loss_note": "<e.g. '10% below entry price as stop-loss'>"
     }
   ],
   "disclaimer": "This is educational guidance only. Always conduct your own research and consider consulting a licensed financial adviser before making investment decisions."

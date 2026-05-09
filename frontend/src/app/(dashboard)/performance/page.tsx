@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   TrendingUp, TrendingDown, BarChart2, AlertTriangle,
-  Activity, Award, Calendar, RefreshCw,
+  Activity, Award, Calendar, RefreshCw, GitBranch, ShieldAlert,
 } from "lucide-react";
 import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -34,6 +34,34 @@ interface HistoryResult {
 interface BenchmarkPoint {
   date: string;
   cumulative_return_pct: number;
+}
+
+interface CorrelationPair {
+  ticker_a: string;
+  ticker_b: string;
+  correlation: number;
+}
+
+interface SectorConcentration {
+  sector: string;
+  weight_pct: number;
+  tickers: string[];
+  is_concentrated: boolean;
+}
+
+interface ConcentrationRisk {
+  sector_concentrations: SectorConcentration[];
+  highly_correlated_pairs: CorrelationPair[];
+  risk_score: number;
+  warnings: string[];
+}
+
+interface CorrelationResult {
+  tickers: string[];
+  matrix: CorrelationPair[];
+  concentration_risk: ConcentrationRisk;
+  lookback_days: number;
+  data_quality: string;
 }
 
 interface PerformanceAnalytics {
@@ -147,6 +175,7 @@ export default function PerformancePage() {
   const [analytics, setAnalytics] = useState<PerformanceAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [correlation, setCorrelation] = useState<CorrelationResult | null>(null);
 
   const load = useCallback(async () => {
     if (!investorId) return;
@@ -169,6 +198,13 @@ export default function PerformancePage() {
   }, [investorId, period]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!investorId) return;
+    fetch(`/api/v1/investors/${investorId}/portfolio/correlation`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setCorrelation(d); });
+  }, [investorId]);
 
   // ── Build chart data ─────────────────────────────────────────────────────
 
@@ -405,6 +441,130 @@ export default function PerformancePage() {
             </Card>
           )}
         </>
+      )}
+
+      {/* Correlation Matrix + Concentration Risk */}
+      {correlation && correlation.tickers.length >= 2 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Correlation heatmap */}
+          {correlation.matrix.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <GitBranch className="h-4 w-4 text-primary" />
+                  Correlation Matrix
+                  <span className="text-xs font-normal text-muted-foreground ml-1">({correlation.lookback_days}d)</span>
+                  {correlation.data_quality !== "full" && (
+                    <Badge variant="warning" className="text-[10px] py-0 ml-auto">{correlation.data_quality} data</Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="text-[11px] border-collapse">
+                    <thead>
+                      <tr>
+                        <th className="w-10" />
+                        {correlation.tickers.map(t => (
+                          <th key={t} className="px-1 py-1 font-mono font-semibold text-muted-foreground text-center w-14">{t}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {correlation.tickers.map(rowTicker => (
+                        <tr key={rowTicker}>
+                          <td className="pr-2 font-mono font-semibold text-muted-foreground text-right">{rowTicker}</td>
+                          {correlation.tickers.map(colTicker => {
+                            if (rowTicker === colTicker) {
+                              return (
+                                <td key={colTicker} className="w-14 h-8 text-center font-bold text-[10px] rounded bg-primary/20 text-primary">1.00</td>
+                              );
+                            }
+                            const pair = correlation.matrix.find(
+                              p => (p.ticker_a === rowTicker && p.ticker_b === colTicker) ||
+                                   (p.ticker_a === colTicker && p.ticker_b === rowTicker)
+                            );
+                            const c = pair?.correlation ?? null;
+                            const bg = c === null ? "bg-muted" :
+                              c > 0.8 ? "bg-red-200 dark:bg-red-900/40 text-red-700 dark:text-red-300" :
+                              c > 0.5 ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300" :
+                              c > 0.2 ? "bg-muted" :
+                              c > -0.2 ? "bg-blue-50 dark:bg-blue-900/20" :
+                              "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300";
+                            return (
+                              <td key={colTicker} className={`w-14 h-8 text-center rounded text-[10px] ${bg}`}>
+                                {c !== null ? c.toFixed(2) : "—"}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex items-center gap-3 mt-3 text-[10px] text-muted-foreground flex-wrap">
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-200 dark:bg-red-900/40 inline-block" />High (&gt;0.8)</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-100 dark:bg-amber-900/30 inline-block" />Moderate (0.5–0.8)</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-100 dark:bg-green-900/30 inline-block" />Negative (&lt;-0.2)</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Concentration Risk */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <ShieldAlert className="h-4 w-4 text-primary" />
+                  Concentration Risk
+                </CardTitle>
+                <Badge
+                  variant={correlation.concentration_risk.risk_score > 50 ? "danger" : correlation.concentration_risk.risk_score > 20 ? "warning" : "success"}
+                  className="text-xs"
+                >
+                  Score: {correlation.concentration_risk.risk_score}/100
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {correlation.concentration_risk.warnings.length > 0 && (
+                <div className="space-y-1.5">
+                  {correlation.concentration_risk.warnings.map((w, i) => (
+                    <p key={i} className="text-xs text-amber-600 dark:text-amber-400 flex items-start gap-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                      {w}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {correlation.concentration_risk.sector_concentrations.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Sector weights</p>
+                  {correlation.concentration_risk.sector_concentrations.slice(0, 5).map(s => (
+                    <div key={s.sector} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="capitalize font-medium">{s.sector}</span>
+                        <span className={s.is_concentrated ? "text-amber-500 font-semibold" : "text-muted-foreground"}>
+                          {s.weight_pct.toFixed(1)}%{s.is_concentrated ? " ⚠" : ""}
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${s.is_concentrated ? "bg-amber-500" : "bg-primary"}`}
+                          style={{ width: `${Math.min(s.weight_pct, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {correlation.concentration_risk.warnings.length === 0 && (
+                <p className="text-xs text-green-600 dark:text-green-400">No significant concentration issues detected.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {loading && (
