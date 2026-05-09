@@ -7,6 +7,7 @@ from app.audit import service as audit
 from app.financial_profiles import service as fp_service
 from app.financial_scoring.engine import calculate_stability_score
 from app.financial_scoring.schemas import FinancialScoringInput
+from app.models.investment_account import InvestmentAccount
 from app.models.investor_profile import ExperienceLevel, InvestorProfile
 from app.models.risk_model import RiskModel
 
@@ -185,10 +186,31 @@ def generate(db: Session, investor_id: uuid.UUID) -> RiskModel | None:
     )
     investable_capital = round(liquid_capital * fp.investable_capital_pct / 100, 2)
 
+    # If any investment account is flagged as emergency fund, derive months from its holdings value.
+    # This lets users designate a study fund (קרן השתלמות) or other account as their emergency fund
+    # rather than entering a manual months figure. Takes the higher of computed vs manual.
+    ef_months = fp.emergency_fund_months
+    ef_accounts = (
+        db.query(InvestmentAccount)
+        .filter(
+            InvestmentAccount.investor_id == investor_id,
+            InvestmentAccount.is_emergency_fund.is_(True),
+        )
+        .all()
+    )
+    if ef_accounts and fp.monthly_expenses > 0:
+        ef_total = 0.0
+        for acc in ef_accounts:
+            for h in acc.holdings:
+                val = h.current_balance or h.current_value or (h.quantity * h.avg_buy_price)
+                ef_total += val or 0.0
+        computed = ef_total / fp.monthly_expenses
+        ef_months = max(ef_months, computed)
+
     scoring_input = FinancialScoringInput(
         monthly_income=fp.monthly_income,
         monthly_expenses=fp.monthly_expenses,
-        emergency_fund_months=fp.emergency_fund_months,
+        emergency_fund_months=ef_months,
         total_monthly_debt_payments=sum(l.monthly_payment for l in fp.liabilities),
         total_assets=total_assets,
         total_liabilities=total_liabilities,
