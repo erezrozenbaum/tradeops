@@ -10,6 +10,20 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.47.0] — 2026-05-09
+
+### Added — TASK 38: Scenario Analysis & Stress Testing
+
+- New module `scenario_analysis/` — deterministic crash scenario engine + log-normal Monte Carlo
+- **5 pre-built scenarios**: 2008 GFC (−50% equities), COVID crash (−34%), 2022 Rate Hike Cycle (−18% bonds, −25% equities), 40% Tech Correction, ILS Depreciation Shock (+22% USD/ILS)
+- **FX impact layer** — for ILS-base-currency portfolios, USD-denominated exposure is adjusted when dollar strengthens/weakens
+- **Monte Carlo projection** — 1,000 log-normal simulations over years-to-retirement (derived from investor age); P10/P50/P90 fan chart
+- New endpoint `GET /portfolio/stress-test`
+- New `/stress-test` page — scenario cards (click to drill-down to per-tier breakdown), Monte Carlo fan chart with projected wealth at P10/P50/P90
+- "Stress Test" nav link added to sidebar
+
+---
+
 ## [0.46.0] — 2026-05-09
 
 ### Added — Phase 8: Professional Investment Intelligence (TASK 37)
