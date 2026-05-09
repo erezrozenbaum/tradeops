@@ -68,6 +68,9 @@ jobs:
 
       - name: Run tests
         working-directory: backend
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/testdb
+          SECRET_KEY: ci-test-secret-key-not-used-in-unit-tests
         run: python -m pytest tests/ -v
 
   # ── Backend: build & push Docker image ───────────────────────────────────
