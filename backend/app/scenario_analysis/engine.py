@@ -8,7 +8,6 @@ from app.portfolio_analysis.schemas import PortfolioSummary
 from app.scenario_analysis.scenarios import SCENARIOS, Scenario
 from app.scenario_analysis.schemas import (
     ScenarioImpact,
-    ScenarioResult,
     MonteCarloPercentile,
     MonteCarloResult,
     StressTestResult,

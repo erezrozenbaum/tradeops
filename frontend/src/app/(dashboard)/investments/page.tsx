@@ -264,6 +264,14 @@ export default function InvestmentsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [rebalance, setRebalance] = useState<RebalanceResult | null>(null);
+  const [income, setIncome] = useState<{
+    total_annual_income: number;
+    portfolio_yield_on_value: number;
+    portfolio_yield_on_cost: number;
+    currency: string;
+    holdings: { holding_id: string; name: string; ticker: string; annual_income: number; yield_on_value: number; next_ex_date: string | null }[];
+    upcoming_ex_dates: { ticker: string; name: string; ex_date: string; estimated_payment: number }[];
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
@@ -301,6 +309,9 @@ export default function InvestmentsPage() {
   useEffect(() => {
     if (!investorId) return;
     loadAll();
+    fetch(`/api/v1/investors/${investorId}/portfolio/income`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setIncome(d); });
     fetch(`/api/v1/investors/${investorId}/calendar`)
       .then(r => r.ok ? r.json() : null)
       .then(d => {
@@ -879,6 +890,83 @@ export default function InvestmentsPage() {
                 {note}
               </p>
             ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Dividend Income Card */}
+      {income && income.total_annual_income > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+              <TrendingUp className="h-4 w-4 text-green-500" />
+              Dividend Income
+              <Badge variant="muted" className="ml-auto text-xs font-normal">Annual estimate</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Summary strip */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-muted/40 rounded-lg p-3 text-center">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Annual Income</p>
+                <p className="text-lg font-bold text-green-500">{formatCurrency(income.total_annual_income, income.currency)}</p>
+              </div>
+              <div className="bg-muted/40 rounded-lg p-3 text-center">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Yield on Value</p>
+                <p className="text-lg font-bold">{income.portfolio_yield_on_value.toFixed(2)}%</p>
+              </div>
+              <div className="bg-muted/40 rounded-lg p-3 text-center">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Yield on Cost</p>
+                <p className="text-lg font-bold">{income.portfolio_yield_on_cost.toFixed(2)}%</p>
+              </div>
+            </div>
+
+            {/* Upcoming ex-dividend dates */}
+            {income.upcoming_ex_dates.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Upcoming Ex-Dividend Dates (90 days)</p>
+                <div className="space-y-1.5">
+                  {income.upcoming_ex_dates.map((ev) => (
+                    <div key={`${ev.ticker}-${ev.ex_date}`} className="flex items-center justify-between text-xs bg-muted/30 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-semibold text-primary">{ev.ticker}</span>
+                        <span className="text-muted-foreground">{ev.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-right">
+                        <span className="text-muted-foreground">{new Date(ev.ex_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                        <span className="font-medium text-green-500">~{formatCurrency(ev.estimated_payment, income.currency)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Top dividend holdings */}
+            {income.holdings.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Income by Holding</p>
+                <div className="space-y-1">
+                  {income.holdings.slice(0, 5).map((h) => (
+                    <div key={h.holding_id} className="flex items-center gap-3 text-xs">
+                      <span className="font-mono font-semibold w-16 shrink-0">{h.ticker}</span>
+                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-green-500"
+                          style={{ width: `${Math.min(h.annual_income / income.total_annual_income * 100, 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-green-500 font-medium w-24 text-right shrink-0">
+                        {formatCurrency(h.annual_income, income.currency)}
+                      </span>
+                      <span className="text-muted-foreground w-14 text-right shrink-0">
+                        {h.yield_on_value.toFixed(1)}% yld
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
