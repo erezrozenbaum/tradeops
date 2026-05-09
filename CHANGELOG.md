@@ -10,6 +10,19 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.50.0] — 2026-05-09
+
+### Added — TASK 41: Professional Client Report (PDF Export)
+
+- New module `reports/` — multi-page PDF report generator using `reportlab` (pure Python, no system dependencies, Docker-friendly)
+- PDF report sections: cover page (investor name, period, base currency, generation timestamp), portfolio overview (value / cost basis / unrealized P&L + holdings table up to 30 rows), performance analytics (Sharpe, Sortino, max drawdown, annualised return, rolling returns 1M/3M/6M/1Y, benchmark comparison, top 5 contributors, top 5 detractors), stress test scenarios (5 historical crash scenarios + Monte Carlo P10/P50/P90), tax-loss harvesting summary (harvest candidates + disclaimer)
+- New endpoint `GET /api/v1/investors/{id}/reports/pdf?period=monthly|quarterly` — returns `application/pdf` stream with correct `Content-Disposition` filename
+- **Export PDF button** on Performance page — hover dropdown for Monthly / Quarterly report; triggers immediate browser download with generated filename
+- Added `reportlab>=4.2.0` to `backend/requirements.txt`
+- `.gitignore`: added `*.tsbuildinfo` pattern + untracked `frontend/tsconfig.tsbuildinfo`
+
+---
+
 ## [0.49.0] — 2026-05-09
 
 ### Added — TASK 40: Tax-Loss Harvesting Alerts

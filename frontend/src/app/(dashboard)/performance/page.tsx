@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   TrendingUp, TrendingDown, BarChart2, AlertTriangle,
-  Activity, Award, Calendar, RefreshCw, GitBranch, ShieldAlert, Scissors,
+  Activity, Award, Calendar, RefreshCw, GitBranch, ShieldAlert, Scissors, FileDown,
 } from "lucide-react";
 import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -236,6 +236,27 @@ export default function PerformancePage() {
   const [correlation, setCorrelation] = useState<CorrelationResult | null>(null);
   const [attribution, setAttribution] = useState<AttributionResult | null>(null);
   const [taxOpps, setTaxOpps] = useState<TaxOpportunityResult | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const downloadPdf = useCallback(async (reportPeriod: "monthly" | "quarterly") => {
+    if (!investorId) return;
+    setPdfLoading(true);
+    try {
+      const res = await fetch(`/api/v1/investors/${investorId}/reports/pdf?period=${reportPeriod}`);
+      if (!res.ok) throw new Error("Failed to generate report");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tradeops-report-${reportPeriod}-${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silently fail — no UI disruption for optional export
+    } finally {
+      setPdfLoading(false);
+    }
+  }, [investorId]);
 
   const load = useCallback(async () => {
     if (!investorId) return;
@@ -335,6 +356,28 @@ export default function PerformancePage() {
             <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
+          <div className="relative group">
+            <Button variant="outline" size="sm" disabled={pdfLoading}>
+              <FileDown className={`h-3.5 w-3.5 mr-1.5 ${pdfLoading ? "animate-pulse" : ""}`} />
+              {pdfLoading ? "Generating…" : "Export PDF"}
+            </Button>
+            {!pdfLoading && (
+              <div className="absolute right-0 top-full mt-1 z-50 hidden group-hover:flex flex-col bg-card border border-border rounded-lg shadow-lg overflow-hidden min-w-[140px]">
+                <button
+                  onClick={() => downloadPdf("monthly")}
+                  className="px-3 py-2 text-xs text-left hover:bg-muted transition-colors"
+                >
+                  Monthly Report
+                </button>
+                <button
+                  onClick={() => downloadPdf("quarterly")}
+                  className="px-3 py-2 text-xs text-left hover:bg-muted transition-colors"
+                >
+                  Quarterly Report
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

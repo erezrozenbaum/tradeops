@@ -27,6 +27,7 @@ Investor Profile → Financial Context → Risk Model → Portfolio Tracking →
 13. **Scenario analysis & stress testing** — 5 historical crash scenarios applied to portfolio tiers + Monte Carlo P10/P50/P90 fan chart to retirement
 14. **Dividend & income calendar** — forward annual dividend income per holding, yield-on-value/cost, upcoming ex-dividend dates (90-day window)
 15. **Tax-loss harvesting alerts** — identifies holdings with unrealized losses >5% that can offset gains; estimates tax saving; flags short-term vs long-term holdings and wash-sale risk
+16. **Professional PDF report** — multi-page client-grade PDF export (cover page, portfolio overview, performance analytics, stress test, tax summary); monthly or quarterly; generated on demand via `reportlab`
 
 ---
 
@@ -146,6 +147,7 @@ tradeops/
 │   │   ├── income_projection/       # Dividend income per holding + ex-date calendar
 │   │   ├── tax_harvesting/          # Tax-loss harvesting opportunity detection
 │   │   ├── tax_rules/               # Country-specific CGT rules for AI context
+│   │   ├── reports/                 # PDF report generation (reportlab)
 │   │   ├── ai_analysis/             # Claude integration
 │   │   ├── audit/
 │   │   └── dashboard/
@@ -202,6 +204,7 @@ Key endpoints:
 | GET | `/api/v1/investors/{id}/portfolio/income` | Dividend income projection + upcoming ex-dates |
 | GET | `/api/v1/investors/{id}/portfolio/tax-opportunities` | Tax-loss harvesting alerts + estimated savings |
 | GET | `/api/v1/investors/{id}/portfolio/rebalance` | Rebalance recommendations vs target allocation |
+| GET | `/api/v1/investors/{id}/reports/pdf` | PDF report download (`?period=monthly\|quarterly`) |
 | GET | `/api/v1/market/quote/{ticker}` | Get cached or fresh quote for a ticker |
 | GET/POST | `/api/v1/investors/{id}/accounts` | Investment accounts |
 | GET/PUT/DELETE | `/api/v1/investors/{id}/accounts/{id}` | Manage account |
