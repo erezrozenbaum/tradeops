@@ -18,6 +18,7 @@ from app.portfolio_analysis.schemas import (
     PortfolioHistoryResult,
 )
 from app.performance_analytics.schemas import PerformanceAnalytics, AttributionResult
+from app.scenario_analysis.schemas import StressTestResult
 from app.portfolio_analysis.rebalance_schemas import RebalanceResult
 from app.risk_modeling.service import get_latest as get_latest_risk_model
 
@@ -119,6 +120,28 @@ def get_portfolio_attribution(investor_id: uuid.UUID, db: Session = Depends(get_
     currency = investor.base_currency if investor else "USD"
 
     return compute_attribution(all_snapshots, portfolio, investor_id, currency)
+
+
+@router.get("/stress-test", response_model=StressTestResult)
+def get_stress_test(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Apply historical crash scenarios to current portfolio + Monte Carlo projection."""
+    from app.scenario_analysis.engine import compute as compute_stress
+    from app.models.investor_profile import InvestorProfile
+    from datetime import date as date_type
+
+    portfolio = service.get_portfolio(db, investor_id)
+    investor = db.get(InvestorProfile, investor_id)
+    currency = investor.base_currency if investor else "USD"
+
+    years = 20
+    if investor and investor.date_of_birth:
+        today = date_type.today()
+        age = today.year - investor.date_of_birth.year - (
+            (today.month, today.day) < (investor.date_of_birth.month, investor.date_of_birth.day)
+        )
+        years = max(1, 65 - age)  # years to standard retirement
+
+    return compute_stress(portfolio, investor_id, currency, years_to_retirement=years)
 
 
 @router.get("/pension-projection")

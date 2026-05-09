@@ -28,6 +28,7 @@ import {
   ClipboardList,
   HelpCircle,
   Newspaper,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +59,7 @@ const sections = [
     items: [
       { label: "Investments", href: "/investments", icon: Briefcase },
       { label: "Performance", href: "/performance", icon: Activity },
+      { label: "Stress Test", href: "/stress-test", icon: Zap },
       { label: "Transactions", href: "/transactions", icon: ClipboardList },
       { label: "Watchlist", href: "/watchlist", icon: Eye },
       { label: "Debt Planner", href: "/debt-planner", icon: CreditCard },
