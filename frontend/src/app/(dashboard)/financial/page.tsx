@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Trash2, Edit2, Wallet } from "lucide-react";
+import { Plus, Trash2, Edit2, Wallet, Briefcase, TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
 
 interface FinancialAsset {
   id: string;
@@ -30,6 +30,15 @@ interface FinancialLiability {
   currency: string;
 }
 
+interface PortfolioSummary {
+  base_currency: string;
+  total_cost_basis: number;
+  total_current_value: number;
+  unrealized_pnl: number;
+  unrealized_pnl_pct: number;
+  accounts: { id: string; provider_name: string; account_name: string | null; account_type: string; total_current_value: number }[];
+}
+
 interface FinancialProfile {
   id: string;
   monthly_income: number;
@@ -49,6 +58,7 @@ interface FinancialProfile {
 export default function FinancialPage() {
   const investorId = useInvestorId();
   const [profile, setProfile] = useState<FinancialProfile | null>(null);
+  const [investmentPortfolio, setInvestmentPortfolio] = useState<PortfolioSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingProfile, setEditingProfile] = useState(false);
   const [form, setForm] = useState<Partial<FinancialProfile>>({});
@@ -92,14 +102,14 @@ export default function FinancialPage() {
   }, [investorId]);
 
   function loadProfile() {
-    fetch(`/api/v1/investors/${investorId}/financial-profile`)
-      .then((r) => {
-        if (r.status === 404) return null;
-        return r.json();
-      })
-      .then((data) => {
-        setProfile(data);
-        if (data) setForm(data);
+    Promise.all([
+      fetch(`/api/v1/investors/${investorId}/financial-profile`).then(r => r.status === 404 ? null : r.json()),
+      fetch(`/api/v1/investors/${investorId}/portfolio`).then(r => r.ok ? r.json() : null),
+    ])
+      .then(([profileData, portfolioData]) => {
+        setProfile(profileData);
+        if (profileData) setForm(profileData);
+        setInvestmentPortfolio(portfolioData);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -893,6 +903,53 @@ export default function FinancialPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Investment Portfolio — read-only, pulled from Investments page */}
+      {investmentPortfolio && investmentPortfolio.accounts.length > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Briefcase className="h-4 w-4 text-primary" />
+                Investment Portfolio
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Auto-included in your net worth — managed in the{" "}
+                <a href="/investments" className="text-primary underline underline-offset-2">Investments</a> page
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-bold">{formatCurrency(investmentPortfolio.total_current_value, investmentPortfolio.base_currency)}</p>
+              {investmentPortfolio.unrealized_pnl !== 0 && (
+                <p className={`text-xs flex items-center justify-end gap-1 font-medium ${investmentPortfolio.unrealized_pnl > 0 ? "text-green-600" : "text-red-500"}`}>
+                  {investmentPortfolio.unrealized_pnl > 0
+                    ? <TrendingUp className="h-3 w-3" />
+                    : <TrendingDown className="h-3 w-3" />}
+                  {investmentPortfolio.unrealized_pnl > 0 ? "+" : ""}
+                  {formatCurrency(investmentPortfolio.unrealized_pnl, investmentPortfolio.base_currency)}
+                  {" "}({investmentPortfolio.unrealized_pnl_pct > 0 ? "+" : ""}{investmentPortfolio.unrealized_pnl_pct.toFixed(1)}%)
+                </p>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1.5">
+              {investmentPortfolio.accounts.map(acc => (
+                <div key={acc.id} className="flex items-center justify-between py-2 px-3 rounded-md border border-border">
+                  <div>
+                    <p className="text-sm font-medium">{acc.account_name ?? acc.provider_name}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{acc.account_type.replace(/_/g, " ")}</p>
+                  </div>
+                  <p className="text-sm font-semibold">{formatCurrency(acc.total_current_value, investmentPortfolio.base_currency)}</p>
+                </div>
+              ))}
+            </div>
+            <a href="/investments" className="mt-3 flex items-center gap-1 text-xs text-primary hover:underline">
+              Manage investments <ArrowRight className="h-3 w-3" />
+            </a>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
         <span>Job stability: <span className="font-medium text-foreground capitalize">{profile.job_stability.replace(/_/g, " ")}</span></span>

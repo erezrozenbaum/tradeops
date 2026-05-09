@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.42.1  
+**Version:** 0.44.0  
 **Last updated:** 2026-05-09
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -556,11 +556,26 @@ kubectl describe ingress tradeops
 
 ### Emergency fund account linking
 
-Any investment account (e.g., קרן השתלמות / study fund) can be flagged as the emergency fund via the shield icon on the Investments page. When flagged:
+Any investment account (e.g., קרן השתלמות / study fund) can be designated as the emergency fund in two ways:
+
+1. **At creation** — check "Use as emergency fund" in the New account form
+2. **On an existing account** — click the amber **EF** shield button in the account card row
+
+When flagged:
 
 - The account's holding values are summed and divided by monthly expenses to compute emergency fund months
 - This computed value is used in the Financial Stability Score instead of (or in addition to) the manual `emergency_fund_months` field
 - The account displays an amber "Emergency Fund" badge
+
+### Investment portfolio in Financial Profile
+
+The Financial Profile page (`/financial`) now includes a live **Investment Portfolio** card that auto-pulls from your investment accounts. It shows:
+
+- Each account name and type with its current value
+- Total portfolio value and unrealized P&L
+- A link to the Investments page for management
+
+Investment account holding values are also automatically included in the **net worth** and **Financial Stability Score** calculation in the risk model — you no longer need to manually re-enter your portfolio as a financial asset.
 
 ### Performance tracking
 

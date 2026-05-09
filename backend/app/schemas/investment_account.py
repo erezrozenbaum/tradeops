@@ -86,6 +86,7 @@ class InvestmentAccountCreate(BaseModel):
     currency: str = Field(..., min_length=3, max_length=3)
     notes: str | None = None
     family_member_id: uuid.UUID | None = None
+    is_emergency_fund: bool = False
 
 
 class InvestmentAccountUpdate(BaseModel):
