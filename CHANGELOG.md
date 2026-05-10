@@ -10,6 +10,16 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.50.1] — 2026-05-10
+
+### Fixed — Performance analytics: NAV-based return calculation
+
+- **Root cause:** performance analytics computed returns by comparing raw `total_value` between snapshots. When the user adds new accounts/holdings between snapshots the portfolio value jumps, producing absurd "returns" (e.g. +25994%, 178522% volatility, Sharpe 7.31).
+- **Fix:** both `engine.py` and `attribution.py` now compute returns using the NAV ratio `total_value / cost_basis` (normalised to cost basis). Capital additions move both `total_value` and `cost_basis` proportionally, so the ratio stays stable — only genuine price appreciation changes it.
+- Affects: Total Return %, Annualised Return, Max Drawdown, Volatility, Sharpe, Sortino, rolling returns (1M/3M/6M/1Y), attribution total return.
+
+---
+
 ## [0.50.0] — 2026-05-09
 
 ### Added — TASK 41: Professional Client Report (PDF Export)

@@ -88,9 +88,14 @@ def compute(
             computed_at=now,
         )
 
-    values = [s.total_value for s in snapshots]
-    start_dt = snapshots[0].snapshot_at
-    end_dt = snapshots[-1].snapshot_at
+    # Filter to snapshots with valid cost basis (exclude zero-basis entries that
+    # would produce division-by-zero or misleadingly large returns)
+    valid = [s for s in snapshots if s.cost_basis > 0]
+    if len(valid) < 2:
+        valid = snapshots  # fall back to raw values if no cost-basis data
+
+    start_dt = valid[0].snapshot_at
+    end_dt = valid[-1].snapshot_at
 
     # Normalise timezone for arithmetic
     if start_dt.tzinfo is None:
@@ -100,22 +105,32 @@ def compute(
 
     period_days = max(1, (end_dt - start_dt).days)
 
+    # ── NAV-based returns ─────────────────────────────────────────────────────
+    # Use value/cost_basis ratio (normalised NAV) instead of raw total_value.
+    # This eliminates distortion from capital additions between snapshots:
+    # when the user adds new holdings the cost_basis rises proportionally, so
+    # the ratio stays stable while genuine price appreciation is still captured.
+    navs = [
+        s.total_value / s.cost_basis if s.cost_basis > 0 else 1.0
+        for s in valid
+    ]
+
     # ── Total & annualised return ─────────────────────────────────────────────
-    total_return_pct = (values[-1] - values[0]) / values[0] * 100 if values[0] > 0 else 0.0
+    total_return_pct = (navs[-1] - navs[0]) / navs[0] * 100 if navs[0] > 0 else 0.0
     annual_return_pct = None
-    if period_days >= 14 and values[0] > 0:
-        annual_return_pct = ((values[-1] / values[0]) ** (365 / period_days) - 1) * 100
+    if period_days >= 14 and navs[0] > 0:
+        annual_return_pct = ((navs[-1] / navs[0]) ** (365 / period_days) - 1) * 100
 
     # ── Period-over-period returns ────────────────────────────────────────────
     returns = []
-    for i in range(1, len(values)):
-        if values[i - 1] > 0:
-            returns.append((values[i] - values[i - 1]) / values[i - 1])
+    for i in range(1, len(navs)):
+        if navs[i - 1] > 0:
+            returns.append((navs[i] - navs[i - 1]) / navs[i - 1])
 
     # ── Max drawdown ─────────────────────────────────────────────────────────
     max_drawdown_pct = 0.0
-    peak = values[0]
-    for v in values:
+    peak = navs[0]
+    for v in navs:
         if v > peak:
             peak = v
         dd = (peak - v) / peak * 100 if peak > 0 else 0.0
@@ -123,8 +138,8 @@ def compute(
             max_drawdown_pct = dd
 
     # Current drawdown from all-time high in this period
-    alltime_peak = max(values)
-    current_drawdown_pct = (alltime_peak - values[-1]) / alltime_peak * 100 if alltime_peak > 0 else 0.0
+    alltime_peak = max(navs)
+    current_drawdown_pct = (alltime_peak - navs[-1]) / alltime_peak * 100 if alltime_peak > 0 else 0.0
 
     # ── Volatility & risk ratios ──────────────────────────────────────────────
     sharpe_ratio = None
