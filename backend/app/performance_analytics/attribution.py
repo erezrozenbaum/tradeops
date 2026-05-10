@@ -57,11 +57,16 @@ def _rolling_return(snapshots: list[PortfolioSnapshotPoint], days: int) -> float
         else:
             break
 
-    if start_snap is None or start_snap.total_value <= 0:
+    if start_snap is None or start_snap.cost_basis <= 0:
         return None
 
     latest = snapshots[-1]
-    return round((latest.total_value - start_snap.total_value) / start_snap.total_value * 100, 2)
+    # NAV-based: normalise by cost_basis to avoid distortion from capital additions
+    nav_start = start_snap.total_value / start_snap.cost_basis
+    nav_end = latest.total_value / latest.cost_basis if latest.cost_basis > 0 else None
+    if nav_end is None or nav_start <= 0:
+        return None
+    return round((nav_end - nav_start) / nav_start * 100, 2)
 
 
 def compute_attribution(
@@ -85,10 +90,11 @@ def compute_attribution(
     }
 
     total_return_pct = 0.0
-    if len(sorted_snaps) >= 2 and sorted_snaps[0].total_value > 0:
-        total_return_pct = round(
-            (sorted_snaps[-1].total_value - sorted_snaps[0].total_value) / sorted_snaps[0].total_value * 100, 2
-        )
+    if len(sorted_snaps) >= 2 and sorted_snaps[0].cost_basis > 0 and sorted_snaps[-1].cost_basis > 0:
+        nav_first = sorted_snaps[0].total_value / sorted_snaps[0].cost_basis
+        nav_last  = sorted_snaps[-1].total_value / sorted_snaps[-1].cost_basis
+        if nav_first > 0:
+            total_return_pct = round((nav_last - nav_first) / nav_first * 100, 2)
 
     bench_ticker = _benchmark_for_currency(currency)
     bench_return: float | None = None
