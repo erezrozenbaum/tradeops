@@ -4,9 +4,18 @@ Maps portfolio asset types to risk tiers and compares against the investor's
 risk model target allocation.
 """
 from datetime import datetime, timezone
+from typing import TypedDict
 import uuid
 
-from app.portfolio_analysis.rebalance_schemas import RebalanceTier, RebalanceResult
+from app.portfolio_analysis.rebalance_schemas import RebalanceTier, RebalanceResult, SuggestedTrade
+
+
+class HoldingInfo(TypedDict):
+    ticker: str | None
+    name: str
+    asset_type: str
+    current_value_base: float  # value in base currency
+    unit_price_base: float | None  # live price converted to base currency (None if no live price)
 
 _ASSET_TO_TIER: dict[str, str | None] = {
     "bond": "low_risk",
@@ -26,7 +35,55 @@ _TIER_META = [
     ("high_risk", "High Risk", ["crypto"]),
 ]
 
+# Reverse mapping: tier → list of asset types (used for suggested trades)
+_ASSET_TO_TIER_REVERSE: dict[str, list[str]] = {
+    "low_risk": ["bond", "fund", "pension_fund", "study_fund"],
+    "growth": ["etf", "stock", "real_estate"],
+    "high_risk": ["crypto"],
+}
+
 _THRESHOLD_PCT = 5.0  # deviation threshold that triggers a rebalance suggestion
+
+
+def _suggested_trades(
+    tier_key: str,
+    action: str,
+    gap_amount: float | None,
+    holdings: list[HoldingInfo],
+    base_currency: str,
+) -> list[SuggestedTrade]:
+    """Compute buy/sell suggestions for the largest tickered holding in a tier."""
+    if action == "hold" or not gap_amount or abs(gap_amount) < 1:
+        return []
+
+    tier_asset_types = set(_ASSET_TO_TIER_REVERSE.get(tier_key, []))
+    candidates = [
+        h for h in holdings
+        if h["ticker"]
+        and h["asset_type"] in tier_asset_types
+        and h["unit_price_base"] and h["unit_price_base"] > 0
+    ]
+    if not candidates:
+        return []
+
+    # Sort by current value descending — suggest adding to / trimming the largest position first
+    candidates.sort(key=lambda h: h["current_value_base"], reverse=True)
+    top = candidates[0]
+
+    direction = "buy" if action == "buy_more" else "sell"
+    units = abs(gap_amount) / top["unit_price_base"]
+    units = round(units, 4)
+    estimated = round(units * top["unit_price_base"], 2)
+
+    return [SuggestedTrade(
+        ticker=top["ticker"],
+        name=top["name"],
+        action=direction,
+        suggested_units=units,
+        unit_price=round(top["unit_price_base"], 4),
+        estimated_value=estimated,
+        currency=base_currency,
+    )]
 
 
 def compute_rebalance(
@@ -35,6 +92,7 @@ def compute_rebalance(
     asset_allocation: dict[str, float],  # e.g. {"etf": 45.0, "crypto": 25.0}
     total_value: float | None = None,    # total portfolio value in base currency
     currency: str | None = None,
+    holdings: "list[HoldingInfo] | None" = None,
 ) -> RebalanceResult:
     notes: list[str] = []
 
@@ -102,6 +160,14 @@ def compute_rebalance(
             else None
         )
 
+        trades = _suggested_trades(
+            tier_key=tier_key,
+            action=action,
+            gap_amount=gap_amount,
+            holdings=holdings or [],
+            base_currency=currency or "ILS",
+        )
+
         tiers.append(RebalanceTier(
             tier=tier_key,
             label=tier_label,
@@ -113,6 +179,7 @@ def compute_rebalance(
             target_amount=target_amount,
             actual_amount=actual_amount,
             gap_amount=gap_amount,
+            suggested_trades=trades,
         ))
 
     if rebalance_needed:

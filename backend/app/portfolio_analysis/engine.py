@@ -33,6 +33,8 @@ def analyze(
     convert: Callable[[float, str, str], float],
     live_prices: dict[str, tuple[float, str]] | None = None,
     prices_updated_at: "datetime | None" = None,
+    realized_pnl_total: float = 0.0,
+    realized_pnl_ytd: float = 0.0,
 ) -> PortfolioSummary:
     """Analyze portfolio.
 
@@ -188,4 +190,6 @@ def analyze(
         computed_at=datetime.now(timezone.utc),
         has_stale_prices=any_stale_price,
         prices_updated_at=prices_updated_at,
+        realized_pnl_total=round(realized_pnl_total, 2),
+        realized_pnl_ytd=round(realized_pnl_ytd, 2),
     )

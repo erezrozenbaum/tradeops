@@ -35,6 +35,11 @@ class PerformanceAnalytics(BaseModel):
     benchmark_series: list[BenchmarkPoint]
     beta: float | None  # portfolio sensitivity to benchmark (Cov/Var)
 
+    # Return methodology
+    # twr_pct = annual_return_pct (NAV chain-link, unaffected by deposit timing)
+    # mwr_pct = IRR from actual buy cash flows (reflects investor timing and size)
+    mwr_pct: float | None = None
+
     computed_at: datetime
 
 

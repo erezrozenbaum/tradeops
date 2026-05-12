@@ -1,7 +1,7 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.51.0
-**Last updated:** 2026-05-11 (v0.51.0)
+**Version:** 0.52.0
+**Last updated:** 2026-05-12 (v0.52.0)
 
 ---
 
@@ -782,7 +782,7 @@ Returns `application/pdf` stream.
 
 ---
 
-### TASK 48 — Realized P&L from Closed Positions
+### TASK 48 — Realized P&L from Closed Positions ✅ DONE
 
 **Type:** Analytics enhancement
 **Risk:** 🟡 Moderate — reads from `holding_transactions` table (TASK 30)
@@ -796,7 +796,7 @@ Returns `application/pdf` stream.
 
 ---
 
-### TASK 49 — Time-Weighted Return (TWR) / Money-Weighted Return (IRR)
+### TASK 49 — Time-Weighted Return (TWR) / Money-Weighted Return (IRR) ✅ DONE
 
 **Type:** New metric (`performance_analytics/engine.py`)
 **Risk:** 🟢 Safe — no DB migration
@@ -844,7 +844,7 @@ Returns `application/pdf` stream.
 
 ---
 
-### TASK 52 — Actionable Rebalancing (Exact Units)
+### TASK 52 — Actionable Rebalancing (Exact Units) ✅ DONE
 
 **Type:** Enhancement (`portfolio_analysis/rebalance_engine.py`)
 **Risk:** 🟢 Safe — no DB migration

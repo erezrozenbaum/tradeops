@@ -15,6 +15,61 @@ from app.performance_analytics.schemas import BenchmarkPoint, PerformanceAnalyti
 
 log = logging.getLogger(__name__)
 
+
+def _compute_irr(
+    cash_flows: list[tuple[datetime, float]],
+    final_value: float,
+    final_date: datetime,
+) -> float | None:
+    """Annualized IRR from buy cash flows via Newton-Raphson.
+
+    cash_flows: list of (date, amount_paid) for each buy, amount_paid > 0.
+    Returns annualized rate or None if insufficient data / does not converge.
+    """
+    if not cash_flows or final_value <= 0:
+        return None
+
+    t0 = cash_flows[0][0]
+    if t0.tzinfo is None:
+        t0 = t0.replace(tzinfo=timezone.utc)
+
+    # Build (years, amount): buys are outflows (-), final portfolio value is inflow (+)
+    dated: list[tuple[float, float]] = []
+    for dt, paid in cash_flows:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        years = max(0.0, (dt - t0).total_seconds() / (365.25 * 86400))
+        dated.append((years, -paid))  # outflow
+
+    final_dt = final_date
+    if final_dt.tzinfo is None:
+        final_dt = final_dt.replace(tzinfo=timezone.utc)
+    total_years = max(0.001, (final_dt - t0).total_seconds() / (365.25 * 86400))
+    dated.append((total_years, final_value))  # inflow
+
+    # Newton-Raphson
+    r = 0.1  # initial guess
+    for _ in range(200):
+        try:
+            npv = sum(a / (1 + r) ** t for t, a in dated)
+            dnpv = sum(-t * a / (1 + r) ** (t + 1) for t, a in dated)
+        except (ZeroDivisionError, OverflowError):
+            return None
+        if abs(dnpv) < 1e-12:
+            break
+        r_new = r - npv / dnpv
+        if r_new <= -1.0:
+            r = r / 2  # step back toward feasible region
+            continue
+        if abs(r_new - r) < 1e-8:
+            r = r_new
+            break
+        r = r_new
+
+    if r <= -1.0 or not math.isfinite(r):
+        return None
+    return round(r * 100, 2)
+
 # Risk-free rate approximation (annualised) — US T-bill / Bank of Israel rate 2024-25
 _RISK_FREE_RATE = 0.045
 
@@ -64,6 +119,7 @@ def compute(
     snapshots: list[PortfolioSnapshotPoint],
     investor_id,
     currency: str = "USD",
+    cash_flows: "list[tuple[datetime, float]] | None" = None,
 ) -> PerformanceAnalytics:
     now = datetime.now(timezone.utc)
 
@@ -86,6 +142,7 @@ def compute(
             benchmark_total_return_pct=None,
             benchmark_series=[],
             beta=None,
+            mwr_pct=None,
             computed_at=now,
         )
 
@@ -228,6 +285,11 @@ def compute(
             if var_b > 0:
                 beta = round(cov / var_b, 3)
 
+    # ── Money-Weighted Return (IRR) ───────────────────────────────────────────
+    mwr_pct: float | None = None
+    if cash_flows and valid:
+        mwr_pct = _compute_irr(cash_flows, valid[-1].total_value, end_dt)
+
     return PerformanceAnalytics(
         investor_id=investor_id,
         currency=currency,
@@ -246,5 +308,6 @@ def compute(
         benchmark_total_return_pct=bench_total,
         benchmark_series=bench_series,
         beta=beta,
+        mwr_pct=mwr_pct,
         computed_at=now,
     )

@@ -10,6 +10,26 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.52.0] — 2026-05-12
+
+### Added — TASK 48: Realized P&L from closed positions
+- WAVG cost-basis computation from buy/sell transaction log (`holding_transactions`). For each sell, realized P&L = proceeds − WAVG unit cost × quantity. Aggregated as `realized_pnl_total` (all time) and `realized_pnl_ytd` (current calendar year) in base currency.
+- `PortfolioSummary` schema: added `realized_pnl_total` and `realized_pnl_ytd` fields.
+- Investments page: 5th summary card "Realized P&L" shows total and YTD gains from closed positions; displays `—` when no sell transactions exist; grid changed to responsive 5-column layout.
+
+### Added — TASK 49: Money-Weighted Return (IRR)
+- Newton-Raphson IRR computed from all buy transactions as cash outflows vs current portfolio value as inflow. Annualized to produce `mwr_pct` (% / year).
+- `PerformanceAnalytics` schema: added `mwr_pct: float | None`.
+- Performance page: "Total Return" card relabeled "Total Return (TWR)"; MWR/IRR displayed as a sub-section with contrasting color. TWR vs MWR gap reveals whether deposit timing helped or hurt overall return.
+- Analytics router queries buy transactions, converts to base currency, and passes cash flows to the engine.
+
+### Added — TASK 52: Actionable rebalancing with exact unit counts
+- `SuggestedTrade` model: `ticker`, `name`, `action` (buy/sell), `suggested_units`, `unit_price`, `estimated_value`, `currency`.
+- `RebalanceTier` now includes `suggested_trades: list[SuggestedTrade]`. For each off-target tier, the largest live-priced holding in that tier is selected: `suggested_units = gap_amount / unit_price_base`.
+- Investments page rebalance section: generic "Buy ~X ILS" replaced with "↑ Buy ~12.34 units TICKER @ 120.00 ≈ 1,480 ILS" actionable guidance. Falls back to monetary hint when no live-priced holdings are present in the tier.
+
+---
+
 ## [0.51.0] — 2026-05-11
 
 ### Fixed — TASK 42: Fee-inclusive cost basis
