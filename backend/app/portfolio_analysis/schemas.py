@@ -58,6 +58,9 @@ class PortfolioSummary(BaseModel):
     # Price staleness: True when any tickered holding fell back to cost_basis (no live/manual price)
     has_stale_prices: bool = False
     prices_updated_at: datetime | None = None  # oldest live price timestamp
+    # Realized P&L from closed positions (WAVG cost basis across sell transactions)
+    realized_pnl_total: float = 0.0
+    realized_pnl_ytd: float = 0.0
 
 
 class PriceRefreshResult(BaseModel):

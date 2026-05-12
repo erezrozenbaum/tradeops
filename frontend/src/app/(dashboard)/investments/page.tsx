@@ -102,6 +102,8 @@ interface PortfolioSummary {
   accounts: AccountAnalysis[];
   has_stale_prices: boolean;
   prices_updated_at: string | null;
+  realized_pnl_total: number;
+  realized_pnl_ytd: number;
 }
 
 interface PortfolioSnapshotPoint {
@@ -146,6 +148,16 @@ interface PensionSimResult {
   monthly_contribution_employer: number | null;
 }
 
+interface SuggestedTrade {
+  ticker: string;
+  name: string;
+  action: string;
+  suggested_units: number;
+  unit_price: number;
+  estimated_value: number;
+  currency: string;
+}
+
 interface RebalanceTier {
   tier: string;
   label: string;
@@ -157,6 +169,7 @@ interface RebalanceTier {
   target_amount: number | null;
   actual_amount: number | null;
   gap_amount: number | null;
+  suggested_trades: SuggestedTrade[];
 }
 
 interface RebalanceResult {
@@ -687,7 +700,7 @@ export default function InvestmentsPage() {
       {/* Portfolio summary */}
       {portfolio && (portfolio.total_current_value > 0 || accounts.length > 0) && (
         <>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
             <Card>
               <CardContent className="pt-5">
                 <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Total value</p>
@@ -730,6 +743,27 @@ export default function InvestmentsPage() {
                     {portfolio.pnl_after_tax_pct >= 0 ? "+" : ""}{portfolio.pnl_after_tax_pct.toFixed(2)}%
                   </p>
                 </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-5">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Realized P&L</p>
+                {portfolio.realized_pnl_total === 0 ? (
+                  <p className="text-xl font-semibold text-muted-foreground">—</p>
+                ) : (
+                  <p className={`text-xl font-semibold ${portfolio.realized_pnl_total >= 0 ? "text-green-600" : "text-red-500"}`}>
+                    {portfolio.realized_pnl_total >= 0 ? "+" : ""}{formatCurrency(portfolio.realized_pnl_total, currency)}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground mt-0.5">From closed positions</p>
+                {portfolio.realized_pnl_total !== 0 && (
+                  <div className="mt-2 pt-2 border-t border-border/60">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">This year (YTD)</p>
+                    <p className={`text-sm font-semibold ${portfolio.realized_pnl_ytd >= 0 ? "text-green-600" : "text-red-500"}`}>
+                      {portfolio.realized_pnl_ytd >= 0 ? "+" : ""}{formatCurrency(portfolio.realized_pnl_ytd, currency)}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
             <AllocationDonut allocation={portfolio.asset_allocation} />
@@ -884,13 +918,22 @@ export default function InvestmentsPage() {
                         )}
                       </p>
                     )}
-                    {tier.gap_amount != null && tier.action !== "hold" && (
-                      <p className="text-[10px] text-muted-foreground">
-                        {tier.action === "reduce"
-                          ? `Sell ~${formatCurrency(Math.abs(tier.gap_amount), rebalance.currency ?? "USD")}`
-                          : `Buy ~${formatCurrency(Math.abs(tier.gap_amount), rebalance.currency ?? "USD")}`}
-                      </p>
-                    )}
+                    {tier.suggested_trades && tier.suggested_trades.length > 0
+                      ? tier.suggested_trades.map((trade) => (
+                          <p key={trade.ticker} className={`text-[10px] font-medium ${trade.action === "buy" ? "text-blue-500" : "text-amber-500"}`}>
+                            {trade.action === "buy" ? "↑ Buy" : "↓ Sell"} ~{trade.suggested_units < 1 ? trade.suggested_units.toFixed(4) : trade.suggested_units.toFixed(2)} units {trade.ticker}{" "}
+                            <span className="text-muted-foreground font-normal">
+                              @ {formatCurrency(trade.unit_price, trade.currency)} ≈ {formatCurrency(trade.estimated_value, trade.currency)}
+                            </span>
+                          </p>
+                        ))
+                      : tier.gap_amount != null && tier.action !== "hold" && (
+                          <p className="text-[10px] text-muted-foreground">
+                            {tier.action === "reduce"
+                              ? `Sell ~${formatCurrency(Math.abs(tier.gap_amount), rebalance.currency ?? "USD")}`
+                              : `Buy ~${formatCurrency(Math.abs(tier.gap_amount), rebalance.currency ?? "USD")}`}
+                          </p>
+                        )}
                     <p className="text-[10px] text-muted-foreground capitalize">
                       {tier.asset_types.join(", ")}
                     </p>

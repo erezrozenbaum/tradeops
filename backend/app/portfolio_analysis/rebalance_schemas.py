@@ -4,6 +4,16 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class SuggestedTrade(BaseModel):
+    ticker: str
+    name: str
+    action: str          # "buy" | "sell"
+    suggested_units: float
+    unit_price: float    # live price in base currency
+    estimated_value: float  # suggested_units × unit_price in base currency
+    currency: str
+
+
 class RebalanceTier(BaseModel):
     tier: str          # "low_risk" | "growth" | "high_risk"
     label: str
@@ -16,6 +26,7 @@ class RebalanceTier(BaseModel):
     target_amount: float | None = None
     actual_amount: float | None = None
     gap_amount: float | None = None   # positive = need to buy, negative = overweight
+    suggested_trades: list[SuggestedTrade] = []
 
 
 class RebalanceResult(BaseModel):

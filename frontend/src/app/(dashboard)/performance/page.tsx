@@ -82,6 +82,7 @@ interface PerformanceAnalytics {
   benchmark_total_return_pct: number | null;
   benchmark_series: BenchmarkPoint[];
   beta: number | null;
+  mwr_pct: number | null;
   computed_at: string;
 }
 
@@ -170,6 +171,7 @@ function MetricCard({
   label,
   value,
   sub,
+  sub2,
   positive,
   neutral,
   icon: Icon,
@@ -177,6 +179,7 @@ function MetricCard({
   label: string;
   value: string;
   sub?: string;
+  sub2?: React.ReactNode;
   positive?: boolean;
   neutral?: boolean;
   icon?: React.ElementType;
@@ -196,6 +199,7 @@ function MetricCard({
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">{label}</p>
             <p className={`text-2xl font-bold ${colour}`}>{value}</p>
             {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+            {sub2 && <div className="mt-1.5 pt-1.5 border-t border-border/50">{sub2}</div>}
           </div>
           {Icon && <Icon className="h-5 w-5 text-muted-foreground/50 mt-0.5" />}
         </div>
@@ -410,9 +414,17 @@ export default function PerformancePage() {
       {analytics && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           <MetricCard
-            label="Total Return"
+            label="Total Return (TWR)"
             value={pct(analytics.total_return_pct)}
             sub={analytics.annual_return_pct !== null ? `${pct(analytics.annual_return_pct)} / year` : undefined}
+            sub2={analytics.mwr_pct !== null ? (
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">MWR (IRR)</p>
+                <p className={`text-sm font-semibold ${analytics.mwr_pct >= 0 ? "text-green-500" : "text-red-500"}`}>
+                  {pct(analytics.mwr_pct)} / year
+                </p>
+              </div>
+            ) : undefined}
             positive={analytics.total_return_pct >= 0}
             icon={analytics.total_return_pct >= 0 ? TrendingUp : TrendingDown}
           />
