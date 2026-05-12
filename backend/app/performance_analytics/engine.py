@@ -85,6 +85,7 @@ def compute(
             benchmark_ticker=None,
             benchmark_total_return_pct=None,
             benchmark_series=[],
+            beta=None,
             computed_at=now,
         )
 
@@ -184,6 +185,49 @@ def compute(
     benchmark_ticker = "^TA35" if currency == "ILS" else "SPY"
     bench_series, bench_total = _fetch_benchmark(benchmark_ticker, start_dt)
 
+    # ── Beta vs benchmark ─────────────────────────────────────────────────────
+    # Beta = Cov(portfolio_returns, benchmark_returns) / Var(benchmark_returns)
+    # Align portfolio snapshot periods with benchmark daily data by date lookup.
+    beta: float | None = None
+    if bench_series and len(returns) >= 4:
+        bench_by_date: dict[str, float] = {bp.date: bp.cumulative_return_pct for bp in bench_series}
+
+        def _nearest_bench(date_str: str) -> float | None:
+            from datetime import timedelta as _td
+            dt = datetime.strptime(date_str, "%Y-%m-%d")
+            for i in range(6):
+                d = (dt - _td(days=i)).strftime("%Y-%m-%d")
+                if d in bench_by_date:
+                    return bench_by_date[d]
+            return None
+
+        bench_rets: list[float] = []
+        port_rets_matched: list[float] = []
+        for i in range(1, len(valid)):
+            s_start = valid[i - 1].snapshot_at
+            s_end = valid[i].snapshot_at
+            if s_start.tzinfo is None:
+                s_start = s_start.replace(tzinfo=timezone.utc)
+            if s_end.tzinfo is None:
+                s_end = s_end.replace(tzinfo=timezone.utc)
+            bc_start = _nearest_bench(s_start.strftime("%Y-%m-%d"))
+            bc_end = _nearest_bench(s_end.strftime("%Y-%m-%d"))
+            if bc_start is None or bc_end is None:
+                continue
+            # Convert cumulative returns to period return for this interval
+            br = (1 + bc_end / 100) / (1 + bc_start / 100) - 1
+            bench_rets.append(br)
+            port_rets_matched.append(returns[i - 1])
+
+        if len(bench_rets) >= 4:
+            n = len(bench_rets)
+            mean_p = sum(port_rets_matched) / n
+            mean_b = sum(bench_rets) / n
+            cov = sum((port_rets_matched[i] - mean_p) * (bench_rets[i] - mean_b) for i in range(n)) / n
+            var_b = sum((r - mean_b) ** 2 for r in bench_rets) / n
+            if var_b > 0:
+                beta = round(cov / var_b, 3)
+
     return PerformanceAnalytics(
         investor_id=investor_id,
         currency=currency,
@@ -201,5 +245,6 @@ def compute(
         benchmark_ticker=benchmark_ticker,
         benchmark_total_return_pct=bench_total,
         benchmark_series=bench_series,
+        beta=beta,
         computed_at=now,
     )

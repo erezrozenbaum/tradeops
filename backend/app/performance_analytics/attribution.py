@@ -1,7 +1,7 @@
 """Holding-level performance attribution + rolling returns + benchmark comparison."""
 import time
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import date as date_type, datetime, timezone, timedelta
 
 import yfinance as yf
 
@@ -113,6 +113,14 @@ def compute_attribution(
             for ha in acc.holdings:
                 if ha.cost_basis <= 0:
                     continue
+                # CAGR since purchase: annualise the unrealized return over days held
+                cagr_pct: float | None = None
+                if ha.purchase_date is not None:
+                    days_held = (date_type.today() - ha.purchase_date).days
+                    if days_held >= 30 and ha.cost_basis > 0:
+                        ratio = ha.current_value_base / ha.cost_basis
+                        if ratio > 0:
+                            cagr_pct = round(((ratio) ** (365 / days_held) - 1) * 100, 2)
                 holdings.append(HoldingContribution(
                     holding_id=ha.id,
                     name=ha.name,
@@ -121,6 +129,7 @@ def compute_attribution(
                     weight_pct=round(ha.cost_basis / total_cb * 100, 1),
                     return_pct=round(ha.unrealized_pnl_pct, 2),
                     contribution_pct=round(ha.unrealized_pnl / total_cb * 100, 2),
+                    cagr_pct=cagr_pct,
                 ))
 
     by_contribution = sorted(holdings, key=lambda h: h.contribution_pct, reverse=True)

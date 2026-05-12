@@ -10,6 +10,33 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.51.0] — 2026-05-11
+
+### Fixed — TASK 42: Fee-inclusive cost basis
+- Brokerage fees (`InvestmentHolding.fees`) are now added to cost basis: `cost_local = quantity × avg_buy_price + fees`. Previously fees were tracked but ignored, overstating P&L for holdings with transaction costs.
+
+### Fixed — TASK 43: Pension fund tax treatment
+- Pension funds (`pension_fund`) and study funds (`study_fund`) no longer have flat 25% capital gains tax applied. They are taxed as income at withdrawal (not CGT) with a substantial exemption — applying CGT was producing a vastly inflated tax burden in the UI and PDF report.
+
+### Added — TASK 44: Price staleness warning
+- `PortfolioSummary` now exposes `has_stale_prices: bool` and `prices_updated_at: datetime | None`
+- Engine sets `has_stale_prices = True` when any tickered holding falls back to cost basis (no live or manual price available)
+- Service tracks the oldest live-price timestamp and surfaces it to the frontend
+- Investments page shows an amber warning banner when prices are stale, prompting the user to click "Refresh prices"
+
+### Added — TASK 45: Beta vs benchmark metric
+- Performance analytics now computes **Beta** (portfolio sensitivity to benchmark). Beta = Cov(portfolio returns, benchmark returns) / Var(benchmark returns), computed by aligning portfolio snapshot periods with the benchmark daily series.
+- Displayed as a 6th metric card on the Performance page alongside Sharpe/Sortino; `None` when fewer than 4 matched data points.
+
+### Added — TASK 46: Per-holding CAGR in attribution
+- `HoldingContribution` now includes `cagr_pct: float | None` — annualised return since purchase date. Formula: `(current_value / cost_basis) ^ (365/days_held) - 1`. Only computed for holdings with a `purchase_date` and held ≥ 30 days.
+- Shown alongside return_pct in the Top Contributors and Top Detractors panels.
+
+### Added — TASK 47: Single-stock concentration risk flag
+- Portfolio correlation engine now flags any single ticker representing > 15% of the portfolio by value. Adds a warning to `ConcentrationRisk.warnings` and +20 pts to `risk_score` per concentrated ticker. Complements the existing sector-level concentration check (> 40%).
+
+---
+
 ## [0.50.1] — 2026-05-10
 
 ### Fixed — Performance analytics: NAV-based return calculation

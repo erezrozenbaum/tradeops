@@ -81,6 +81,7 @@ interface PerformanceAnalytics {
   benchmark_ticker: string | null;
   benchmark_total_return_pct: number | null;
   benchmark_series: BenchmarkPoint[];
+  beta: number | null;
   computed_at: string;
 }
 
@@ -92,6 +93,7 @@ interface HoldingContribution {
   weight_pct: number;
   return_pct: number;
   contribution_pct: number;
+  cagr_pct: number | null;
 }
 
 interface AttributionResult {
@@ -406,7 +408,7 @@ export default function PerformancePage() {
 
       {/* Key metric cards */}
       {analytics && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           <MetricCard
             label="Total Return"
             value={pct(analytics.total_return_pct)}
@@ -453,6 +455,18 @@ export default function PerformancePage() {
               : undefined}
             neutral={analytics.benchmark_total_return_pct === null}
             icon={BarChart2}
+          />
+          <MetricCard
+            label="Beta"
+            value={analytics.beta !== null ? fmt(analytics.beta) : "—"}
+            sub={analytics.beta !== null
+              ? analytics.beta > 1.2 ? "High market sensitivity"
+                : analytics.beta < 0.8 ? "Defensive portfolio"
+                : "Market-like sensitivity"
+              : "Need more data"}
+            neutral
+            positive={analytics.beta !== null ? analytics.beta < 1.0 : undefined}
+            icon={Activity}
           />
         </div>
       )}
@@ -524,6 +538,7 @@ export default function PerformancePage() {
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-0.5">
                         {h.weight_pct.toFixed(1)}% weight · {pct(h.return_pct)} return
+                        {h.cagr_pct !== null && ` · ${pct(h.cagr_pct)} CAGR`}
                       </p>
                     </div>
                   </div>
@@ -559,6 +574,7 @@ export default function PerformancePage() {
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-0.5">
                         {h.weight_pct.toFixed(1)}% weight · {pct(h.return_pct)} return
+                        {h.cagr_pct !== null && ` · ${pct(h.cagr_pct)} CAGR`}
                       </p>
                     </div>
                   </div>

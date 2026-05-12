@@ -33,6 +33,7 @@ class PerformanceAnalytics(BaseModel):
     benchmark_ticker: str | None
     benchmark_total_return_pct: float | None
     benchmark_series: list[BenchmarkPoint]
+    beta: float | None  # portfolio sensitivity to benchmark (Cov/Var)
 
     computed_at: datetime
 
@@ -47,6 +48,7 @@ class HoldingContribution(BaseModel):
     weight_pct: float       # % of portfolio cost basis
     return_pct: float       # this holding's unrealized return %
     contribution_pct: float # contribution to total portfolio return (gain / total_cost_basis × 100)
+    cagr_pct: float | None = None  # annualised return since purchase; None if < 30 days or no purchase_date
 
 
 class AttributionResult(BaseModel):
