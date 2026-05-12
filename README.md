@@ -28,6 +28,12 @@ Investor Profile → Financial Context → Risk Model → Portfolio Tracking →
 14. **Dividend & income calendar** — forward annual dividend income per holding, yield-on-value/cost, upcoming ex-dividend dates (90-day window)
 15. **Tax-loss harvesting alerts** — identifies holdings with unrealized losses >5% that can offset gains; estimates tax saving; flags short-term vs long-term holdings and wash-sale risk
 16. **Professional PDF report** — multi-page client-grade PDF export (cover page, portfolio overview, performance analytics, stress test, tax summary); monthly or quarterly; generated on demand via `reportlab`
+17. **Beta vs benchmark** — portfolio market sensitivity (Cov/Var regression); displayed alongside Sharpe/Sortino on the Performance page
+18. **Per-holding CAGR** — annualised return since purchase date shown for each contributor and detractor in attribution
+19. **Price staleness warning** — amber banner when any tickered holding falls back to cost basis (no live market price available)
+20. **Fee-inclusive cost basis** — brokerage fees are now included in cost basis for correct P&L calculation
+21. **Pension fund tax correction** — pension and study funds exempt from flat 25% CGT; taxed as income at withdrawal
+22. **Single-stock concentration flag** — correlation engine warns when any single ticker > 15% of portfolio value
 
 ---
 

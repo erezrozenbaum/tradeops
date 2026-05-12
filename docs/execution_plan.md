@@ -1,7 +1,7 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.50.0
-**Last updated:** 2026-05-09 (v0.50.0)
+**Version:** 0.51.0
+**Last updated:** 2026-05-11 (v0.51.0)
 
 ---
 
@@ -569,7 +569,7 @@ Replaces static catalog recommendations with real market intelligence. New `live
 
 ---
 
-### TASK 37 — Performance Attribution & Benchmark Comparison
+### TASK 37 — Performance Attribution & Benchmark Comparison ✅ DONE
 
 **Type:** New module (`performance_analytics/attribution.py`)
 **Risk:** 🟢 Safe — no DB migration (reads portfolio_snapshots + yfinance for benchmark)
@@ -608,7 +608,7 @@ Replaces static catalog recommendations with real market intelligence. New `live
 
 ---
 
-### TASK 38 — Scenario Analysis & Stress Testing
+### TASK 38 — Scenario Analysis & Stress Testing ✅ DONE
 
 **Type:** New module (`scenario_analysis/`)
 **Risk:** 🟢 Safe — no DB migration (applies historical drawdowns to current allocation)
@@ -629,7 +629,7 @@ Replaces static catalog recommendations with real market intelligence. New `live
 
 ---
 
-### TASK 39 — Dividend & Income Calendar
+### TASK 39 — Dividend & Income Calendar ✅ DONE
 
 **Type:** New module (`income_projection/`)
 **Risk:** 🟢 Safe — no DB migration
@@ -691,6 +691,171 @@ Returns `application/pdf` stream.
 **Frontend:** "Export PDF" button on `/performance` page; download triggers immediately.
 
 **Library preference:** `reportlab` (pure Python, no system deps, Docker-friendly) over `weasyprint` (needs Cairo/Pango system packages).
+
+---
+
+---
+
+## Phase 9: Analytics Correctness & Investor-Grade Depth
+
+*Gap analysis 2026-05-11 — deep code review from an experienced investor's perspective.*
+
+**Goal:** Fix critical data correctness bugs and add the analytics every serious investor expects.
+
+---
+
+### TASK 42 — Fee-Inclusive Cost Basis (CRITICAL FIX)
+
+**Type:** Bug fix (`portfolio_analysis/engine.py`)
+**Risk:** 🟢 Safe — no DB migration
+
+**Problem:** Cost basis is computed as `quantity × avg_buy_price`. The `fees` field exists on `InvestmentHolding` but is never added. Buy 100 shares @ $10 with a $50 brokerage fee → cost is $1,050, system reports $1,000 → P&L overstated.
+
+**Fix:** `cost_local = h.quantity * h.avg_buy_price + h.fees`
+
+---
+
+### TASK 43 — Pension Fund Tax Treatment (CRITICAL FIX)
+
+**Type:** Bug fix (`portfolio_analysis/engine.py`)
+**Risk:** 🟢 Safe — no DB migration
+
+**Problem:** Flat 25% CGT applied to ALL holdings including pension (`pension_fund`) and study funds (`study_fund`). Israeli pension is taxed as income at withdrawal (not capital gains), with ~8,900 ILS/month exemption. The UI shows a massively inflated tax burden.
+
+**Fix:** Skip `_after_tax()` for `is_pension` holdings. Show `pnl_after_tax = pnl` for these account types and note that tax treatment is income-based at withdrawal.
+
+---
+
+### TASK 44 — Price Staleness Warning
+
+**Type:** UX + schema extension
+**Risk:** 🟢 Safe — no DB migration
+
+**Problem:** When yfinance fails or 24h cache expires, portfolio silently falls back to `cost_basis` for holding value. Investor makes decisions on data that may be days old with no visual warning.
+
+**Fix:**
+- Add `has_stale_prices: bool` to `PortfolioSummary` schema
+- `engine.analyze()` sets `True` if any tickered holding uses `price_source = "cost_basis"`
+- Frontend: amber warning banner on investments page when `has_stale_prices`
+
+---
+
+### TASK 45 — Beta vs Benchmark
+
+**Type:** New metric (`performance_analytics/engine.py` + schema)
+**Risk:** 🟢 Safe — no DB migration
+
+**What it does:** Beta = Cov(portfolio returns, benchmark returns) / Var(benchmark returns). Measures portfolio sensitivity to market moves. Without beta, alpha is meaningless — a 5% alpha achieved by taking 3× market risk is bad.
+
+**Implementation:**
+- Align portfolio snapshot periods with benchmark daily series
+- Compute period benchmark returns matching each portfolio snapshot interval
+- Beta from at least 4 matched pairs; `None` if insufficient data
+- Add `beta: float | None` to `PerformanceAnalytics` schema
+- Show on performance page alongside Sharpe/Sortino
+
+---
+
+### TASK 46 — Per-Holding CAGR in Attribution
+
+**Type:** New metric (`performance_analytics/attribution.py` + schema)
+**Risk:** 🟢 Safe — no DB migration
+
+**What it does:** CAGR since purchase date for each holding. Every serious investor's first question: "I've held MSFT for 3 years — what's my annualised return?"
+
+**Implementation:**
+- Add `cagr_pct: float | None` to `HoldingContribution` schema
+- Compute `((1 + unrealized_pnl_pct/100) ^ (365/days_held) - 1) × 100` from `purchase_date`
+- `None` if `purchase_date` is missing or holding < 30 days old
+- Show CAGR alongside return_pct in contributors/detractors UI
+
+---
+
+### TASK 47 — Single-Stock Concentration Risk
+
+**Type:** Enhancement (`portfolio_correlation/engine.py`)
+**Risk:** 🟢 Safe — no DB migration
+
+**Problem:** Concentration risk only checks sector > 40%. Does not flag a single ticker at 20% of portfolio — a common risk for investors with large positions in a single Israeli stock or holding many employer shares.
+
+**Fix:** Add per-ticker concentration check (threshold: 15%). Add warning to `ConcentrationRisk.warnings` and add 20 pts to `risk_score` per concentrated ticker.
+
+---
+
+### TASK 48 — Realized P&L from Closed Positions
+
+**Type:** Analytics enhancement
+**Risk:** 🟡 Moderate — reads from `holding_transactions` table (TASK 30)
+
+**Problem:** Investors who sold positions see zero contribution to their total return — the position is gone. Performance analytics only reads `portfolio_snapshots` but realized gains from sell transactions are never aggregated.
+
+**What to build:**
+- Sum realized gains from `holding_transactions` (type=sell) per investor
+- Add `realized_pnl_total` and `realized_pnl_ytd` to `PortfolioSummary`
+- Show on investments page: "Realized gains this year: +X ILS"
+
+---
+
+### TASK 49 — Time-Weighted Return (TWR) / Money-Weighted Return (IRR)
+
+**Type:** New metric (`performance_analytics/engine.py`)
+**Risk:** 🟢 Safe — no DB migration
+
+**Problem:** Simple annualized return is misleading when capital is added mid-period. A $500k deposit one day before a rally inflates returns. TWR eliminates timing effects; IRR (money-weighted) accounts for size/timing of cash flows.
+
+**What to build:**
+- TWR: chain-link returns between each snapshot (immune to deposits/withdrawals)
+- IRR: Newton-Raphson on cash flow series (purchases = negative, current value = positive)
+- Add `twr_pct: float | None` and `mwr_pct: float | None` to `PerformanceAnalytics`
+- Show as separate row alongside current total_return_pct
+
+---
+
+### TASK 50 — Retirement Readiness Score
+
+**Type:** New module
+**Risk:** 🟢 Safe — no DB migration
+
+**What it does:** "Given my current trajectory, how likely am I to retire comfortably?" Combines:
+- Current pension + study fund projected balance (already in pension_projection)
+- Investment portfolio Monte Carlo (already in scenario_analysis)
+- Years to retirement (from investor age)
+- Expected monthly expenses at retirement
+- Safe withdrawal rate (4% rule + sensitivity)
+
+**Output:** `ReadinessScore { score: int (0-100), verdict: str, projected_monthly_income, gap_monthly, years_to_close_gap }`
+
+**API:** `GET /api/v1/investors/{id}/retirement-readiness`
+**Frontend:** New card on dashboard + dedicated section on stress-test page
+
+---
+
+### TASK 51 — Goals Linked to Accounts
+
+**Type:** Schema extension (DB migration)
+**Risk:** 🔴 Risky — Alembic migration (add `linked_account_id` to `financial_goals`)
+
+**Problem:** Goals float independently from the portfolio. An investor can't say "this Keren Hishtalmut IS my child's education fund" and see real progress.
+
+**Fix:**
+- Add `linked_account_id: UUID | None` FK to `investment_accounts` on `financial_goals`
+- Goals analysis uses `account.total_current_value` as `current_amount` when linked
+- Frontend: account selector when editing goal
+
+---
+
+### TASK 52 — Actionable Rebalancing (Exact Units)
+
+**Type:** Enhancement (`portfolio_analysis/rebalance_engine.py`)
+**Risk:** 🟢 Safe — no DB migration
+
+**Problem:** Rebalancing guide says "buy more growth" but not "buy 12 units of VT at today's price of $120."
+
+**What to build:**
+- For each tier needing a buy: divide `gap_amount` by live price → suggested_units
+- For tickers in that tier: show "Buy ~12 units VT (~$1,440)" or "Sell ~5 units BTC (~$300k)"
+- Requires live price from `market_data` cache
+- Add `suggested_trades: list[SuggestedTrade]` to `RebalanceResult`
 
 ---
 

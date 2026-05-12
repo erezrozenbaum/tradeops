@@ -28,10 +28,17 @@ def get_portfolio(db: Session, investor_id: uuid.UUID) -> PortfolioSummary | Non
     # Build live price map from cached snapshots (no network call — read-only)
     tickers = {h.ticker for acc in accounts for h in acc.holdings if h.ticker}
     live_prices: dict[str, tuple[float, str]] = {}
+    prices_updated_at = None
     for ticker in tickers:
         snapshot = get_cached_price(db, ticker)
         if snapshot:
             live_prices[ticker] = (snapshot.price, snapshot.currency)
+            fetched = snapshot.fetched_at
+            if fetched.tzinfo is None:
+                from datetime import timezone as _tz
+                fetched = fetched.replace(tzinfo=_tz.utc)
+            if prices_updated_at is None or fetched < prices_updated_at:
+                prices_updated_at = fetched  # track the oldest (most stale) live price
 
     return engine.analyze(
         investor_id=investor_id,
@@ -39,6 +46,7 @@ def get_portfolio(db: Session, investor_id: uuid.UUID) -> PortfolioSummary | Non
         accounts=accounts,
         convert=convert,
         live_prices=live_prices or None,
+        prices_updated_at=prices_updated_at,
     )
 
 

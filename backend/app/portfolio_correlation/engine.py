@@ -27,6 +27,7 @@ _CACHE_TTL = 86_400  # 24h
 _TICKER_SECTOR: dict[str, str] = {i.ticker: (i.asset_family or i.asset_type) for i in CATALOG}
 
 _SECTOR_CONCENTRATION_THRESHOLD = 40.0
+_SINGLE_TICKER_THRESHOLD = 15.0  # flag any single ticker > 15% of portfolio
 _HIGH_CORR_THRESHOLD = 0.8
 _LOOKBACK_DAYS = 90
 
@@ -164,6 +165,16 @@ def compute(db: Session, investor_id: uuid.UUID) -> CorrelationResult | None:
         risk_score += 30 * min(len(concentrated), 2)
         for s in concentrated:
             warnings.append(f"{s.sector.capitalize()} is {s.weight_pct:.0f}% of portfolio — above the 40% concentration threshold.")
+
+    # Single-ticker concentration: flag any ticker > 15% of portfolio
+    for ticker, val in sorted(ticker_values.items(), key=lambda x: -x[1]):
+        pct = val / total_val * 100
+        if pct > _SINGLE_TICKER_THRESHOLD:
+            risk_score += 20
+            warnings.append(
+                f"{ticker} is {pct:.0f}% of your portfolio — single-stock concentration above the 15% threshold."
+            )
+
     if len(high_corr) >= 3:
         risk_score += 30
         warnings.append(f"{len(high_corr)} ticker pairs have correlation > 0.8 — low diversification benefit.")

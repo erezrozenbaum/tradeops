@@ -32,6 +32,7 @@ def analyze(
     accounts: list[InvestmentAccount],
     convert: Callable[[float, str, str], float],
     live_prices: dict[str, tuple[float, str]] | None = None,
+    prices_updated_at: "datetime | None" = None,
 ) -> PortfolioSummary:
     """Analyze portfolio.
 
@@ -45,6 +46,7 @@ def analyze(
     asset_buckets: dict[str, float] = {}
     currency_buckets: dict[str, float] = {}
     unique_foreign_currencies: set[str] = set()
+    any_stale_price = False
 
     for account in accounts:
         acc_cost = 0.0
@@ -74,7 +76,8 @@ def analyze(
                     price_source = "cost_basis"
                 value_base = convert(value_local, h.currency, base_currency)
             else:
-                cost_local = h.quantity * h.avg_buy_price
+                # Include brokerage fees in cost basis — fees are a real cost of acquisition
+                cost_local = h.quantity * h.avg_buy_price + (h.fees or 0.0)
                 cost_base = convert(cost_local, h.currency, base_currency)
 
                 if h.ticker and h.ticker in lp:
@@ -94,10 +97,14 @@ def analyze(
                     value_local = cost_local
                     value_base = cost_base
                     price_source = "cost_basis"
+                    if h.ticker:
+                        any_stale_price = True
 
             pnl = value_base - cost_base
             pnl_pct = (pnl / cost_base * 100) if cost_base > 0 else 0.0
-            pnl_at = _after_tax(pnl)
+            # Pension and study funds are taxed as income at withdrawal, not as capital gains.
+            # Do not apply flat 25% CGT — show gross gain and let the user plan accordingly.
+            pnl_at = pnl if is_pension else _after_tax(pnl)
 
             holding_analyses.append(HoldingAnalysis(
                 id=h.id,
@@ -179,4 +186,6 @@ def analyze(
         currency_exposure=to_pct(currency_buckets),
         accounts=account_analyses,
         computed_at=datetime.now(timezone.utc),
+        has_stale_prices=any_stale_price,
+        prices_updated_at=prices_updated_at,
     )

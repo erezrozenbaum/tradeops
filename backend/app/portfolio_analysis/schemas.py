@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HoldingAnalysis(BaseModel):
@@ -55,6 +55,9 @@ class PortfolioSummary(BaseModel):
     currency_exposure: dict[str, float]
     accounts: list[AccountAnalysis]
     computed_at: datetime
+    # Price staleness: True when any tickered holding fell back to cost_basis (no live/manual price)
+    has_stale_prices: bool = False
+    prices_updated_at: datetime | None = None  # oldest live price timestamp
 
 
 class PriceRefreshResult(BaseModel):
