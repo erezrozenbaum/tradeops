@@ -41,12 +41,33 @@ def get_rebalance(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     if portfolio is None:
         raise HTTPException(status_code=404, detail="Investor not found")
     risk_model = get_latest_risk_model(db, investor_id)
+
+    # Build HoldingInfo list for suggested trades (ticker, live price in base currency)
+    from app.portfolio_analysis.rebalance_engine import HoldingInfo
+    holdings_info: list[HoldingInfo] = []
+    for acc in portfolio.accounts:
+        for h in acc.holdings:
+            if not h.ticker:
+                continue
+            # Derive unit price in base currency from live price + fx
+            unit_price_base: float | None = None
+            if h.live_price is not None and h.live_price_currency:
+                unit_price_base = fx_convert(db, h.live_price, h.live_price_currency, portfolio.base_currency)
+            holdings_info.append(HoldingInfo(
+                ticker=h.ticker,
+                name=h.name,
+                asset_type=h.asset_type,
+                current_value_base=h.current_value_base,
+                unit_price_base=unit_price_base,
+            ))
+
     return rebalance_engine.compute_rebalance(
         investor_id=investor_id,
         risk_model=risk_model,
         asset_allocation=portfolio.asset_allocation,
         total_value=portfolio.total_current_value,
         currency=portfolio.base_currency,
+        holdings=holdings_info or None,
     )
 
 
@@ -107,7 +128,26 @@ def get_portfolio_analytics(
     investor = db.get(InvestorProfile, investor_id)
     currency = investor.base_currency if investor else "USD"
 
-    return compute_analytics(snapshots, investor_id=investor_id, currency=currency)
+    # Build cash flow list for MWR/IRR: (date, total_amount) for each buy transaction
+    from app.models.holding_transaction import HoldingTransaction
+    from app.currency_engine.rates import convert as _fx_convert
+
+    buy_txs = (
+        db.query(HoldingTransaction)
+        .filter(
+            HoldingTransaction.investor_id == investor_id,
+            HoldingTransaction.transaction_type == "buy",
+        )
+        .order_by(HoldingTransaction.transaction_date)
+        .all()
+    )
+    cash_flows: list[tuple[datetime, float]] = []
+    for tx in buy_txs:
+        paid_base = _fx_convert(db, tx.total_amount, tx.currency, currency)
+        dt = datetime(tx.transaction_date.year, tx.transaction_date.month, tx.transaction_date.day, tzinfo=timezone.utc)
+        cash_flows.append((dt, paid_base))
+
+    return compute_analytics(snapshots, investor_id=investor_id, currency=currency, cash_flows=cash_flows or None)
 
 
 @router.get("/attribution", response_model=AttributionResult)

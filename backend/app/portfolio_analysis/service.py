@@ -1,5 +1,6 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import date as _date, datetime, timezone
+from typing import Callable
 
 from sqlalchemy.orm import Session
 
@@ -9,6 +10,67 @@ from app.currency_engine.rates import convert as fx_convert
 from app.market_data.service import get_cached_price
 from app.portfolio_analysis import engine
 from app.portfolio_analysis.schemas import PortfolioSummary, PortfolioSnapshotPoint
+
+
+def _compute_realized_pnl(
+    db: Session,
+    investor_id: uuid.UUID,
+    convert: Callable[[float, str, str], float],
+    base_currency: str,
+) -> tuple[float, float]:
+    """Compute realized P&L from sell transactions using WAVG cost basis.
+
+    Returns (realized_pnl_total, realized_pnl_ytd) in base currency.
+    """
+    from app.models.holding_transaction import HoldingTransaction
+
+    today = _date.today()
+    year_start = _date(today.year, 1, 1)
+
+    txs = (
+        db.query(HoldingTransaction)
+        .filter(
+            HoldingTransaction.investor_id == investor_id,
+            HoldingTransaction.transaction_type.in_(["buy", "sell"]),
+        )
+        .order_by(HoldingTransaction.transaction_date)
+        .all()
+    )
+
+    # Per-ticker running state: (total_qty, total_cost_in_base)
+    ticker_state: dict[str, tuple[float, float]] = {}
+    realized_total = 0.0
+    realized_ytd = 0.0
+
+    for tx in txs:
+        if not tx.ticker or not tx.quantity or tx.quantity <= 0:
+            continue
+        cur = tx.currency or base_currency
+        ticker = tx.ticker
+
+        if tx.transaction_type == "buy":
+            cost_base = convert(tx.total_amount, cur, base_currency)
+            prev_qty, prev_cost = ticker_state.get(ticker, (0.0, 0.0))
+            ticker_state[ticker] = (prev_qty + tx.quantity, prev_cost + cost_base)
+
+        elif tx.transaction_type == "sell":
+            prev_qty, prev_cost = ticker_state.get(ticker, (0.0, 0.0))
+            if prev_qty <= 0:
+                continue
+            wavg_cost_per_unit = prev_cost / prev_qty
+            sold_cost = wavg_cost_per_unit * tx.quantity
+            proceeds_base = convert(tx.total_amount - tx.fees, cur, base_currency)
+            pnl = proceeds_base - sold_cost
+
+            new_qty = max(0.0, prev_qty - tx.quantity)
+            new_cost = max(0.0, prev_cost - sold_cost)
+            ticker_state[ticker] = (new_qty, new_cost)
+
+            realized_total += pnl
+            if tx.transaction_date >= year_start:
+                realized_ytd += pnl
+
+    return round(realized_total, 2), round(realized_ytd, 2)
 
 
 def get_portfolio(db: Session, investor_id: uuid.UUID) -> PortfolioSummary | None:
@@ -40,6 +102,10 @@ def get_portfolio(db: Session, investor_id: uuid.UUID) -> PortfolioSummary | Non
             if prices_updated_at is None or fetched < prices_updated_at:
                 prices_updated_at = fetched  # track the oldest (most stale) live price
 
+    realized_pnl_total, realized_pnl_ytd = _compute_realized_pnl(
+        db, investor_id, convert, investor.base_currency
+    )
+
     return engine.analyze(
         investor_id=investor_id,
         base_currency=investor.base_currency,
@@ -47,6 +113,8 @@ def get_portfolio(db: Session, investor_id: uuid.UUID) -> PortfolioSummary | Non
         convert=convert,
         live_prices=live_prices or None,
         prices_updated_at=prices_updated_at,
+        realized_pnl_total=realized_pnl_total,
+        realized_pnl_ytd=realized_pnl_ytd,
     )
 
 
