@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatPercent } from "@/lib/utils";
-import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronRight, Briefcase, RefreshCw, Scale, CheckCircle2, XCircle, ShieldCheck, Shield } from "lucide-react";
+import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronRight, Briefcase, RefreshCw, Scale, CheckCircle2, XCircle, ShieldCheck, Shield, AlertTriangle } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -100,6 +100,8 @@ interface PortfolioSummary {
   asset_allocation: Record<string, number>;
   currency_exposure: Record<string, number>;
   accounts: AccountAnalysis[];
+  has_stale_prices: boolean;
+  prices_updated_at: string | null;
 }
 
 interface PortfolioSnapshotPoint {
@@ -670,6 +672,17 @@ export default function InvestmentsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Stale price warning */}
+      {portfolio?.has_stale_prices && (
+        <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>
+            Some holdings are showing cost basis instead of live market prices — prices may be stale or unavailable.
+            Click <strong>Refresh prices</strong> to fetch current market data.
+          </span>
+        </div>
+      )}
 
       {/* Portfolio summary */}
       {portfolio && (portfolio.total_current_value > 0 || accounts.length > 0) && (
