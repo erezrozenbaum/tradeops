@@ -47,6 +47,11 @@ class FinancialGoal(Base, UUIDMixin, TimestampMixin):
         String(50), nullable=False, default="target_by_date"
     )
     mode_config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    linked_account_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("investment_accounts.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     investor: Mapped["InvestorProfile"] = relationship(
         "InvestorProfile", back_populates="goals"

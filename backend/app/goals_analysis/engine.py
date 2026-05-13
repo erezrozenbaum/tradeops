@@ -17,6 +17,27 @@ def _goal_type_value(goal) -> str:
     return gt.value if hasattr(gt, "value") else str(gt)
 
 
+class _GoalProxy:
+    """Wraps a FinancialGoal, optionally overriding current_amount from a linked account."""
+
+    def __init__(self, goal, current_amount_override: float | None = None):
+        self._goal = goal
+        self._override = current_amount_override
+
+    def __getattr__(self, name: str):
+        return getattr(self._goal, name)
+
+    @property
+    def current_amount(self) -> float:
+        return self._override if self._override is not None else self._goal.current_amount
+
+    @property
+    def progress_pct(self) -> float:
+        if self._goal.target_amount <= 0:
+            return 0.0
+        return round(min(self.current_amount / self._goal.target_amount * 100, 100), 2)
+
+
 def _base(goal, *, on_track: bool, status: str, **extra) -> GoalAnalysis:
     amount_remaining = max(goal.target_amount - goal.current_amount, 0.0)
     return GoalAnalysis(
@@ -157,14 +178,19 @@ def analyze(
     goals: list,
     monthly_surplus: float | None,
     progress_logs_by_goal: dict | None = None,
+    account_value_overrides: dict[str, float] | None = None,
 ) -> GoalsAnalysisResult:
     if progress_logs_by_goal is None:
         progress_logs_by_goal = {}
+    if account_value_overrides is None:
+        account_value_overrides = {}
 
     goal_analyses: list[GoalAnalysis] = []
     total_needed = 0.0
 
-    for goal in goals:
+    for _goal in goals:
+        override = account_value_overrides.get(str(_goal.id))
+        goal = _GoalProxy(_goal, override) if override is not None else _goal
         mode = getattr(goal, "tracking_mode", None) or "target_by_date"
         logs = progress_logs_by_goal.get(str(goal.id), [])
 

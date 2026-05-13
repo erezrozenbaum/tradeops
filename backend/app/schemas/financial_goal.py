@@ -25,6 +25,7 @@ class FinancialGoalCreate(BaseModel):
     risk_suitability: GoalRiskSuitability = GoalRiskSuitability.low
     tracking_mode: str = Field("target_by_date")
     mode_config: dict | None = None
+    linked_account_id: uuid.UUID | None = None
 
 
 class FinancialGoalUpdate(BaseModel):
@@ -36,12 +37,14 @@ class FinancialGoalUpdate(BaseModel):
     risk_suitability: GoalRiskSuitability | None = None
     tracking_mode: str | None = None
     mode_config: dict | None = None
+    linked_account_id: uuid.UUID | None = None
 
 
 class FinancialGoalOut(FinancialGoalCreate):
     id: uuid.UUID
     investor_profile_id: uuid.UUID
     progress_pct: float
+    linked_account_name: str | None = None  # resolved at API layer, not from DB column
     created_at: datetime
     updated_at: datetime
     model_config = {"from_attributes": True}

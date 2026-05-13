@@ -10,6 +10,19 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.54.0] — 2026-05-13
+
+### Added — TASK 51: Goals Linked to Accounts
+- **Alembic migration 0023**: nullable `linked_account_id` FK column on `financial_goals` → `investment_accounts.id` (ON DELETE SET NULL). Zero downtime — existing rows unaffected.
+- `FinancialGoal` model: new `linked_account_id` mapped column.
+- `FinancialGoalCreate` / `FinancialGoalUpdate` / `FinancialGoalOut` schemas: added `linked_account_id: uuid | None` and `linked_account_name: str | None` (resolved at API layer, not persisted).
+- Goals router: `_enrich()` helper resolves account name from DB and sets `linked_account_name` on the response.
+- Goals analysis engine: new `_GoalProxy` class that wraps a `FinancialGoal` and overrides `current_amount` / `progress_pct` with a live account value when set, without mutating the DB object. `analyze()` accepts `account_value_overrides: dict[str, float] | None`.
+- Goals analysis service: `_account_current_value()` helper sums holdings' effective values (current_balance → current_value → cost basis) with FX conversion. Per-goal overrides are computed and passed to the engine.
+- Frontend goals page: fetches investment accounts on load; goal create form has an optional "Link to investment account" selector (only shown when accounts exist); linked account name shown as a coloured pill on each goal card.
+
+---
+
 ## [0.53.0] — 2026-05-13
 
 ### Added — TASK 50: Retirement Readiness Score
