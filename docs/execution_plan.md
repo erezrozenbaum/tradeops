@@ -709,81 +709,47 @@ Returns `application/pdf` stream.
 
 ---
 
-### TASK 42 — Fee-Inclusive Cost Basis (CRITICAL FIX)
+### TASK 42 — Fee-Inclusive Cost Basis (CRITICAL FIX) ✅ DONE
 
 **Type:** Bug fix (`portfolio_analysis/engine.py`)
 **Risk:** 🟢 Safe — no DB migration
-
-**Problem:** Cost basis is computed as `quantity × avg_buy_price`. The `fees` field exists on `InvestmentHolding` but is never added. Buy 100 shares @ $10 with a $50 brokerage fee → cost is $1,050, system reports $1,000 → P&L overstated.
 
 **Fix:** `cost_local = h.quantity * h.avg_buy_price + h.fees`
 
 ---
 
-### TASK 43 — Pension Fund Tax Treatment (CRITICAL FIX)
+### TASK 43 — Pension Fund Tax Treatment (CRITICAL FIX) ✅ DONE
 
 **Type:** Bug fix (`portfolio_analysis/engine.py`)
 **Risk:** 🟢 Safe — no DB migration
 
-**Problem:** Flat 25% CGT applied to ALL holdings including pension (`pension_fund`) and study funds (`study_fund`). Israeli pension is taxed as income at withdrawal (not capital gains), with ~8,900 ILS/month exemption. The UI shows a massively inflated tax burden.
-
-**Fix:** Skip `_after_tax()` for `is_pension` holdings. Show `pnl_after_tax = pnl` for these account types and note that tax treatment is income-based at withdrawal.
-
 ---
 
-### TASK 44 — Price Staleness Warning
+### TASK 44 — Price Staleness Warning ✅ DONE
 
 **Type:** UX + schema extension
 **Risk:** 🟢 Safe — no DB migration
 
-**Problem:** When yfinance fails or 24h cache expires, portfolio silently falls back to `cost_basis` for holding value. Investor makes decisions on data that may be days old with no visual warning.
-
-**Fix:**
-- Add `has_stale_prices: bool` to `PortfolioSummary` schema
-- `engine.analyze()` sets `True` if any tickered holding uses `price_source = "cost_basis"`
-- Frontend: amber warning banner on investments page when `has_stale_prices`
-
 ---
 
-### TASK 45 — Beta vs Benchmark
+### TASK 45 — Beta vs Benchmark ✅ DONE
 
 **Type:** New metric (`performance_analytics/engine.py` + schema)
 **Risk:** 🟢 Safe — no DB migration
 
-**What it does:** Beta = Cov(portfolio returns, benchmark returns) / Var(benchmark returns). Measures portfolio sensitivity to market moves. Without beta, alpha is meaningless — a 5% alpha achieved by taking 3× market risk is bad.
-
-**Implementation:**
-- Align portfolio snapshot periods with benchmark daily series
-- Compute period benchmark returns matching each portfolio snapshot interval
-- Beta from at least 4 matched pairs; `None` if insufficient data
-- Add `beta: float | None` to `PerformanceAnalytics` schema
-- Show on performance page alongside Sharpe/Sortino
-
 ---
 
-### TASK 46 — Per-Holding CAGR in Attribution
+### TASK 46 — Per-Holding CAGR in Attribution ✅ DONE
 
 **Type:** New metric (`performance_analytics/attribution.py` + schema)
 **Risk:** 🟢 Safe — no DB migration
 
-**What it does:** CAGR since purchase date for each holding. Every serious investor's first question: "I've held MSFT for 3 years — what's my annualised return?"
-
-**Implementation:**
-- Add `cagr_pct: float | None` to `HoldingContribution` schema
-- Compute `((1 + unrealized_pnl_pct/100) ^ (365/days_held) - 1) × 100` from `purchase_date`
-- `None` if `purchase_date` is missing or holding < 30 days old
-- Show CAGR alongside return_pct in contributors/detractors UI
-
 ---
 
-### TASK 47 — Single-Stock Concentration Risk
+### TASK 47 — Single-Stock Concentration Risk ✅ DONE
 
 **Type:** Enhancement (`portfolio_correlation/engine.py`)
 **Risk:** 🟢 Safe — no DB migration
-
-**Problem:** Concentration risk only checks sector > 40%. Does not flag a single ticker at 20% of portfolio — a common risk for investors with large positions in a single Israeli stock or holding many employer shares.
-
-**Fix:** Add per-ticker concentration check (threshold: 15%). Add warning to `ConcentrationRisk.warnings` and add 20 pts to `risk_score` per concentrated ticker.
 
 ---
 
