@@ -4,7 +4,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <main className="flex-1 ml-60 min-h-screen">{children}</main>
+      {/* pt-14 for mobile top bar; lg:ml-60 for desktop sidebar; lg:pt-0 resets mobile padding */}
+      <main className="flex-1 min-h-screen pt-14 lg:ml-60 lg:pt-0">{children}</main>
     </div>
   );
 }

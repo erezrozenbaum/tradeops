@@ -246,7 +246,7 @@ export default function WatchlistPage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl space-y-5 lg:space-y-6">
       {/* Price alert modal */}
       {alertModal && investorId && (
         <AlertModal

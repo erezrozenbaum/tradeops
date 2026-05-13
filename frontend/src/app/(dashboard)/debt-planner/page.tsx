@@ -84,7 +84,7 @@ export default function DebtPlannerPage() {
 
   if (plan?.no_debts) {
     return (
-      <div className="p-8 max-w-2xl">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-2xl">
         <h1 className="text-xl font-semibold mb-2">Debt Payoff Planner</h1>
         <Card>
           <CardContent className="pt-6 text-center py-12">
@@ -100,7 +100,7 @@ export default function DebtPlannerPage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl space-y-5 lg:space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Debt Payoff Planner</h1>

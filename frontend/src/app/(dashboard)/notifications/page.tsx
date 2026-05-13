@@ -60,7 +60,7 @@ export default function NotificationsPage() {
   const infos = notifications.filter(n => n.severity === "info");
 
   return (
-    <div className="p-8 max-w-3xl space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-3xl space-y-5 lg:space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Notifications</h1>

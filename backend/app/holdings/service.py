@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.models.investment_account import InvestmentAccount, InvestmentHolding
 from app.models.investor_profile import InvestorProfile
 from app.schemas.investment_account import (
+    AutoSyncUpdate,
     InvestmentAccountCreate,
     InvestmentAccountUpdate,
     InvestmentHoldingCreate,
@@ -59,6 +60,20 @@ def update_account(
         return None
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(account, field, value)
+    db.commit()
+    db.refresh(account)
+    return account
+
+
+def set_auto_sync(
+    db: Session, investor_id: uuid.UUID, account_id: uuid.UUID, data: AutoSyncUpdate
+) -> InvestmentAccount | None:
+    account = get_account(db, investor_id, account_id)
+    if not account:
+        return None
+    account.auto_sync_enabled = data.auto_sync_enabled
+    if data.sync_broker_type is not None:
+        account.sync_broker_type = data.sync_broker_type
     db.commit()
     db.refresh(account)
     return account
