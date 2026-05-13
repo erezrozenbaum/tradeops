@@ -17,6 +17,14 @@ import Link from "next/link";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+interface InvestmentAccount {
+  id: string;
+  provider_name: string;
+  account_name: string | null;
+  account_type: string;
+  currency: string;
+}
+
 interface FinancialGoal {
   id: string;
   name: string;
@@ -30,6 +38,8 @@ interface FinancialGoal {
   currency: string;
   risk_suitability: string;
   mode_config: Record<string, unknown> | null;
+  linked_account_id: string | null;
+  linked_account_name: string | null;
 }
 
 interface GoalAnalysis {
@@ -123,6 +133,7 @@ const EMPTY_FORM = {
   priority: "1",
   currency: "ILS",
   risk_suitability: "low",
+  linked_account_id: "",
   // monthly_contribution
   monthly_target: "",
   current_monthly: "0",
@@ -211,6 +222,7 @@ function buildPayload(f: FormState) {
     currency: f.currency,
     risk_suitability: f.risk_suitability,
     tracking_mode: f.tracking_mode,
+    linked_account_id: f.linked_account_id || null,
   };
 
   if (f.tracking_mode === "target_by_date") {
@@ -279,6 +291,7 @@ export default function GoalsPage() {
   const investorId = useInvestorId();
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
   const [analysis, setAnalysis] = useState<GoalsAnalysisResult | null>(null);
+  const [accounts, setAccounts] = useState<InvestmentAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -287,6 +300,9 @@ export default function GoalsPage() {
   useEffect(() => {
     if (!investorId) return;
     loadData();
+    fetch(`/api/v1/investors/${investorId}/accounts`)
+      .then(r => r.ok ? r.json() : [])
+      .then(d => setAccounts(Array.isArray(d) ? d : []));
   }, [investorId]);
 
   function loadData() {
@@ -561,6 +577,28 @@ export default function GoalsPage() {
                   </Field>
                 </div>
 
+                {/* Linked account — optional, syncs current_amount from account value */}
+                {accounts.length > 0 && (
+                  <div className="pt-1 border-t border-border/60">
+                    <Field
+                      label="Link to investment account (optional)"
+                      hint="When linked, the goal's current amount is automatically synced from the account's total value"
+                    >
+                      <Select
+                        value={form.linked_account_id}
+                        onChange={(e) => setForm({ ...form, linked_account_id: e.target.value })}
+                      >
+                        <option value="">— No linked account —</option>
+                        {accounts.map(acc => (
+                          <option key={acc.id} value={acc.id}>
+                            {acc.account_name || acc.provider_name} ({acc.account_type.replace(/_/g, " ")}, {acc.currency})
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  </div>
+                )}
+
                 <div className="flex gap-3 pt-1">
                   <Button onClick={createGoal} disabled={saving || !isFormValid(form)}>
                     {saving ? "Creating…" : "Create Financial Goal"}
@@ -673,6 +711,12 @@ export default function GoalsPage() {
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {GOAL_TYPE_LABELS[goal.goal_type] ?? goal.goal_type}
                     </p>
+                    {goal.linked_account_name && (
+                      <p className="text-[10px] text-primary mt-1 flex items-center gap-1">
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                        {goal.linked_account_name}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Badge variant={RISK_COLORS[goal.risk_suitability] ?? "default"}>
