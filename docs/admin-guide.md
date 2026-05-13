@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.54.0  
+**Version:** 0.56.0  
 **Last updated:** 2026-05-13
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -585,6 +585,7 @@ kubectl describe ingress tradeops
 | Actionable rebalancing | `rebalance_engine.py` + `rebalance_schemas.py` | `SuggestedTrade` per tier: specific ticker, unit count, and estimated value computed from live price; replaces generic monetary hint |
 | Retirement Readiness Score | `retirement_readiness/` module | 0–100 score from pension projection + MC P50 + 4% SWR vs monthly expenses. `GET /investors/{id}/retirement-readiness`. Card on dashboard + section on stress-test page. |
 | Goals linked to accounts | Migration 0023 + `goals_analysis/engine.py` | `linked_account_id` FK on `financial_goals`; linked goal's current_amount auto-synced from account total value via `_GoalProxy`. Account selector in goal form. |
+| Broker Import | `broker_sync/` module | `POST /investors/{id}/accounts/{account_id}/broker-sync` — multipart upload (file + broker_type). Parsers: IBKR Flex Query XML, eToro CSV, Altshuler Shaham Trade CSV/XLSX, ALTrade CSV/XLSX. Upserts holdings (match by ISIN → ticker → name). "Broker Import" button on each account card. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.

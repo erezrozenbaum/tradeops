@@ -10,6 +10,29 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.56.0] — 2026-05-13
+
+### Added — TASK 56: Altshuler Shaham Trade + ALTrade Import
+- New parsers in `broker_sync/parsers/`:
+  - `altshuler_shaham.py`: parses CSV and Excel (.xlsx) exports from Altshuler Shaham Trade. Supports bilingual (Hebrew/English) column headers using a 30+ alias mapping. Hebrew column names include שם ני"ע, כמות, מחיר ממוצע, שווי, מטבע and their English equivalents. Supports `windows-1255` encoding for Hebrew CSV files.
+  - `altrade.py`: parses CSV and Excel exports from ALTrade with its own column alias set (Security/נייר ערך, Purchase Price/מחיר קנייה, Market Value/שווי שוק, etc.).
+- Both parsers auto-detect header rows, skip total/summary rows, and handle malformed numeric values gracefully.
+
+---
+
+## [0.55.0] — 2026-05-13
+
+### Added — TASK 54+55: Broker Import Framework + IBKR + eToro
+- New `broker_sync` module (`schemas.py`, `service.py`, `router.py`, `parsers/`).
+- **API endpoint**: `POST /api/v1/investors/{id}/accounts/{account_id}/broker-sync` — multipart upload with `file` + `broker_type` field.
+- **Upsert logic**: matches existing holdings by ISIN → ticker → name (case-insensitive). Updates quantity, avg_buy_price, current_value on match; creates new holding otherwise. Returns `BrokerSyncResult { imported, updated, skipped, errors }`.
+- **IBKR Flex Query XML parser** (`parsers/ibkr.py`): reads `<OpenPosition>` elements (symbol, ISIN, description, position, costBasisPrice, markPrice, currency, assetCategory). Maps IBKR asset categories (STK/BOND/ETF/FUND/CRYPTO) to internal asset types.
+- **eToro CSV parser** (`parsers/etoro.py`): reads portfolio export CSV (Asset, Units, Avg Open Rate, Estimated Current Value, Type). Skips CFD positions (not actual ownership).
+- `openpyxl>=3.1.0` added to `requirements.txt` for Excel parsing.
+- **Frontend**: new "Broker Import" button on each account card. Opens a modal with broker selector (IBKR, eToro, Altshuler Shaham, ALTrade), contextual format hint per broker, drag/click file upload, and result summary (N new · N updated · N skipped + error list if any).
+
+---
+
 ## [0.54.0] — 2026-05-13
 
 ### Added — TASK 51: Goals Linked to Accounts
