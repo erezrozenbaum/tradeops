@@ -1,7 +1,7 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.53.0
-**Last updated:** 2026-05-13 (v0.53.0)
+**Version:** 0.54.0
+**Last updated:** 2026-05-13 (v0.54.0)
 
 ---
 
@@ -283,6 +283,11 @@ TASK 12 (market scanner)   → deferred; depends on TASK 11
 | 0016 | widen nationality + tax_residency from VARCHAR(3) to VARCHAR(100) |
 | 0017 | watchlist_items table |
 | 0018 | spouse_income on financial_profiles + family_member_id on investment_accounts |
+| 0019 | holding_transactions table |
+| 0020 | price_alerts table |
+| 0021 | emergency_fund flag on investment_accounts |
+| 0022 | is_emergency_fund flag on investment_holdings |
+| 0023 | linked_account_id FK on financial_goals |
 
 ---
 
@@ -830,10 +835,10 @@ Returns `application/pdf` stream.
 
 ---
 
-### TASK 51 — Goals Linked to Accounts
+### TASK 51 — Goals Linked to Accounts ✅ DONE
 
 **Type:** Schema extension (DB migration)
-**Risk:** 🔴 Risky — Alembic migration (add `linked_account_id` to `financial_goals`)
+**Risk:** 🔴 Risky — Alembic migration 0023 (add `linked_account_id` to `financial_goals`)
 
 **Problem:** Goals float independently from the portfolio. An investor can't say "this Keren Hishtalmut IS my child's education fund" and see real progress.
 
