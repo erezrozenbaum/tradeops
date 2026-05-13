@@ -33,6 +33,7 @@ from app.portfolio_correlation.router import router as portfolio_correlation_rou
 from app.holdings_news.router import router as holdings_news_router
 from app.reports.router import router as reports_router
 from app.retirement_readiness.router import router as retirement_readiness_router
+from app.broker_sync.router import router as broker_sync_router
 
 api_router = APIRouter()
 
@@ -69,3 +70,4 @@ api_router.include_router(portfolio_correlation_router, prefix="/investors/{inve
 api_router.include_router(holdings_news_router, prefix="/investors/{investor_id}/news", tags=["holdings-news"])
 api_router.include_router(reports_router, prefix="/investors/{investor_id}/reports", tags=["reports"])
 api_router.include_router(retirement_readiness_router, prefix="/investors/{investor_id}/retirement-readiness", tags=["retirement-readiness"])
+api_router.include_router(broker_sync_router, prefix="/investors", tags=["broker-sync"])

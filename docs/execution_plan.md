@@ -1,7 +1,7 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.54.0
-**Last updated:** 2026-05-13 (v0.54.0)
+**Version:** 0.56.0
+**Last updated:** 2026-05-13 (v0.56.0)
 
 ---
 
@@ -830,9 +830,200 @@ Returns `application/pdf` stream.
 
 ---
 
+## Phase 10: Production Hardening, Broker Integrations, Mobile, Analytics & AI Depth
+
+*Expansion phase 2026-05-13 — following completion of all Phase 9 analytics tasks.*
+
+**Goal:** Transform TradeOps from a personal analytics tool into a production-grade, multi-source, mobile-friendly financial intelligence platform.
+
+---
+
+### TASK 53 — Production Auth & Multi-user
+
+**Type:** Core architecture change
+**Risk:** 🔴 Risky — auth middleware, DB migration, full API protection
+
+**What it does:**
+- JWT authentication (register/login with hashed password)
+- Associate `investor_profiles` with `users` table
+- Middleware: all `/api/v1/investors/{id}/*` endpoints require valid JWT
+- Admin role: access all investors; user role: own investors only
+- Graceful unauthenticated error responses (401/403)
+
+**DB migration:** `0024_users` — add `users` table, add `user_id` FK to `investor_profiles`
+
+**API:**
+```
+POST /api/v1/auth/register   → { access_token, token_type }
+POST /api/v1/auth/login      → { access_token, token_type }
+GET  /api/v1/auth/me         → current user info
+```
+
+**Frontend:** Login/register page, JWT stored in httpOnly cookie, redirect if unauthenticated
+
+---
+
+### TASK 54 — Broker Import Framework + IBKR Flex Query ✅ DONE
+
+**Type:** New module (`broker_sync/`)
+**Risk:** 🟡 Moderate — additive, no DB migration
+
+**What it does:**
+- Unified broker file-import framework: parse → upsert holdings into existing account
+- IBKR Flex Query XML: parse `<OpenPosition>` elements (symbol, ISIN, quantity, costBasisPrice, markPrice, currency)
+- Upsert logic: match by ISIN → ticker → name; update if exists, create if new
+- Returns `BrokerSyncResult { broker_type, imported, updated, skipped, errors }`
+
+**API:** `POST /api/v1/investors/{id}/accounts/{account_id}/broker-sync`
+- `multipart/form-data`: `file` + `broker_type` (ibkr | etoro | altshuler_shaham | altrade)
+
+**Frontend:** "Broker Import" button on each account card → modal with broker selector + file upload
+
+---
+
+### TASK 55 — eToro Portfolio CSV Import ✅ DONE
+
+**Type:** New parser (`broker_sync/parsers/etoro.py`)
+**Risk:** 🟢 Safe — additive only, uses TASK 54 framework
+
+**eToro CSV format:** Asset, Units, Avg Open Rate, Estimated Current Value, P&L Amount, Type
+- Maps `Units` → quantity, `Avg Open Rate` → avg_buy_price, `Estimated Current Value` → current_value
+- Type column used to infer asset_type (stock, crypto, ETF)
+
+---
+
+### TASK 56 — Altshuler Shaham Trade + ALTrade Import ✅ DONE
+
+**Type:** New parsers (Israeli brokers)
+**Risk:** 🟢 Safe — additive only, uses TASK 54 framework
+
+**Altshuler Shaham Trade:**
+- CSV/Excel export: bilingual (Hebrew/English) column headers
+- Column aliases: שם ני"ע / Name, כמות / Quantity, מחיר ממוצע / Avg Price, שווי / Value, מטבע / Currency, ISIN
+- Supports `.csv` and `.xlsx` (openpyxl)
+
+**ALTrade:**
+- CSV/Excel export with columns: Security, ISIN, Quantity, Purchase Price, Market Value, Currency
+- Hebrew aliases for all columns
+
+---
+
+### TASK 57 — Broker Auto-Sync Scheduler
+
+**Type:** Background worker enhancement
+**Risk:** 🟡 Moderate — adds APScheduler job
+
+**What it does:**
+- For accounts flagged with `auto_sync_enabled=True`, re-import from last uploaded file path on a schedule
+- Or: store broker credentials (IBKR token/API key) and fetch positions via REST (where available)
+- Daily sync at configurable time (default: 08:00 local)
+- New DB columns on `investment_accounts`: `auto_sync_enabled`, `last_synced_at`, `sync_broker_type`
+
+**DB migration:** `0025_account_auto_sync`
+
+---
+
+### TASK 58 — Mobile-First Responsive UI
+
+**Type:** Frontend enhancement
+**Risk:** 🟢 Safe — CSS/layout only, no backend changes
+
+**What it does:**
+- Audit all pages for mobile breakpoints (sm/md/lg)
+- Convert data-heavy tables to card stacks on mobile
+- Touch-friendly tap targets (min 44×44px)
+- Collapsible sidebar → hamburger menu on mobile
+- Dashboard cards: 1-col on mobile, 2-col on tablet, 3-col on desktop
+- Holdings tables: horizontal scroll or card view on small screens
+
+---
+
+### TASK 59 — PWA Support
+
+**Type:** Frontend enhancement
+**Risk:** 🟢 Safe — Next.js PWA plugin, no backend changes
+
+**What it does:**
+- Add `next-pwa` and `manifest.json`
+- Service worker: cache static assets + last API responses
+- Offline fallback page
+- Install prompt (add to home screen)
+- Push notification groundwork (permission request)
+
+---
+
+### TASK 60 — Options Tracking
+
+**Type:** Schema extension + new analytics
+**Risk:** 🔴 Risky — DB migration (0026_options_holdings)
+
+**What it does:**
+- New `asset_type` values: `call_option`, `put_option`
+- New columns on `investment_holdings`: `strike_price`, `expiry_date`, `option_type` (call/put), `underlying_ticker`, `contract_multiplier` (default 100)
+- Options P&L: intrinsic + time value, days to expiry badge
+- Risk: max loss = premium paid (long) or unlimited (short) — display warning
+
+**API:** Existing holdings endpoints + new `/portfolio/options` summary
+
+**Frontend:** Options tab on investments page; expiry countdown badges; P&L table
+
+---
+
+### TASK 61 — Family Consolidated View
+
+**Type:** New dashboard section
+**Risk:** 🟡 Moderate — no DB migration, aggregates existing data
+
+**What it does:**
+- Aggregate all family members' investment accounts into a single household portfolio view
+- Combined AUM, allocation by member, shared goal progress
+- Cross-member risk exposure (e.g., both spouses hold the same stock)
+- Household net worth card
+
+**API:** `GET /api/v1/investors/{id}/family-portfolio`
+
+**Frontend:** New "Family" tab on dashboard; household allocation donut; per-member breakdown
+
+---
+
+### TASK 62 — AI Weekly Digest Email
+
+**Type:** New worker + email integration
+**Risk:** 🟡 Moderate — adds email sender (SMTP/SendGrid)
+
+**What it does:**
+- Weekly cron job (Friday 18:00) generates AI narrative for each investor:
+  - Portfolio performance this week vs benchmark
+  - Goal progress update
+  - Notable market events affecting holdings
+  - 1-3 actionable suggestions from AI analysis module
+- Send as styled HTML email
+- Opt-in preference on investor profile
+
+**Config:** `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (or `SENDGRID_API_KEY`)
+
+---
+
+### TASK 63 — Natural Language Portfolio Queries
+
+**Type:** New AI feature
+**Risk:** 🟡 Moderate — extends AI module, uses Anthropic API
+
+**What it does:**
+- Chat interface: user asks questions in natural language ("What's my biggest risk this month?", "How much would I need to save to retire at 60?")
+- Backend: extract intent + entities → call relevant analysis engines → compose AI answer with real data
+- Maintain short conversation history (last 5 turns) per session
+- Safety: AI responses always grounded in actual portfolio data, never invented
+
+**API:** `POST /api/v1/investors/{id}/chat` — `{ message: str }` → `{ reply: str, data: dict | null }`
+
+**Frontend:** Chat drawer / floating button on dashboard
+
+---
+
 ## 5. Out of Scope (explicit deferral)
 
-- Broker API integration (IBKR, eToro, Meitav) — much larger lift
+- Broker API integration (real-time REST) — IBKR TWS, eToro Open API — requires broker credentials + live connection (deferred to TASK 57+)
 - PDF statement import
 - Real-time price streaming (daily-close polling sufficient for MVP)
 - Live trading execution

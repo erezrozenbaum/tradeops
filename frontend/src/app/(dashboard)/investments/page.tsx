@@ -318,6 +318,12 @@ export default function InvestmentsPage() {
   // CSV import
   const [csvImportResult, setCsvImportResult] = useState<{ accountId: string; imported: number; errors: string[] } | null>(null);
 
+  // Broker sync
+  const [brokerModal, setBrokerModal] = useState<{ accountId: string } | null>(null);
+  const [brokerType, setBrokerType] = useState("ibkr");
+  const [brokerImporting, setBrokerImporting] = useState(false);
+  const [brokerResult, setBrokerResult] = useState<{ imported: number; updated: number; skipped: number; errors: string[] } | null>(null);
+
   // Earnings calendar
   const [earningsMap, setEarningsMap] = useState<Record<string, string>>({});
 
@@ -623,6 +629,31 @@ export default function InvestmentsPage() {
     if (data.imported > 0) loadAll();
   }
 
+  async function importBrokerFile(accountId: string, file: File) {
+    setBrokerImporting(true);
+    setBrokerResult(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("broker_type", brokerType);
+      const res = await fetch(
+        `/api/v1/investors/${investorId}/accounts/${accountId}/broker-sync`,
+        { method: "POST", body: form }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        const msg = data?.detail?.message ?? data?.detail ?? "Import failed";
+        const errs: string[] = data?.detail?.errors ?? [];
+        setBrokerResult({ imported: 0, updated: 0, skipped: 0, errors: [msg, ...errs] });
+      } else {
+        setBrokerResult({ imported: data.imported, updated: data.updated, skipped: data.skipped, errors: data.errors ?? [] });
+        if (data.imported > 0 || data.updated > 0) loadAll();
+      }
+    } finally {
+      setBrokerImporting(false);
+    }
+  }
+
   async function openSimulation(h: Holding) {
     const defaultContrib = h.asset_type === "study_fund"
       ? (h.monthly_contribution_employee ?? 0) + (h.monthly_contribution_employer ?? 0)
@@ -667,6 +698,7 @@ export default function InvestmentsPage() {
   const currency = portfolio?.base_currency ?? "ILS";
 
   return (
+    <>
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -1206,6 +1238,14 @@ export default function InvestmentsPage() {
                       />
                       CSV
                     </label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      title="Import holdings from broker export"
+                      onClick={() => { setBrokerModal({ accountId: account.id }); setBrokerResult(null); }}
+                    >
+                      Broker Import
+                    </Button>
                     <Button
                       variant={account.is_emergency_fund ? "outline" : "ghost"}
                       size="sm"
@@ -1841,5 +1881,85 @@ export default function InvestmentsPage() {
         );
       })}
     </div>
+
+    {/* Broker Import Modal */}
+    {brokerModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => { if (!brokerImporting) setBrokerModal(null); }}>
+        <div className="bg-card border rounded-xl shadow-2xl w-full max-w-md p-6 space-y-5" onClick={e => e.stopPropagation()}>
+          <div>
+            <h2 className="text-base font-semibold">Broker Import</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Import holdings from your broker's portfolio export file. Existing holdings are matched by ISIN or ticker and updated; new positions are added.</p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Broker</label>
+            <select
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              value={brokerType}
+              onChange={e => setBrokerType(e.target.value)}
+            >
+              <option value="ibkr">IBKR — Interactive Brokers (Flex Query XML)</option>
+              <option value="etoro">eToro (portfolio CSV)</option>
+              <option value="altshuler_shaham">Altshuler Shaham Trade (CSV / Excel)</option>
+              <option value="altrade">ALTrade (CSV / Excel)</option>
+            </select>
+          </div>
+
+          {brokerType === "ibkr" && (
+            <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+              In IBKR Account Management: Reports → Flex Queries → Create query with <strong>Open Positions</strong> section → Run → Download XML.
+            </p>
+          )}
+          {(brokerType === "altshuler_shaham" || brokerType === "altrade") && (
+            <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+              Export your portfolio from the broker's web portal as CSV or Excel (.xlsx). Both Hebrew and English column names are supported.
+            </p>
+          )}
+
+          {!brokerResult ? (
+            <label className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-8 cursor-pointer transition-colors ${brokerImporting ? "opacity-50 pointer-events-none" : "hover:border-primary/50 hover:bg-muted/30"}`}>
+              <input
+                type="file"
+                className="sr-only"
+                accept=".csv,.xlsx,.xml"
+                disabled={brokerImporting}
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (f) importBrokerFile(brokerModal.accountId, f);
+                  e.target.value = "";
+                }}
+              />
+              {brokerImporting ? (
+                <span className="text-sm text-muted-foreground animate-pulse">Importing…</span>
+              ) : (
+                <>
+                  <span className="text-sm font-medium">Click to select file</span>
+                  <span className="text-xs text-muted-foreground">.csv, .xlsx or .xml accepted</span>
+                </>
+              )}
+            </label>
+          ) : (
+            <div className={`rounded-lg border px-4 py-3 text-sm space-y-1 ${brokerResult.errors.length > 0 && brokerResult.imported === 0 && brokerResult.updated === 0 ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400" : "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400"}`}>
+              <p className="font-medium">
+                {brokerResult.imported} new · {brokerResult.updated} updated · {brokerResult.skipped} skipped
+              </p>
+              {brokerResult.errors.length > 0 && (
+                <ul className="text-xs space-y-0.5 mt-1">
+                  {brokerResult.errors.map((e, i) => <li key={i}>• {e}</li>)}
+                </ul>
+              )}
+            </div>
+          )}
+
+          <div className="flex gap-2 justify-end pt-1">
+            {brokerResult && (
+              <Button variant="outline" size="sm" onClick={() => setBrokerResult(null)}>Import another</Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => setBrokerModal(null)} disabled={brokerImporting}>Close</Button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
