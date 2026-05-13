@@ -1,7 +1,7 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.56.0
-**Last updated:** 2026-05-13 (v0.56.0)
+**Version:** 0.58.0
+**Last updated:** 2026-05-13 (v0.58.0)
 
 ---
 
@@ -908,33 +908,32 @@ GET  /api/v1/auth/me         → current user info
 
 ---
 
-### TASK 57 — Broker Auto-Sync Scheduler
+### TASK 57 — Broker Auto-Sync Scheduler ✅ DONE
 
 **Type:** Background worker enhancement
 **Risk:** 🟡 Moderate — adds APScheduler job
 
 **What it does:**
-- For accounts flagged with `auto_sync_enabled=True`, re-import from last uploaded file path on a schedule
-- Or: store broker credentials (IBKR token/API key) and fetch positions via REST (where available)
-- Daily sync at configurable time (default: 08:00 local)
+- For accounts flagged with `auto_sync_enabled=True`, refreshes market prices for holdings daily
 - New DB columns on `investment_accounts`: `auto_sync_enabled`, `last_synced_at`, `sync_broker_type`
+- API: `PATCH /investors/{id}/accounts/{account_id}/auto-sync`
+- Worker job: `workers/jobs/broker_auto_sync.py` — daily at 09:00 UTC
 
 **DB migration:** `0025_account_auto_sync`
 
 ---
 
-### TASK 58 — Mobile-First Responsive UI
+### TASK 58 — Mobile-First Responsive UI ✅ DONE
 
 **Type:** Frontend enhancement
 **Risk:** 🟢 Safe — CSS/layout only, no backend changes
 
 **What it does:**
-- Audit all pages for mobile breakpoints (sm/md/lg)
-- Convert data-heavy tables to card stacks on mobile
-- Touch-friendly tap targets (min 44×44px)
-- Collapsible sidebar → hamburger menu on mobile
-- Dashboard cards: 1-col on mobile, 2-col on tablet, 3-col on desktop
-- Holdings tables: horizontal scroll or card view on small screens
+- Collapsible sidebar → hamburger drawer on mobile, fixed sidebar on `lg:` and above
+- `DashboardLayout`: responsive `pt-14 lg:pt-0` + `lg:ml-60`
+- All pages: responsive padding `p-4 sm:p-6 lg:p-8` and spacing
+- Holdings tables: `overflow-x-auto` + `min-w-[600px]` for horizontal scroll on narrow screens
+- Close-on-navigate for mobile drawer
 
 ---
 

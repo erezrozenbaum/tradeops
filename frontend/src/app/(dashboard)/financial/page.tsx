@@ -311,7 +311,7 @@ export default function FinancialPage() {
 
   if (!profile) {
     return (
-      <div className="p-8 space-y-6">
+      <div className="p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Financial Profile</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Income, expenses, assets & liabilities</p>
@@ -451,7 +451,7 @@ export default function FinancialPage() {
   const totalLiabilities = profile.liabilities.reduce((s, l) => s + l.outstanding_balance, 0);
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Financial Profile</h1>

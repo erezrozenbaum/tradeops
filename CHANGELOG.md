@@ -10,6 +10,28 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.58.0] — 2026-05-13
+
+### Added — TASK 58: Mobile-First Responsive UI
+- **Collapsible sidebar on mobile**: desktop keeps fixed left sidebar; mobile gets a hamburger top bar that opens a full-height drawer overlay.
+- **Responsive layout**: `DashboardLayout` adds `pt-14 lg:pt-0` and `lg:ml-60` so content accounts for the mobile top bar.
+- **All dashboard pages**: outer containers changed from fixed `p-8` to responsive `p-4 sm:p-6 lg:p-8`, and `space-y-6 lg:space-y-8`.
+- **Holdings tables**: wrapped in `overflow-x-auto` with `min-w-[600px]` so they scroll horizontally on narrow screens.
+- Close-on-navigate: drawer auto-closes when the route changes.
+
+---
+
+## [0.57.0] — 2026-05-13
+
+### Added — TASK 57: Broker Auto-Sync Scheduler
+- **DB migration 0025** (`0025_account_auto_sync`): adds `auto_sync_enabled` (bool), `last_synced_at` (timestamptz), and `sync_broker_type` (varchar) to `investment_accounts`.
+- **Model + schema**: `InvestmentAccount` model and `InvestmentAccountOut` schema updated with new fields.
+- **API endpoint**: `PATCH /api/v1/investors/{id}/accounts/{account_id}/auto-sync` — enables/disables daily auto-sync for a specific account.
+- **Worker job** (`workers/jobs/broker_auto_sync.py`): daily at 09:00 UTC, refreshes market prices for all holdings in auto-sync-enabled accounts and updates `last_synced_at`.
+- **Frontend**: "Sync/Auto" toggle button on each account card header (blue when active); tooltip shows last synced date.
+
+---
+
 ## [0.56.0] — 2026-05-13
 
 ### Added — TASK 56: Altshuler Shaham Trade + ALTrade Import

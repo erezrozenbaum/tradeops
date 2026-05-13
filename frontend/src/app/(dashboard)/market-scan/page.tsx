@@ -194,7 +194,7 @@ export default function MarketScanPage() {
   const rc = result?.readiness_classification ?? "not_ready";
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
