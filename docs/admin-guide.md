@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.52.0  
-**Last updated:** 2026-05-12
+**Version:** 0.53.0  
+**Last updated:** 2026-05-13
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
@@ -583,6 +583,7 @@ kubectl describe ingress tradeops
 | Realized P&L | `portfolio_analysis/service.py` + `PortfolioSummary` | WAVG cost basis from buy/sell transactions; `realized_pnl_total` and `realized_pnl_ytd` in base currency; 5th card on investments page |
 | Money-Weighted Return (IRR) | `performance_analytics/engine.py` + `schemas.py` | Newton-Raphson IRR from buy transactions vs current portfolio value; `mwr_pct` shown alongside TWR on performance page |
 | Actionable rebalancing | `rebalance_engine.py` + `rebalance_schemas.py` | `SuggestedTrade` per tier: specific ticker, unit count, and estimated value computed from live price; replaces generic monetary hint |
+| Retirement Readiness Score | `retirement_readiness/` module | 0–100 score from pension projection + MC P50 + 4% SWR vs monthly expenses. `GET /investors/{id}/retirement-readiness`. Card on dashboard + section on stress-test page. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.

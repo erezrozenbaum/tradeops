@@ -10,6 +10,19 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.53.0] — 2026-05-13
+
+### Added — TASK 50: Retirement Readiness Score
+- New `retirement_readiness` module: `schemas.py`, `engine.py`, `router.py`.
+- Pure engine combines pension projection (existing `pension_projection` module) + Monte Carlo P50 at retirement horizon (from `scenario_analysis`) + 4% safe withdrawal rate to produce a `ReadinessScore`.
+- Score 0–100 based on income coverage ratio: projected monthly SWR income vs current monthly expenses. Verdicts: "On track" / "Mostly on track" / "At risk" / "Significant gap" / "Critical shortfall".
+- `years_to_close_gap`: additional years of 7% growth needed to eliminate shortfall (shown only when gap exists).
+- New API endpoint: `GET /api/v1/investors/{id}/retirement-readiness`.
+- Dashboard: new `RetirementReadinessCard` component rendered after pension projection — shows score gauge, monthly income vs expenses, surplus/shortfall, breakdown tiles (total at retirement, pension, MC P50, years to retirement), and amber warning with years-to-close-gap if shortfall exists.
+- Stress-test page: new "Retirement Readiness" section with full score display, metric grid, score bar, breakdown tiles, and shortfall warning.
+
+---
+
 ## [0.52.0] — 2026-05-12
 
 ### Added — TASK 48: Realized P&L from closed positions
