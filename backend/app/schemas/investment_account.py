@@ -82,6 +82,11 @@ class InvestmentHoldingOut(BaseModel):
 
 # ── Accounts ─────────────────────────────────────────────────────────────────
 
+class AutoSyncUpdate(BaseModel):
+    auto_sync_enabled: bool
+    sync_broker_type: str | None = None
+
+
 class InvestmentAccountCreate(BaseModel):
     provider_name: str = Field(..., min_length=1, max_length=100)
     account_type: AccountType
@@ -112,6 +117,9 @@ class InvestmentAccountOut(BaseModel):
     notes: str | None
     family_member_id: uuid.UUID | None
     is_emergency_fund: bool = False
+    auto_sync_enabled: bool = False
+    last_synced_at: datetime | None = None
+    sync_broker_type: str | None = None
     holdings: list[InvestmentHoldingOut] = []
     created_at: datetime
     updated_at: datetime

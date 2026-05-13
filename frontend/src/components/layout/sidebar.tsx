@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   User,
@@ -29,6 +30,8 @@ import {
   HelpCircle,
   Newspaper,
   Zap,
+  Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -87,7 +90,7 @@ const sections = [
   },
 ];
 
-export function Sidebar() {
+function SidebarContent({ onNav }: { onNav?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -97,11 +100,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-60 border-r border-border bg-card flex flex-col z-40">
-      <div className="h-14 flex items-center px-6 border-b border-border shrink-0">
-        <span className="text-sm font-semibold tracking-tight">TradeOps AI</span>
-      </div>
-
+    <>
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
         {sections.map((section, i) => (
           <div key={i}>
@@ -117,6 +116,7 @@ export function Sidebar() {
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      onClick={onNav}
                       className={cn(
                         "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
                         active
@@ -144,6 +144,64 @@ export function Sidebar() {
           Switch profile
         </button>
       </div>
-    </aside>
+    </>
+  );
+}
+
+export function Sidebar() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close on route change
+  const pathname = usePathname();
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:fixed lg:left-0 lg:top-0 lg:h-screen lg:w-60 lg:border-r lg:border-border lg:bg-card lg:flex lg:flex-col lg:z-40">
+        <div className="h-14 flex items-center px-6 border-b border-border shrink-0">
+          <span className="text-sm font-semibold tracking-tight">TradeOps AI</span>
+        </div>
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile top bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-card border-b border-border flex items-center px-4 z-40">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="p-2 rounded-md text-muted-foreground hover:bg-muted transition-colors"
+          aria-label="Open navigation"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <span className="ml-3 text-sm font-semibold tracking-tight">TradeOps AI</span>
+      </div>
+
+      {/* Mobile drawer overlay */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-50 flex"
+          onClick={() => setMobileOpen(false)}
+        >
+          <div
+            className="bg-card w-72 h-full flex flex-col border-r border-border shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="h-14 flex items-center justify-between px-6 border-b border-border shrink-0">
+              <span className="text-sm font-semibold tracking-tight">TradeOps AI</span>
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="p-1.5 rounded-md text-muted-foreground hover:bg-muted transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <SidebarContent onNav={() => setMobileOpen(false)} />
+          </div>
+          {/* Dimmed backdrop */}
+          <div className="flex-1 bg-black/40" />
+        </div>
+      )}
+    </>
   );
 }

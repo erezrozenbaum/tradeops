@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.schemas.investment_account import (
+    AutoSyncUpdate,
     InvestmentAccountCreate,
     InvestmentAccountOut,
     InvestmentAccountUpdate,
@@ -64,6 +65,19 @@ def update_account(
 def delete_account(investor_id: uuid.UUID, account_id: uuid.UUID, db: Session = Depends(get_db)):
     if not service.delete_account(db, investor_id, account_id):
         raise HTTPException(status_code=404, detail="Account not found")
+
+
+@router.patch("/{investor_id}/accounts/{account_id}/auto-sync", response_model=InvestmentAccountOut)
+def set_auto_sync(
+    investor_id: uuid.UUID,
+    account_id: uuid.UUID,
+    data: AutoSyncUpdate,
+    db: Session = Depends(get_db),
+):
+    account = service.set_auto_sync(db, investor_id, account_id, data)
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return account
 
 
 # ── Holdings ─────────────────────────────────────────────────────────────────

@@ -55,6 +55,9 @@ interface Account {
   notes: string | null;
   family_member_id: string | null;
   is_emergency_fund: boolean;
+  auto_sync_enabled: boolean;
+  last_synced_at: string | null;
+  sync_broker_type: string | null;
   holdings: Holding[];
 }
 
@@ -405,6 +408,19 @@ export default function InvestmentsPage() {
     loadAll();
   }
 
+  async function toggleAutoSync(account: Account) {
+    const newEnabled = !account.auto_sync_enabled;
+    await fetch(`/api/v1/investors/${investorId}/accounts/${account.id}/auto-sync`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        auto_sync_enabled: newEnabled,
+        sync_broker_type: account.sync_broker_type ?? "ibkr",
+      }),
+    });
+    loadAll();
+  }
+
   async function toggleHoldingEmergencyFund(accountId: string, holdingId: string, current: boolean) {
     await fetch(`/api/v1/investors/${investorId}/accounts/${accountId}/holdings/${holdingId}`, {
       method: "PUT",
@@ -699,7 +715,7 @@ export default function InvestmentsPage() {
 
   return (
     <>
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Investments</h1>
@@ -1247,6 +1263,18 @@ export default function InvestmentsPage() {
                       Broker Import
                     </Button>
                     <Button
+                      variant={account.auto_sync_enabled ? "outline" : "ghost"}
+                      size="sm"
+                      title={account.auto_sync_enabled
+                        ? `Auto-sync ON · Last synced: ${account.last_synced_at ? new Date(account.last_synced_at).toLocaleDateString() : "never"}`
+                        : "Enable daily price auto-sync for this account"}
+                      onClick={() => toggleAutoSync(account)}
+                      className={account.auto_sync_enabled ? "text-blue-600 border-blue-300 hover:text-blue-700 gap-1" : "gap-1 text-muted-foreground"}
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      <span className="text-[10px]">{account.auto_sync_enabled ? "Auto" : "Sync"}</span>
+                    </Button>
+                    <Button
                       variant={account.is_emergency_fund ? "outline" : "ghost"}
                       size="sm"
                       title={account.is_emergency_fund ? "Unmark as emergency fund" : "Mark as emergency fund"}
@@ -1415,7 +1443,8 @@ export default function InvestmentsPage() {
                   <p className="text-xs text-muted-foreground py-3 text-center">No holdings yet — click "Add holding" to get started.</p>
                 )}
                 {account.holdings.length > 0 && (
-                  <table className="w-full text-sm">
+                  <div className="overflow-x-auto -mx-1">
+                  <table className="w-full text-sm min-w-[600px]">
                     <thead>
                       <tr className="border-b border-border text-xs text-muted-foreground">
                         <th className="text-left pb-2 font-medium">Name</th>
@@ -1874,6 +1903,7 @@ export default function InvestmentsPage() {
                       })}
                     </tbody>
                   </table>
+                  </div>
                 )}
               </CardContent>
             )}

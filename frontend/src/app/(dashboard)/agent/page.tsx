@@ -170,7 +170,7 @@ export default function AgentPage() {
   const showStale = cachedAt && isStale(cachedAt);
 
   return (
-    <div className="p-8 max-w-5xl space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl space-y-5 lg:space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
