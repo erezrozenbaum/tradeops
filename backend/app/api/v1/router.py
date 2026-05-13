@@ -32,6 +32,7 @@ from app.economic_calendar.router import router as economic_calendar_router
 from app.portfolio_correlation.router import router as portfolio_correlation_router
 from app.holdings_news.router import router as holdings_news_router
 from app.reports.router import router as reports_router
+from app.retirement_readiness.router import router as retirement_readiness_router
 
 api_router = APIRouter()
 
@@ -67,3 +68,4 @@ api_router.include_router(economic_calendar_router, prefix="/investors/{investor
 api_router.include_router(portfolio_correlation_router, prefix="/investors/{investor_id}/portfolio", tags=["portfolio-correlation"])
 api_router.include_router(holdings_news_router, prefix="/investors/{investor_id}/news", tags=["holdings-news"])
 api_router.include_router(reports_router, prefix="/investors/{investor_id}/reports", tags=["reports"])
+api_router.include_router(retirement_readiness_router, prefix="/investors/{investor_id}/retirement-readiness", tags=["retirement-readiness"])

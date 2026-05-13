@@ -13,7 +13,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { AlertCircle, TrendingUp, TrendingDown, Minus, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, AlertTriangle, CheckCircle2, Circle, Zap, Clock, CalendarClock, PiggyBank, Bot, Calendar, Newspaper, ExternalLink } from "lucide-react";
+import { AlertCircle, TrendingUp, TrendingDown, Minus, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, AlertTriangle, CheckCircle2, Circle, Zap, Clock, CalendarClock, PiggyBank, Bot, Calendar, Newspaper, ExternalLink, Target } from "lucide-react";
 import Link from "next/link";
 
 interface EarningsEvent {
@@ -62,6 +62,21 @@ interface PensionProjection {
   years_to_retirement: number;
   retirement_age: number;
   has_data: boolean;
+}
+
+interface RetirementReadiness {
+  score: number;
+  verdict: string;
+  projected_monthly_income: number;
+  monthly_expenses: number;
+  gap_monthly: number;
+  total_at_retirement: number;
+  pension_projected: number;
+  portfolio_mc_p50: number;
+  years_to_retirement: number;
+  years_to_close_gap: number | null;
+  swr_pct: number;
+  currency: string;
 }
 
 interface InvestmentDecision {
@@ -201,6 +216,7 @@ export default function DashboardPage() {
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [goalsAnalysis, setGoalsAnalysis] = useState<GoalsAnalysisResult | null>(null);
   const [pension, setPension] = useState<PensionProjection | null>(null);
+  const [retirement, setRetirement] = useState<RetirementReadiness | null>(null);
   const [actionItems, setActionItems] = useState<ActionItem[] | null>(null);
   const [loadingActions, setLoadingActions] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -237,6 +253,11 @@ export default function DashboardPage() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
+
+    // Retirement readiness loads independently (combines pension + MC)
+    fetch(`/api/v1/investors/${investorId}/retirement-readiness`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setRetirement(d); });
 
     // Calendar and news load independently (non-blocking, slow yfinance calls)
     fetch(`/api/v1/investors/${investorId}/calendar`)
@@ -498,6 +519,9 @@ export default function DashboardPage() {
 
       {/* Pension projection */}
       {pension && pension.has_data && <PensionCard projection={pension} />}
+
+      {/* Retirement readiness */}
+      {retirement && <RetirementReadinessCard data={retirement} />}
 
       {/* Earnings calendar + News feed */}
       {(earningsEvents.length > 0 || newsItems.length > 0) && (
@@ -967,6 +991,120 @@ function PensionCard({ projection }: { projection: PensionProjection }) {
         )}
         <p className="text-[10px] text-muted-foreground mt-4">
           Projection assumes constant returns and contributions. Actual results may vary.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+const READINESS_SCORE_CONFIG = {
+  on_track:        { color: "text-green-500",  bar: "bg-green-500",  badge: "success"  as const },
+  mostly_on_track: { color: "text-blue-500",   bar: "bg-blue-500",   badge: "default"  as const },
+  at_risk:         { color: "text-amber-500",  bar: "bg-amber-500",  badge: "warning"  as const },
+  significant_gap: { color: "text-orange-500", bar: "bg-orange-500", badge: "warning"  as const },
+  critical:        { color: "text-red-500",    bar: "bg-red-500",    badge: "danger"   as const },
+};
+
+function verdictKey(verdict: string): keyof typeof READINESS_SCORE_CONFIG {
+  if (verdict === "On track") return "on_track";
+  if (verdict === "Mostly on track") return "mostly_on_track";
+  if (verdict === "At risk") return "at_risk";
+  if (verdict === "Significant gap") return "significant_gap";
+  return "critical";
+}
+
+function RetirementReadinessCard({ data }: { data: RetirementReadiness }) {
+  const fmt = (n: number) => formatCurrency(n, data.currency);
+  const key = verdictKey(data.verdict);
+  const cfg = READINESS_SCORE_CONFIG[key];
+  const isShortfall = data.gap_monthly < 0;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2">
+          <Target className="h-4 w-4 text-primary" />
+          Retirement Readiness
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap items-start gap-8 mb-5">
+          {/* Score gauge */}
+          <div className="text-center min-w-[80px]">
+            <p className={`text-5xl font-bold tracking-tight ${cfg.color}`}>{data.score}</p>
+            <p className="text-xs text-muted-foreground mt-1">/ 100</p>
+            <Badge variant={cfg.badge} className="mt-2 text-xs">{data.verdict}</Badge>
+          </div>
+
+          {/* Key metrics */}
+          <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Projected monthly income</p>
+              <p className="text-xl font-semibold">{fmt(data.projected_monthly_income)}</p>
+              <p className="text-[10px] text-muted-foreground">at {data.swr_pct}% SWR</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Monthly expenses (target)</p>
+              <p className="text-xl font-semibold">{data.monthly_expenses > 0 ? fmt(data.monthly_expenses) : "—"}</p>
+              <p className="text-[10px] text-muted-foreground">current spending baseline</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">
+                {isShortfall ? "Monthly shortfall" : "Monthly surplus"}
+              </p>
+              <p className={`text-xl font-semibold ${isShortfall ? "text-red-500" : "text-green-500"}`}>
+                {isShortfall ? "" : "+"}{fmt(data.gap_monthly)}
+              </p>
+              <p className="text-[10px] text-muted-foreground">at retirement</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Score bar */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
+            <span>Readiness</span>
+            <span>{data.score}%</span>
+          </div>
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${cfg.bar}`}
+              style={{ width: `${data.score}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Breakdown */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm border-t border-border pt-4">
+          <div className="bg-muted/40 rounded-lg p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Total at retirement</p>
+            <p className="font-semibold">{fmt(data.total_at_retirement)}</p>
+          </div>
+          <div className="bg-muted/40 rounded-lg p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Pension projected</p>
+            <p className="font-semibold">{fmt(data.pension_projected)}</p>
+          </div>
+          <div className="bg-muted/40 rounded-lg p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Portfolio MC P50</p>
+            <p className="font-semibold">{fmt(data.portfolio_mc_p50)}</p>
+          </div>
+          <div className="bg-muted/40 rounded-lg p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Years to retirement</p>
+            <p className="font-semibold">{data.years_to_retirement.toFixed(1)}</p>
+          </div>
+        </div>
+
+        {isShortfall && data.years_to_close_gap !== null && (
+          <div className="mt-3 flex items-center gap-2 p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              At current trajectory, you need approximately <span className="font-semibold">{data.years_to_close_gap} additional years</span> of 7% portfolio growth to close the retirement income gap.
+            </p>
+          </div>
+        )}
+
+        <p className="text-[10px] text-muted-foreground mt-3">
+          Based on 4% safe withdrawal rule · Pension projection + Monte Carlo P50 · Assumes {data.years_to_retirement.toFixed(0)} years to retirement
         </p>
       </CardContent>
     </Card>

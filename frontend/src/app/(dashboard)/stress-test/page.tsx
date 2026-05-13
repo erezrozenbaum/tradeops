@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useInvestorId } from "@/hooks/useInvestorId";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, TrendingDown, TrendingUp, BarChart2, Zap } from "lucide-react";
+import { AlertTriangle, TrendingDown, TrendingUp, BarChart2, Zap, Target } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
@@ -12,6 +12,21 @@ import {
 import { formatCurrency } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────
+
+interface RetirementReadiness {
+  score: number;
+  verdict: string;
+  projected_monthly_income: number;
+  monthly_expenses: number;
+  gap_monthly: number;
+  total_at_retirement: number;
+  pension_projected: number;
+  portfolio_mc_p50: number;
+  years_to_retirement: number;
+  years_to_close_gap: number | null;
+  swr_pct: number;
+  currency: string;
+}
 
 interface ScenarioImpact {
   scenario_id: string;
@@ -84,6 +99,7 @@ export default function StressTestPage() {
   const [data, setData] = useState<StressTestResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
+  const [retirement, setRetirement] = useState<RetirementReadiness | null>(null);
 
   useEffect(() => {
     if (!investorId) return;
@@ -92,6 +108,10 @@ export default function StressTestPage() {
       .then(r => r.ok ? r.json() : null)
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
+
+    fetch(`/api/v1/investors/${investorId}/retirement-readiness`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setRetirement(d); });
   }, [investorId]);
 
   const currency = data?.currency ?? "USD";
@@ -297,6 +317,121 @@ export default function StressTestPage() {
           )}
         </>
       )}
+
+      {/* Retirement Readiness */}
+      {retirement && <RetirementReadinessSection data={retirement} />}
+    </div>
+  );
+}
+
+// ── Retirement Readiness Section ────────────────────────────────────────────
+
+const _SCORE_CFG = {
+  on_track:        { color: "text-green-500",  bar: "bg-green-500",  badge: "success"  as const },
+  mostly_on_track: { color: "text-blue-500",   bar: "bg-blue-500",   badge: "default"  as const },
+  at_risk:         { color: "text-amber-500",  bar: "bg-amber-500",  badge: "warning"  as const },
+  significant_gap: { color: "text-orange-500", bar: "bg-orange-500", badge: "warning"  as const },
+  critical:        { color: "text-red-500",    bar: "bg-red-500",    badge: "danger"   as const },
+} as const;
+
+function _verdictKey(verdict: string): keyof typeof _SCORE_CFG {
+  if (verdict === "On track") return "on_track";
+  if (verdict === "Mostly on track") return "mostly_on_track";
+  if (verdict === "At risk") return "at_risk";
+  if (verdict === "Significant gap") return "significant_gap";
+  return "critical";
+}
+
+function RetirementReadinessSection({ data }: { data: RetirementReadiness }) {
+  const fmt = (n: number) => formatCurrency(n, data.currency);
+  const key = _verdictKey(data.verdict);
+  const cfg = _SCORE_CFG[key];
+  const isShortfall = data.gap_monthly < 0;
+
+  return (
+    <div>
+      <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+        <Target className="h-4 w-4" />
+        Retirement Readiness
+      </h2>
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-wrap items-start gap-8 mb-6">
+            {/* Score */}
+            <div className="text-center min-w-[80px]">
+              <p className={`text-6xl font-bold tracking-tight ${cfg.color}`}>{data.score}</p>
+              <p className="text-xs text-muted-foreground mt-1">/ 100</p>
+              <Badge variant={cfg.badge} className="mt-2">{data.verdict}</Badge>
+            </div>
+
+            {/* Metrics grid */}
+            <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-5">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Projected monthly income</p>
+                <p className="text-2xl font-bold">{fmt(data.projected_monthly_income)}</p>
+                <p className="text-[10px] text-muted-foreground">at {data.swr_pct}% safe withdrawal rate</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Monthly expenses (target)</p>
+                <p className="text-2xl font-bold">{data.monthly_expenses > 0 ? fmt(data.monthly_expenses) : "—"}</p>
+                <p className="text-[10px] text-muted-foreground">current spending baseline</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">{isShortfall ? "Monthly shortfall" : "Monthly surplus"}</p>
+                <p className={`text-2xl font-bold ${isShortfall ? "text-red-500" : "text-green-500"}`}>
+                  {isShortfall ? "" : "+"}{fmt(data.gap_monthly)}
+                </p>
+                <p className="text-[10px] text-muted-foreground">income vs expenses at retirement</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Score bar */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
+              <span>Readiness score</span>
+              <span>{data.score} / 100</span>
+            </div>
+            <div className="h-3 bg-muted rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${cfg.bar}`}
+                style={{ width: `${data.score}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Breakdown tiles */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+            {[
+              { label: "Total at Retirement", value: fmt(data.total_at_retirement) },
+              { label: "Pension Projected", value: fmt(data.pension_projected) },
+              { label: "Portfolio MC P50", value: fmt(data.portfolio_mc_p50) },
+              { label: "Years to Retirement", value: data.years_to_retirement.toFixed(1) },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-muted/40 rounded-lg p-3">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">{label}</p>
+                <p className="font-semibold">{value}</p>
+              </div>
+            ))}
+          </div>
+
+          {isShortfall && data.years_to_close_gap !== null && (
+            <div className="mt-4 flex items-start gap-3 p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+              <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-700 dark:text-amber-400">
+                At current trajectory you need approximately{" "}
+                <span className="font-semibold">{data.years_to_close_gap} additional years</span>{" "}
+                of 7% portfolio growth beyond your planned retirement to close the income gap.
+                Consider increasing contributions or adjusting retirement age.
+              </p>
+            </div>
+          )}
+
+          <p className="text-[10px] text-muted-foreground mt-4">
+            4% safe withdrawal rule · Pension projection + Monte Carlo P50 · Assumes {data.years_to_retirement.toFixed(0)} years to retirement age 67
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
