@@ -29,6 +29,8 @@ class HoldingAssetType(str, enum.Enum):
     pension_fund = "pension_fund"
     study_fund = "study_fund"
     real_estate = "real_estate"
+    call_option = "call_option"
+    put_option = "put_option"
     other = "other"
 
 
@@ -91,6 +93,13 @@ class InvestmentHolding(Base, UUIDMixin, TimestampMixin):
     is_emergency_fund: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     management_fee_balance_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
     management_fee_contribution_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Options fields (call_option / put_option asset types)
+    strike_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    expiry_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    option_type: Mapped[str | None] = mapped_column(String(10), nullable=True)  # "call" | "put"
+    underlying_ticker: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    contract_multiplier: Mapped[float | None] = mapped_column(Float, nullable=True)
+    position_type: Mapped[str | None] = mapped_column(String(10), nullable=True)  # "long" | "short"
 
     account: Mapped["InvestmentAccount"] = relationship(
         "InvestmentAccount", back_populates="holdings"
