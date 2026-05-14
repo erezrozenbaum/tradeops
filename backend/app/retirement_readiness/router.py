@@ -56,12 +56,19 @@ def get_retirement_readiness(investor_id: uuid.UUID, db: Session = Depends(get_d
     pension_projected = pension_result["total_projected_value"]
     years_to_retirement = pension_result["years_to_retirement"]
 
-    # Portfolio Monte Carlo P50 at retirement horizon
-    portfolio = portfolio_service.get_portfolio(db, investor_id)
-    portfolio_value = portfolio.total_current_value if portfolio else 0.0
+    # Portfolio Monte Carlo P50 — NON-pension holdings only.
+    # Pension/study fund accounts are already fully projected via pension_projection,
+    # so including them here would double-count the same assets.
+    _PENSION_TYPES = {"pension_fund", "study_fund"}
+    non_pension_value = 0.0
+    for acc in accounts:
+        for h in acc.holdings:
+            if h.asset_type not in _PENSION_TYPES:
+                val = h.current_value or (h.quantity * (h.avg_buy_price or 0.0))
+                non_pension_value += fx_convert(db, val, h.currency, currency)
 
     years_int = max(1, min(int(years_to_retirement), 40))
-    mc = _monte_carlo(portfolio_value, years_int)
+    mc = _monte_carlo(non_pension_value, years_int)
     portfolio_mc_p50 = mc.percentiles[-1].p50 if mc.percentiles else 0.0
 
     return compute_score(
