@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.58.0  
-**Last updated:** 2026-05-13
+**Version:** 0.59.0  
+**Last updated:** 2026-05-14
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
@@ -588,6 +588,7 @@ kubectl describe ingress tradeops
 | Broker Import | `broker_sync/` module | `POST /investors/{id}/accounts/{account_id}/broker-sync` — multipart upload (file + broker_type). Parsers: IBKR Flex Query XML, eToro CSV, Altshuler Shaham Trade CSV/XLSX, ALTrade CSV/XLSX. Upserts holdings (match by ISIN → ticker → name). "Broker Import" button on each account card. |
 | Broker Auto-Sync | Migration 0025 + `workers/jobs/broker_auto_sync.py` | Per-account toggle (`auto_sync_enabled`). Daily at 09:00 UTC: refreshes market prices for all holdings in enabled accounts, updates `last_synced_at`. `PATCH /investors/{id}/accounts/{account_id}/auto-sync`. Blue "Auto/Sync" toggle on account card. |
 | Mobile-First UI | `sidebar.tsx` + `layout.tsx` + all page containers | Hamburger drawer on `<lg` screens; fixed sidebar on `lg+`. Responsive `p-4 sm:p-6 lg:p-8` padding on all pages. Holdings tables: horizontal scroll on mobile. |
+| Auth & Multi-user | Migration 0024 + `app/auth/` | JWT auth (HS256, 7-day tokens). `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `GET /api/v1/auth/me`. All routes require `Authorization: Bearer <token>`. Investor profiles scoped to authenticated user. `SECRET_KEY` env var required. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.

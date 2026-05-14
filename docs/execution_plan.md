@@ -1,7 +1,7 @@
 # TradeOps AI — Execution Plan
 
-**Version:** 0.58.0
-**Last updated:** 2026-05-13 (v0.58.0)
+**Version:** 0.59.0
+**Last updated:** 2026-05-14 (v0.59.0)
 
 ---
 
@@ -838,28 +838,28 @@ Returns `application/pdf` stream.
 
 ---
 
-### TASK 53 — Production Auth & Multi-user
+### TASK 53 — Production Auth & Multi-user ✅ DONE
 
 **Type:** Core architecture change
 **Risk:** 🔴 Risky — auth middleware, DB migration, full API protection
 
 **What it does:**
-- JWT authentication (register/login with hashed password)
-- Associate `investor_profiles` with `users` table
-- Middleware: all `/api/v1/investors/{id}/*` endpoints require valid JWT
-- Admin role: access all investors; user role: own investors only
-- Graceful unauthenticated error responses (401/403)
+- JWT authentication (register/login with hashed password via `passlib[bcrypt]` + `python-jose`)
+- `users` table + `user_id` FK on `investor_profiles` (nullable, backward compatible)
+- All `/api/v1/` routes protected via `Depends(get_current_user)` — auth routes excluded
+- Investor profiles scoped by user_id (users see only their own profiles)
+- `AuthFetchPatch` component patches `window.fetch` in dashboard to inject Bearer token automatically
 
 **DB migration:** `0024_users` — add `users` table, add `user_id` FK to `investor_profiles`
 
 **API:**
 ```
-POST /api/v1/auth/register   → { access_token, token_type }
+POST /api/v1/auth/register   → { id, email, role, created_at }
 POST /api/v1/auth/login      → { access_token, token_type }
 GET  /api/v1/auth/me         → current user info
 ```
 
-**Frontend:** Login/register page, JWT stored in httpOnly cookie, redirect if unauthenticated
+**Frontend:** Login/register page updated with two-step flow (auth → profile selection); JWT stored in `localStorage` as `tradeops_token`
 
 ---
 

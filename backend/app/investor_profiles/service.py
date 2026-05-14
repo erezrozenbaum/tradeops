@@ -11,12 +11,15 @@ def get(db: Session, investor_id: uuid.UUID) -> InvestorProfile | None:
     return db.get(InvestorProfile, investor_id)
 
 
-def get_all(db: Session, skip: int = 0, limit: int = 100) -> list[InvestorProfile]:
-    return db.query(InvestorProfile).offset(skip).limit(limit).all()
+def get_all(db: Session, user_id: uuid.UUID | None = None, skip: int = 0, limit: int = 100) -> list[InvestorProfile]:
+    q = db.query(InvestorProfile)
+    if user_id is not None:
+        q = q.filter(InvestorProfile.user_id == user_id)
+    return q.offset(skip).limit(limit).all()
 
 
-def create(db: Session, data: InvestorProfileCreate) -> InvestorProfile:
-    profile = InvestorProfile(**data.model_dump())
+def create(db: Session, data: InvestorProfileCreate, user_id: uuid.UUID | None = None) -> InvestorProfile:
+    profile = InvestorProfile(**data.model_dump(), user_id=user_id)
     db.add(profile)
     db.flush()
     audit.log_event(
