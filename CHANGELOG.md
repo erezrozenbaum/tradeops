@@ -10,6 +10,20 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.61.0] — 2026-05-14
+
+### Added — TASK 60: PWA Support
+
+- **`next.config.ts`**: sets `Cache-Control: no-cache` + `Service-Worker-Allowed: /` headers on `/sw.js`.
+- **`src/app/manifest.ts`**: native Next.js 14 `MetadataRoute.Manifest` — name, short_name, theme color `#0f172a`, 192×192 and 512×512 icons.
+- **`src/app/icon.tsx`**: 192×192 PNG favicon generated via `ImageResponse` (dark background, sky-blue T logo + chart bars).
+- **`src/app/icon512/route.tsx`**: 512×512 maskable PNG icon via `ImageResponse`.
+- **`public/sw.js`**: service worker with three fetch strategies — API routes always network-only (financial data must never be stale), navigation requests network-first with `/offline` fallback, static assets (`_next/static`, fonts, images) cache-first.
+- **`src/app/offline/page.tsx`**: offline fallback page shown when navigation fails while offline.
+- **`src/app/layout.tsx`**: `Viewport` export (`themeColor: '#0f172a'`), Apple Web App metadata, SW registration script injected at body end.
+
+---
+
 ## [0.60.0] — 2026-05-14
 
 ### Added — Management Fees in Pension/Study Fund Projections

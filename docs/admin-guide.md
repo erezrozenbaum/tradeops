@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.60.0  
+**Version:** 0.61.0  
 **Last updated:** 2026-05-14
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -591,6 +591,7 @@ kubectl describe ingress tradeops
 | Auth & Multi-user | Migration 0024 + `app/auth/` | JWT auth (HS256, 7-day tokens). `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `GET /api/v1/auth/me`. All routes require `Authorization: Bearer <token>`. Investor profiles scoped to authenticated user. `SECRET_KEY` env var required. |
 | Admin Panel | `app/admin/` + `/admin` page | Multi-tenant management dashboard. Shows user/profile stats, user table (promote/demote/delete), profile assignment. Accessible only to `role=admin` users. First admin must be set via SQL: `UPDATE users SET role='admin' WHERE email='...'`. |
 | Management Fees | Migration 0026 + `pension_projection.py` + `pension_simulation/engine.py` | `management_fee_balance_pct` (% p.a. deducted from return rate) and `management_fee_contribution_pct` (% deducted from each contribution) on pension/study fund holdings. Input fields in Create/Edit holding forms. Applied in both pension projection and standalone pension simulation. |
+| PWA Support | `next.config.ts` + `public/sw.js` + `src/app/manifest.ts` | Installable Progressive Web App. Service worker: API routes always network-only, pages network-first with offline fallback, static assets cache-first. 192×192 and 512×512 icons via `ImageResponse`. Offline page at `/offline`. Add to home screen on mobile/desktop. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.
