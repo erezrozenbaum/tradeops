@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.59.0  
+**Version:** 0.60.0  
 **Last updated:** 2026-05-14
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -589,6 +589,8 @@ kubectl describe ingress tradeops
 | Broker Auto-Sync | Migration 0025 + `workers/jobs/broker_auto_sync.py` | Per-account toggle (`auto_sync_enabled`). Daily at 09:00 UTC: refreshes market prices for all holdings in enabled accounts, updates `last_synced_at`. `PATCH /investors/{id}/accounts/{account_id}/auto-sync`. Blue "Auto/Sync" toggle on account card. |
 | Mobile-First UI | `sidebar.tsx` + `layout.tsx` + all page containers | Hamburger drawer on `<lg` screens; fixed sidebar on `lg+`. Responsive `p-4 sm:p-6 lg:p-8` padding on all pages. Holdings tables: horizontal scroll on mobile. |
 | Auth & Multi-user | Migration 0024 + `app/auth/` | JWT auth (HS256, 7-day tokens). `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `GET /api/v1/auth/me`. All routes require `Authorization: Bearer <token>`. Investor profiles scoped to authenticated user. `SECRET_KEY` env var required. |
+| Admin Panel | `app/admin/` + `/admin` page | Multi-tenant management dashboard. Shows user/profile stats, user table (promote/demote/delete), profile assignment. Accessible only to `role=admin` users. First admin must be set via SQL: `UPDATE users SET role='admin' WHERE email='...'`. |
+| Management Fees | Migration 0026 + `pension_projection.py` + `pension_simulation/engine.py` | `management_fee_balance_pct` (% p.a. deducted from return rate) and `management_fee_contribution_pct` (% deducted from each contribution) on pension/study fund holdings. Input fields in Create/Edit holding forms. Applied in both pension projection and standalone pension simulation. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.

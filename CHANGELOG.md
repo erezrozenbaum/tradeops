@@ -10,6 +10,30 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.60.0] — 2026-05-14
+
+### Added — Management Fees in Pension/Study Fund Projections
+
+- **DB migration 0026**: adds `management_fee_balance_pct` and `management_fee_contribution_pct` columns to `investment_holdings` (nullable Float).
+- **Model + schemas**: both fee fields exposed on `InvestmentHolding` (Create, Update, Out). Validation: balance fee 0–5%, contribution fee 0–10%.
+- **`pension_projection.py`**: net rate = gross rate − balance fee; monthly contribution deducted by contribution fee % before projecting.
+- **`pension_simulation/engine.py`**: `simulate()` now accepts `management_fee_balance_pct` and `management_fee_contribution_pct`; applies net rate and post-fee monthly amount in the FV formula.
+- **`pension_simulation/router.py`**: passes `holding.management_fee_balance_pct` and `holding.management_fee_contribution_pct` to `engine.simulate()`.
+- **Frontend**: fee input fields ("Fee on balance % / Fee on contribution %", with Hebrew labels דמי ניהול מצבירה / מהפקדות) added to both create and edit forms for `pension_fund` and `study_fund` holdings.
+
+### Fixed
+
+- **`pension_projection.py`**: `NameError` — `rate` renamed to `net_rate` consistently in the dict returned per fund.
+- **Retirement Readiness double-counting**: `portfolio_mc_p50` Monte Carlo was running on total portfolio (including pension balances), then added to `pension_projected` (future value of those same accounts). Fixed to run MC on non-pension holdings only.
+
+### Changed
+
+- **Admin panel** (`/admin`): new page for multi-tenant management. Shows stats (total users, profiles, unassigned), users table with promote/demote/delete, profiles table with inline user assignment. Only visible to `role=admin` users (link shown in sidebar).
+- **`app/admin/`**: `router.py`, `schemas.py`, `dependencies.py` — `require_admin` dependency checks `current_user.role == "admin"`.
+- **Auth**: replaced `passlib[bcrypt]` with direct `bcrypt` calls (`bcrypt.hashpw` / `bcrypt.checkpw`) to resolve incompatibility with `bcrypt>=4.0.0`.
+
+---
+
 ## [0.59.0] — 2026-05-14
 
 ### Added — TASK 53: Production Auth & Multi-user
