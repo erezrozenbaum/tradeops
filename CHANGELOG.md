@@ -10,6 +10,19 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.62.0] — 2026-05-14
+
+### Added — TASK 61: Options Tracking
+
+- **DB migration 0027**: adds 6 nullable columns to `investment_holdings`: `strike_price`, `expiry_date`, `option_type` (call|put), `underlying_ticker`, `contract_multiplier`, `position_type` (long|short).
+- **`HoldingAssetType`**: new values `call_option` and `put_option` (stored as `String(50)` — no DB-level enum change needed).
+- **Schemas**: all 6 fields added to `InvestmentHoldingCreate`, `InvestmentHoldingUpdate`, `InvestmentHoldingOut` with validation (pattern constraints on `option_type` and `position_type`).
+- **`portfolio_analysis/options_engine.py`**: pure math engine — `days_to_expiry`, `expiry_status` (ok / warning / critical / expired), cost basis, unrealized P&L and %, max loss (`None` for short = unlimited).
+- **`GET /investors/{id}/portfolio/options`**: returns all option positions with P&L, expiry info, account name, expiring-soon count, and short-position flag.
+- **Frontend**: `call_option` / `put_option` added to asset type selector; options-specific create/edit form (underlying ticker, strike, expiry, contracts, premium, multiplier, position type); short-position warning banner; expiry countdown badge + underlying·strike inline in the holdings table row; **Options P&L summary card** shown above account list when any options exist (columns: strike, expiry, cost basis, current value, P&L, max loss — with "Unlimited ⚠️" for short).
+
+---
+
 ## [0.61.0] — 2026-05-14
 
 ### Added — TASK 60: PWA Support

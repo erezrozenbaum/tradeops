@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.61.0  
+**Version:** 0.62.0  
 **Last updated:** 2026-05-14
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -592,6 +592,7 @@ kubectl describe ingress tradeops
 | Admin Panel | `app/admin/` + `/admin` page | Multi-tenant management dashboard. Shows user/profile stats, user table (promote/demote/delete), profile assignment. Accessible only to `role=admin` users. First admin must be set via SQL: `UPDATE users SET role='admin' WHERE email='...'`. |
 | Management Fees | Migration 0026 + `pension_projection.py` + `pension_simulation/engine.py` | `management_fee_balance_pct` (% p.a. deducted from return rate) and `management_fee_contribution_pct` (% deducted from each contribution) on pension/study fund holdings. Input fields in Create/Edit holding forms. Applied in both pension projection and standalone pension simulation. |
 | PWA Support | `next.config.ts` + `public/sw.js` + `src/app/manifest.ts` | Installable Progressive Web App. Service worker: API routes always network-only, pages network-first with offline fallback, static assets cache-first. 192×192 and 512×512 icons via `ImageResponse`. Offline page at `/offline`. Add to home screen on mobile/desktop. |
+| Options Tracking | Migration 0027 + `options_engine.py` + `GET /portfolio/options` | `call_option` / `put_option` asset types. Fields: strike_price, expiry_date, option_type, underlying_ticker, contract_multiplier, position_type (long/short). P&L vs cost basis (premium × qty × multiplier). Max loss = premium paid for long; unlimited for short (warning shown). Expiry countdown badges. Options P&L summary card on investments page. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.
