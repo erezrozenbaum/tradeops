@@ -46,6 +46,12 @@ interface Holding {
   is_emergency_fund: boolean;
   management_fee_balance_pct: number | null;
   management_fee_contribution_pct: number | null;
+  strike_price: number | null;
+  expiry_date: string | null;
+  option_type: string | null;
+  underlying_ticker: string | null;
+  contract_multiplier: number | null;
+  position_type: string | null;
 }
 
 interface Account {
@@ -206,11 +212,14 @@ const ASSET_TYPES = [
   { value: "pension_fund", label: "Pension Fund" },
   { value: "study_fund", label: "Study Fund (כה\"ת)" },
   { value: "real_estate", label: "Real Estate" },
+  { value: "call_option", label: "Call Option" },
+  { value: "put_option", label: "Put Option" },
   { value: "other", label: "Other" },
 ];
 
 const EMPTY_ACCOUNT = { provider_name: "", account_type: "brokerage", account_name: "", currency: "ILS", notes: "", family_member_id: "", is_emergency_fund: false };
-const EMPTY_HOLDING = { ticker: "", isin: "", name: "", asset_type: "stock", quantity: "", avg_buy_price: "", currency: "ILS", fees: "", purchase_date: "", current_value: "", notes: "", current_balance: "", total_deposits: "", monthly_contribution: "", annual_return_rate: "", monthly_contribution_employee: "", monthly_contribution_employer: "", fund_status: "active", management_fee_balance_pct: "", management_fee_contribution_pct: "" };
+const EMPTY_HOLDING = { ticker: "", isin: "", name: "", asset_type: "stock", quantity: "", avg_buy_price: "", currency: "ILS", fees: "", purchase_date: "", current_value: "", notes: "", current_balance: "", total_deposits: "", monthly_contribution: "", annual_return_rate: "", monthly_contribution_employee: "", monthly_contribution_employer: "", fund_status: "active", management_fee_balance_pct: "", management_fee_contribution_pct: "", strike_price: "", expiry_date: "", option_type: "call", underlying_ticker: "", contract_multiplier: "100", position_type: "long" };
+const _OPTION_TYPES = new Set(["call_option", "put_option"]);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -314,6 +323,9 @@ export default function InvestmentsPage() {
   const [editHoldingForm, setEditHoldingForm] = useState(EMPTY_HOLDING);
   const [savingEditHolding, setSavingEditHolding] = useState(false);
 
+  // Options summary
+  const [optionsSummary, setOptionsSummary] = useState<any>(null);
+
   // Pension simulation
   const [simulatingHoldingId, setSimulatingHoldingId] = useState<string | null>(null);
   const [simParams, setSimParams] = useState({ retirement_age: 67, monthly_contribution: 0, annual_return_rate: 5.0, withdrawal_years: 25 });
@@ -351,12 +363,13 @@ export default function InvestmentsPage() {
 
   async function loadAll() {
     setLoading(true);
-    const [accts, port, reb, hist, families] = await Promise.all([
+    const [accts, port, reb, hist, families, opts] = await Promise.all([
       fetch(`/api/v1/investors/${investorId}/accounts`).then(r => r.ok ? r.json() : []),
       fetch(`/api/v1/investors/${investorId}/portfolio`).then(r => r.ok ? r.json() : null),
       fetch(`/api/v1/investors/${investorId}/portfolio/rebalance`).then(r => r.ok ? r.json() : null),
       fetch(`/api/v1/investors/${investorId}/portfolio/history`).then(r => r.ok ? r.json() : null),
       fetch(`/api/v1/family-profiles?investor_id=${investorId}`).then(r => r.ok ? r.json() : []),
+      fetch(`/api/v1/investors/${investorId}/portfolio/options`).then(r => r.ok ? r.json() : null),
     ]);
     setAccounts(accts);
     setPortfolio(port);
@@ -364,6 +377,7 @@ export default function InvestmentsPage() {
     setHistory(hist?.snapshots ?? []);
     const members: FamilyMember[] = (families as { members: FamilyMember[] }[]).flatMap(f => f.members ?? []);
     setFamilyMembers(members);
+    setOptionsSummary(opts);
     setLoading(false);
   }
 
@@ -480,6 +494,23 @@ export default function InvestmentsPage() {
             management_fee_contribution_pct: holdingForm.management_fee_contribution_pct ? parseFloat(holdingForm.management_fee_contribution_pct) : null,
             notes: holdingForm.notes || null,
           }
+        : _OPTION_TYPES.has(holdingForm.asset_type)
+        ? {
+            name: holdingForm.name,
+            asset_type: holdingForm.asset_type,
+            quantity: parseFloat(holdingForm.quantity) || 0,
+            avg_buy_price: parseFloat(holdingForm.avg_buy_price) || 0,
+            currency: holdingForm.currency,
+            fees: 0,
+            current_value: holdingForm.current_value ? parseFloat(holdingForm.current_value) : null,
+            strike_price: holdingForm.strike_price ? parseFloat(holdingForm.strike_price) : null,
+            expiry_date: holdingForm.expiry_date || null,
+            option_type: holdingForm.option_type || null,
+            underlying_ticker: holdingForm.underlying_ticker || null,
+            contract_multiplier: holdingForm.contract_multiplier ? parseFloat(holdingForm.contract_multiplier) : 100,
+            position_type: holdingForm.position_type || "long",
+            notes: holdingForm.notes || null,
+          }
         : {
             ticker: holdingForm.ticker || null,
             isin: holdingForm.isin || null,
@@ -561,6 +592,12 @@ export default function InvestmentsPage() {
       fund_status: h.fund_status ?? "active",
       management_fee_balance_pct: h.management_fee_balance_pct != null ? String(h.management_fee_balance_pct) : "",
       management_fee_contribution_pct: h.management_fee_contribution_pct != null ? String(h.management_fee_contribution_pct) : "",
+      strike_price: h.strike_price != null ? String(h.strike_price) : "",
+      expiry_date: h.expiry_date ?? "",
+      option_type: h.option_type ?? "call",
+      underlying_ticker: h.underlying_ticker ?? "",
+      contract_multiplier: h.contract_multiplier != null ? String(h.contract_multiplier) : "100",
+      position_type: h.position_type ?? "long",
     });
     setExpandedAccounts(prev => { const s = new Set(prev); s.add(accountId); return s; });
   }
@@ -608,6 +645,22 @@ export default function InvestmentsPage() {
             annual_return_rate: editHoldingForm.annual_return_rate ? parseFloat(editHoldingForm.annual_return_rate) : null,
             management_fee_balance_pct: editHoldingForm.management_fee_balance_pct ? parseFloat(editHoldingForm.management_fee_balance_pct) : null,
             management_fee_contribution_pct: editHoldingForm.management_fee_contribution_pct ? parseFloat(editHoldingForm.management_fee_contribution_pct) : null,
+            notes: editHoldingForm.notes || null,
+          }
+        : _OPTION_TYPES.has(editHoldingForm.asset_type)
+        ? {
+            name: editHoldingForm.name || undefined,
+            asset_type: editHoldingForm.asset_type,
+            quantity: parseFloat(editHoldingForm.quantity) || undefined,
+            avg_buy_price: parseFloat(editHoldingForm.avg_buy_price) || undefined,
+            currency: editHoldingForm.currency || undefined,
+            current_value: editHoldingForm.current_value ? parseFloat(editHoldingForm.current_value) : null,
+            strike_price: editHoldingForm.strike_price ? parseFloat(editHoldingForm.strike_price) : null,
+            expiry_date: editHoldingForm.expiry_date || null,
+            option_type: editHoldingForm.option_type || null,
+            underlying_ticker: editHoldingForm.underlying_ticker || null,
+            contract_multiplier: editHoldingForm.contract_multiplier ? parseFloat(editHoldingForm.contract_multiplier) : 100,
+            position_type: editHoldingForm.position_type || "long",
             notes: editHoldingForm.notes || null,
           }
         : {
@@ -1203,6 +1256,87 @@ export default function InvestmentsPage() {
         </div>
       )}
 
+      {/* Options P&L summary */}
+      {optionsSummary && optionsSummary.total_positions > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              Options Positions
+              <span className="text-xs font-normal text-muted-foreground ml-1">{optionsSummary.total_positions} active</span>
+              {optionsSummary.expiring_soon_count > 0 && (
+                <span className="text-[10px] font-medium rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5">
+                  {optionsSummary.expiring_soon_count} expiring within 30d
+                </span>
+              )}
+              {optionsSummary.has_short_positions && (
+                <span className="text-[10px] font-medium rounded-full bg-destructive/15 text-destructive px-2 py-0.5">
+                  Short positions — unlimited max loss
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[700px]">
+                <thead>
+                  <tr className="border-b border-border text-xs text-muted-foreground">
+                    <th className="text-left pb-2 font-medium">Name</th>
+                    <th className="text-right pb-2 font-medium">Strike</th>
+                    <th className="text-right pb-2 font-medium">Expiry</th>
+                    <th className="text-right pb-2 font-medium">Cost basis</th>
+                    <th className="text-right pb-2 font-medium">Current value</th>
+                    <th className="text-right pb-2 font-medium">P&L</th>
+                    <th className="text-right pb-2 font-medium">Max loss</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {optionsSummary.positions.map((p: any) => (
+                    <tr key={p.id} className="hover:bg-muted/30">
+                      <td className="py-2.5 pr-3">
+                        <p className="font-medium">{p.name}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] text-muted-foreground">{p.asset_type === "call_option" ? "Call" : "Put"} · {p.position_type}</span>
+                          {p.underlying_ticker && <span className="text-[10px] text-muted-foreground">{p.underlying_ticker}</span>}
+                          {p.days_to_expiry !== null && (
+                            <span className={`text-[10px] font-medium rounded-full px-1.5 py-0 ${p.expiry_status === "expired" || p.expiry_status === "critical" ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400" : p.expiry_status === "warning" ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"}`}>
+                              {p.days_to_expiry === 0 ? "Expired" : `${p.days_to_expiry}d`}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2.5 text-right tabular-nums">{p.strike_price != null ? formatCurrency(p.strike_price, p.currency) : "—"}</td>
+                      <td className="py-2.5 text-right text-xs text-muted-foreground">{p.expiry_date ?? "—"}</td>
+                      <td className="py-2.5 text-right tabular-nums">{formatCurrency(p.cost_basis, p.currency)}</td>
+                      <td className="py-2.5 text-right tabular-nums">{p.current_value != null ? formatCurrency(p.current_value, p.currency) : <span className="text-muted-foreground text-xs">—</span>}</td>
+                      <td className={`py-2.5 text-right tabular-nums font-medium ${p.unrealized_pnl == null ? "" : p.unrealized_pnl >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                        {p.unrealized_pnl != null ? `${p.unrealized_pnl >= 0 ? "+" : ""}${formatCurrency(p.unrealized_pnl, p.currency)}` : <span className="text-muted-foreground text-xs font-normal">—</span>}
+                      </td>
+                      <td className="py-2.5 text-right tabular-nums text-xs">
+                        {p.max_loss_unlimited
+                          ? <span className="text-destructive font-semibold">Unlimited ⚠️</span>
+                          : p.max_loss != null ? formatCurrency(p.max_loss, p.currency) : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-border font-semibold text-sm">
+                    <td colSpan={3} className="pt-2 text-muted-foreground text-xs">Total</td>
+                    <td className="pt-2 text-right tabular-nums">{formatCurrency(optionsSummary.total_cost_basis, portfolio?.base_currency ?? "USD")}</td>
+                    <td className="pt-2 text-right tabular-nums">{formatCurrency(optionsSummary.total_current_value, portfolio?.base_currency ?? "USD")}</td>
+                    <td className={`pt-2 text-right tabular-nums ${optionsSummary.total_unrealized_pnl >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                      {optionsSummary.total_unrealized_pnl >= 0 ? "+" : ""}{formatCurrency(optionsSummary.total_unrealized_pnl, portfolio?.base_currency ?? "USD")}
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Account cards */}
       {accounts.map(account => {
         const analysis = portfolio?.accounts.find(a => a.id === account.id);
@@ -1402,6 +1536,64 @@ export default function InvestmentsPage() {
                           <Input type="date" value={holdingForm.purchase_date} onChange={e => setHoldingForm({ ...holdingForm, purchase_date: e.target.value })} />
                         </div>
                       </div>
+                    ) : _OPTION_TYPES.has(holdingForm.asset_type) ? (
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Name *</label>
+                          <Input placeholder="e.g. AAPL Jun 200 Call" value={holdingForm.name} onChange={e => setHoldingForm({ ...holdingForm, name: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Asset type</label>
+                          <Select value={holdingForm.asset_type} onChange={e => setHoldingForm({ ...holdingForm, asset_type: e.target.value })}>
+                            {ASSET_TYPES.filter(t => t.value !== "pension_fund").map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Underlying ticker</label>
+                          <Input placeholder="AAPL" value={holdingForm.underlying_ticker} onChange={e => setHoldingForm({ ...holdingForm, underlying_ticker: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Strike price *</label>
+                          <Input type="number" placeholder="200.00" value={holdingForm.strike_price} onChange={e => setHoldingForm({ ...holdingForm, strike_price: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Expiry date *</label>
+                          <Input type="date" value={holdingForm.expiry_date} onChange={e => setHoldingForm({ ...holdingForm, expiry_date: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Contracts (qty) *</label>
+                          <Input type="number" placeholder="1" value={holdingForm.quantity} onChange={e => setHoldingForm({ ...holdingForm, quantity: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Premium paid per unit</label>
+                          <Input type="number" placeholder="3.50" value={holdingForm.avg_buy_price} onChange={e => setHoldingForm({ ...holdingForm, avg_buy_price: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Contract multiplier</label>
+                          <Input type="number" placeholder="100" value={holdingForm.contract_multiplier} onChange={e => setHoldingForm({ ...holdingForm, contract_multiplier: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Position type</label>
+                          <select className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background" value={holdingForm.position_type} onChange={e => setHoldingForm({ ...holdingForm, position_type: e.target.value })}>
+                            <option value="long">Long</option>
+                            <option value="short">Short ⚠️</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Current value (total)</label>
+                          <Input type="number" placeholder="Optional" value={holdingForm.current_value} onChange={e => setHoldingForm({ ...holdingForm, current_value: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Currency</label>
+                          <Input maxLength={3} value={holdingForm.currency} onChange={e => setHoldingForm({ ...holdingForm, currency: e.target.value.toUpperCase() })} />
+                        </div>
+                        {holdingForm.position_type === "short" && (
+                          <div className="col-span-3 flex items-center gap-2 p-2 rounded-md bg-destructive/10 text-destructive text-xs">
+                            <AlertTriangle className="h-4 w-4 shrink-0" />
+                            Short positions carry unlimited max loss. Ensure this reflects your actual position.
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <div className="grid grid-cols-3 gap-3">
                         <div className="space-y-1">
@@ -1490,10 +1682,14 @@ export default function InvestmentsPage() {
                         const isEditing = editingHolding?.holdingId === h.id;
                         const isPension = h.asset_type === "pension_fund";
                         const isStudyFund = h.asset_type === "study_fund";
+                        const isOption = _OPTION_TYPES.has(h.asset_type);
                         const isSavingsFund = isPension || isStudyFund;
                         const taxInfo = isStudyFund ? studyFundTaxStatus(h.purchase_date) : null;
+                        const optDays = isOption && h.expiry_date ? Math.max(0, Math.floor((new Date(h.expiry_date).getTime() - Date.now()) / 86400000)) : null;
                         const calcValue = isSavingsFund
                           ? (h.current_balance ?? h.total_deposits ?? 0)
+                          : isOption
+                          ? (h.current_value ?? (h.avg_buy_price * h.quantity * (h.contract_multiplier ?? 100)))
                           : h.quantity * h.avg_buy_price;
                         return (
                           <>
@@ -1525,6 +1721,17 @@ export default function InvestmentsPage() {
                                 )}
                                 {isStudyFund && h.fund_status === "inactive" && (
                                   <span className="inline-flex items-center rounded-full bg-muted px-1.5 py-0 text-[10px] font-medium text-muted-foreground">Inactive</span>
+                                )}
+                                {isOption && optDays !== null && (
+                                  <span className={`inline-flex items-center rounded-full px-1.5 py-0 text-[10px] font-medium ${optDays === 0 ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400" : optDays <= 7 ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400" : optDays <= 30 ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"}`}>
+                                    {optDays === 0 ? "Expired" : `${optDays}d to expiry`}
+                                  </span>
+                                )}
+                                {isOption && h.position_type === "short" && (
+                                  <span className="inline-flex items-center rounded-full bg-destructive/15 px-1.5 py-0 text-[10px] font-medium text-destructive">Short ⚠️</span>
+                                )}
+                                {isOption && h.underlying_ticker && (
+                                  <span className="text-xs text-muted-foreground">{h.underlying_ticker} · Strike {h.strike_price}</span>
                                 )}
                                 {!isSavingsFund && h.ticker && earningsMap[h.ticker.toUpperCase()] && (() => {
                                   const earningsDate = earningsMap[h.ticker.toUpperCase()];
@@ -1887,6 +2094,58 @@ export default function InvestmentsPage() {
                                         <label className="text-xs text-muted-foreground">Start date</label>
                                         <Input type="date" value={editHoldingForm.purchase_date} onChange={e => setEditHoldingForm({ ...editHoldingForm, purchase_date: e.target.value })} />
                                       </div>
+                                    </div>
+                                  ) : _OPTION_TYPES.has(editHoldingForm.asset_type) ? (
+                                    <div className="grid grid-cols-3 gap-3">
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Name *</label>
+                                        <Input value={editHoldingForm.name} onChange={e => setEditHoldingForm({ ...editHoldingForm, name: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Underlying ticker</label>
+                                        <Input value={editHoldingForm.underlying_ticker} onChange={e => setEditHoldingForm({ ...editHoldingForm, underlying_ticker: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Strike price</label>
+                                        <Input type="number" value={editHoldingForm.strike_price} onChange={e => setEditHoldingForm({ ...editHoldingForm, strike_price: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Expiry date</label>
+                                        <Input type="date" value={editHoldingForm.expiry_date} onChange={e => setEditHoldingForm({ ...editHoldingForm, expiry_date: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Contracts (qty)</label>
+                                        <Input type="number" value={editHoldingForm.quantity} onChange={e => setEditHoldingForm({ ...editHoldingForm, quantity: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Premium per unit</label>
+                                        <Input type="number" value={editHoldingForm.avg_buy_price} onChange={e => setEditHoldingForm({ ...editHoldingForm, avg_buy_price: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Contract multiplier</label>
+                                        <Input type="number" value={editHoldingForm.contract_multiplier} onChange={e => setEditHoldingForm({ ...editHoldingForm, contract_multiplier: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Position type</label>
+                                        <select className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background" value={editHoldingForm.position_type} onChange={e => setEditHoldingForm({ ...editHoldingForm, position_type: e.target.value })}>
+                                          <option value="long">Long</option>
+                                          <option value="short">Short ⚠️</option>
+                                        </select>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Current value (total)</label>
+                                        <Input type="number" value={editHoldingForm.current_value} onChange={e => setEditHoldingForm({ ...editHoldingForm, current_value: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Currency</label>
+                                        <Input maxLength={3} value={editHoldingForm.currency} onChange={e => setEditHoldingForm({ ...editHoldingForm, currency: e.target.value.toUpperCase() })} />
+                                      </div>
+                                      {editHoldingForm.position_type === "short" && (
+                                        <div className="col-span-3 flex items-center gap-2 p-2 rounded-md bg-destructive/10 text-destructive text-xs">
+                                          <AlertTriangle className="h-4 w-4 shrink-0" />
+                                          Short positions carry unlimited max loss.
+                                        </div>
+                                      )}
                                     </div>
                                   ) : (
                                     <div className="grid grid-cols-3 gap-3">
