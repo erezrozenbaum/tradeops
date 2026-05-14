@@ -41,6 +41,8 @@ class TradingFrequency(str, enum.Enum):
 class InvestorProfile(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "investor_profiles"
 
+    user_id: Mapped[uuid.UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     date_of_birth: Mapped[date] = mapped_column(Date, nullable=False)
     country: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 3166-1 alpha-2/3

@@ -10,6 +10,26 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.59.0] — 2026-05-14
+
+### Added — TASK 53: Production Auth & Multi-user
+
+- **DB migration 0024** (`0024_users`): creates `users` table (`id`, `email`, `password_hash`, `role`, `created_at`) and adds nullable `user_id` FK on `investor_profiles`.
+- **Migration chain fixed**: migration 0025 `down_revision` updated from 0023 → 0024.
+- **Auth module** (`app/auth/`): JWT-based auth using `python-jose` + `bcrypt` via `passlib`.
+  - `POST /api/v1/auth/register` — create account (email + password)
+  - `POST /api/v1/auth/login` — returns `access_token` (7-day JWT, HS256)
+  - `GET /api/v1/auth/me` — returns current user info
+- **All API routes protected**: `Depends(get_current_user)` applied globally via `app.include_router(..., dependencies=[...])`.
+- **Investor profiles scoped by user**: `GET /api/v1/investors` filters by `user_id`; `POST /api/v1/investors` sets `user_id` from JWT; ownership checked on GET/PUT/DELETE by ID.
+- **Frontend auth flow**: login page updated with email/password auth step before profile selection; JWT stored in `localStorage` as `tradeops_token`.
+- **Auth fetch patch**: `AuthFetchPatch` component in dashboard layout globally injects `Authorization: Bearer` into all `/api/` requests (covers pages using raw `fetch`).
+- **`api.ts` updated**: injects token header, clears token + investor ID and redirects to `/login` on 401.
+- **`useInvestorId` hook**: now checks for both `tradeops_token` and `tradeops_investor_id`; redirects to `/login` if either is missing.
+- **Sidebar logout**: now clears both `tradeops_token` and `tradeops_investor_id`.
+
+---
+
 ## [0.58.0] — 2026-05-13
 
 ### Added — TASK 58: Mobile-First Responsive UI

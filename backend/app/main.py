@@ -1,9 +1,11 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.auth.dependencies import get_current_user
+from app.auth.router import router as auth_router
 from app.core.config import settings
 from app.api.v1.router import api_router
 
@@ -41,7 +43,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(api_router, prefix="/api/v1")
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(api_router, prefix="/api/v1", dependencies=[Depends(get_current_user)])
 
 
 @app.get("/health")
