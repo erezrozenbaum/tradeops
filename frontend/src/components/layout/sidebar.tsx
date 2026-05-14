@@ -32,6 +32,7 @@ import {
   Zap,
   Menu,
   X,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -93,8 +94,23 @@ const sections = [
 function SidebarContent({ onNav }: { onNav?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  function handleLogout() {
+  useEffect(() => {
+    const token = localStorage.getItem("tradeops_token");
+    if (!token) return;
+    fetch("/api/v1/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(u => { if (u?.role === "admin") setIsAdmin(true); })
+      .catch(() => {});
+  }, []);
+
+  function handleSwitchProfile() {
+    localStorage.removeItem("tradeops_investor_id");
+    router.push("/login");
+  }
+
+  function handleSignOut() {
     localStorage.removeItem("tradeops_investor_id");
     localStorage.removeItem("tradeops_token");
     router.push("/login");
@@ -136,13 +152,37 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         ))}
       </nav>
 
-      <div className="border-t border-border p-3 shrink-0">
+      <div className="border-t border-border p-3 shrink-0 space-y-0.5">
+        {isAdmin && (
+          <Link
+            href="/admin"
+            onClick={onNav}
+            className={cn(
+              "flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+              pathname === "/admin"
+                ? "bg-primary/10 text-primary font-medium"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <ShieldCheck className="h-4 w-4" />
+            Admin Panel
+          </Link>
+        )}
+      </div>
+      <div className="border-t border-border p-3 shrink-0 space-y-0.5">
         <button
-          onClick={handleLogout}
+          onClick={handleSwitchProfile}
+          className="flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          <Users className="h-4 w-4" />
+          Switch profile
+        </button>
+        <button
+          onClick={handleSignOut}
           className="flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
           <LogOut className="h-4 w-4" />
-          Switch profile
+          Sign out
         </button>
       </div>
     </>
