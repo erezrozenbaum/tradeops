@@ -12,6 +12,7 @@ from app.currency_engine.rates import force_refresh_rates, convert as fx_convert
 from app.portfolio_analysis import service
 from app.portfolio_analysis import rebalance_engine
 from app.portfolio_analysis import pension_projection
+from app.portfolio_analysis import options_engine
 from app.portfolio_analysis.schemas import (
     PortfolioSummary,
     PriceRefreshResult,
@@ -252,3 +253,39 @@ def get_portfolio_history(
     since = datetime.now(timezone.utc) - timedelta(days=days) if days else None
     snapshots = service.get_history(db, investor_id, since=since)
     return PortfolioHistoryResult(investor_id=investor_id, snapshots=snapshots)
+
+
+@router.get("/options")
+def get_options_summary(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Return all options positions with P&L, expiry info, and risk warnings."""
+    _OPTION_TYPES = {"call_option", "put_option"}
+
+    accounts = (
+        db.query(InvestmentAccount)
+        .filter(InvestmentAccount.investor_id == investor_id)
+        .all()
+    )
+
+    positions = []
+    for acc in accounts:
+        for h in acc.holdings:
+            if h.asset_type in _OPTION_TYPES:
+                pos = options_engine.compute_position(h)
+                pos["account_name"] = acc.account_name or acc.provider_name
+                positions.append(pos)
+
+    total_cost_basis = sum(p["cost_basis"] for p in positions)
+    total_current_value = sum(p["current_value"] for p in positions if p["current_value"] is not None)
+    total_unrealized_pnl = sum(p["unrealized_pnl"] for p in positions if p["unrealized_pnl"] is not None)
+    expiring_soon = [p for p in positions if p.get("days_to_expiry") is not None and p["days_to_expiry"] <= 30]
+    has_short = any(p["max_loss_unlimited"] for p in positions)
+
+    return {
+        "positions": positions,
+        "total_positions": len(positions),
+        "total_cost_basis": round(total_cost_basis, 2),
+        "total_current_value": round(total_current_value, 2),
+        "total_unrealized_pnl": round(total_unrealized_pnl, 2),
+        "expiring_soon_count": len(expiring_soon),
+        "has_short_positions": has_short,
+    }

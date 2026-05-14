@@ -30,6 +30,12 @@ class InvestmentHoldingCreate(BaseModel):
     is_emergency_fund: bool = False
     management_fee_balance_pct: float | None = Field(None, ge=0, le=5)
     management_fee_contribution_pct: float | None = Field(None, ge=0, le=10)
+    strike_price: float | None = Field(None, ge=0)
+    expiry_date: date | None = None
+    option_type: str | None = Field(None, pattern="^(call|put)$")
+    underlying_ticker: str | None = Field(None, max_length=20)
+    contract_multiplier: float | None = Field(None, gt=0)
+    position_type: str | None = Field(None, pattern="^(long|short)$")
 
 
 class InvestmentHoldingUpdate(BaseModel):
@@ -54,6 +60,12 @@ class InvestmentHoldingUpdate(BaseModel):
     is_emergency_fund: bool | None = None
     management_fee_balance_pct: float | None = Field(None, ge=0, le=5)
     management_fee_contribution_pct: float | None = Field(None, ge=0, le=10)
+    strike_price: float | None = Field(None, ge=0)
+    expiry_date: date | None = None
+    option_type: str | None = Field(None, pattern="^(call|put)$")
+    underlying_ticker: str | None = Field(None, max_length=20)
+    contract_multiplier: float | None = Field(None, gt=0)
+    position_type: str | None = Field(None, pattern="^(long|short)$")
 
 
 class InvestmentHoldingOut(BaseModel):
@@ -80,6 +92,12 @@ class InvestmentHoldingOut(BaseModel):
     is_emergency_fund: bool = False
     management_fee_balance_pct: float | None = None
     management_fee_contribution_pct: float | None = None
+    strike_price: float | None = None
+    expiry_date: date | None = None
+    option_type: str | None = None
+    underlying_ticker: str | None = None
+    contract_multiplier: float | None = None
+    position_type: str | None = None
     created_at: datetime
     updated_at: datetime
 
