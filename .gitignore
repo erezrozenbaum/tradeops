@@ -32,3 +32,6 @@ Thumbs.db
 CLAUDE.local.md
 **/CLAUDE.local.md
 .claude/
+
+# Internal planning docs
+docs/execution_plan.md
