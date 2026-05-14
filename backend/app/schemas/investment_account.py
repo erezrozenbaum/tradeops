@@ -28,6 +28,8 @@ class InvestmentHoldingCreate(BaseModel):
     monthly_contribution_employer: float | None = Field(None, ge=0)
     fund_status: str | None = None
     is_emergency_fund: bool = False
+    management_fee_balance_pct: float | None = Field(None, ge=0, le=5)
+    management_fee_contribution_pct: float | None = Field(None, ge=0, le=10)
 
 
 class InvestmentHoldingUpdate(BaseModel):
@@ -50,6 +52,8 @@ class InvestmentHoldingUpdate(BaseModel):
     monthly_contribution_employer: float | None = Field(None, ge=0)
     fund_status: str | None = None
     is_emergency_fund: bool | None = None
+    management_fee_balance_pct: float | None = Field(None, ge=0, le=5)
+    management_fee_contribution_pct: float | None = Field(None, ge=0, le=10)
 
 
 class InvestmentHoldingOut(BaseModel):
@@ -74,6 +78,8 @@ class InvestmentHoldingOut(BaseModel):
     monthly_contribution_employer: float | None
     fund_status: str | None
     is_emergency_fund: bool = False
+    management_fee_balance_pct: float | None = None
+    management_fee_contribution_pct: float | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -44,6 +44,8 @@ interface Holding {
   monthly_contribution_employer: number | null;
   fund_status: string | null;
   is_emergency_fund: boolean;
+  management_fee_balance_pct: number | null;
+  management_fee_contribution_pct: number | null;
 }
 
 interface Account {
@@ -208,7 +210,7 @@ const ASSET_TYPES = [
 ];
 
 const EMPTY_ACCOUNT = { provider_name: "", account_type: "brokerage", account_name: "", currency: "ILS", notes: "", family_member_id: "", is_emergency_fund: false };
-const EMPTY_HOLDING = { ticker: "", isin: "", name: "", asset_type: "stock", quantity: "", avg_buy_price: "", currency: "ILS", fees: "", purchase_date: "", current_value: "", notes: "", current_balance: "", total_deposits: "", monthly_contribution: "", annual_return_rate: "", monthly_contribution_employee: "", monthly_contribution_employer: "", fund_status: "active" };
+const EMPTY_HOLDING = { ticker: "", isin: "", name: "", asset_type: "stock", quantity: "", avg_buy_price: "", currency: "ILS", fees: "", purchase_date: "", current_value: "", notes: "", current_balance: "", total_deposits: "", monthly_contribution: "", annual_return_rate: "", monthly_contribution_employee: "", monthly_contribution_employer: "", fund_status: "active", management_fee_balance_pct: "", management_fee_contribution_pct: "" };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -456,6 +458,8 @@ export default function InvestmentsPage() {
             monthly_contribution_employee: holdingForm.monthly_contribution_employee ? parseFloat(holdingForm.monthly_contribution_employee) : null,
             monthly_contribution_employer: holdingForm.monthly_contribution_employer ? parseFloat(holdingForm.monthly_contribution_employer) : null,
             annual_return_rate: holdingForm.annual_return_rate ? parseFloat(holdingForm.annual_return_rate) : null,
+            management_fee_balance_pct: holdingForm.management_fee_balance_pct ? parseFloat(holdingForm.management_fee_balance_pct) : null,
+            management_fee_contribution_pct: holdingForm.management_fee_contribution_pct ? parseFloat(holdingForm.management_fee_contribution_pct) : null,
             fund_status: holdingForm.fund_status || "active",
             notes: holdingForm.notes || null,
           }
@@ -472,6 +476,8 @@ export default function InvestmentsPage() {
             total_deposits: holdingForm.total_deposits ? parseFloat(holdingForm.total_deposits) : null,
             monthly_contribution: holdingForm.monthly_contribution ? parseFloat(holdingForm.monthly_contribution) : null,
             annual_return_rate: holdingForm.annual_return_rate ? parseFloat(holdingForm.annual_return_rate) : null,
+            management_fee_balance_pct: holdingForm.management_fee_balance_pct ? parseFloat(holdingForm.management_fee_balance_pct) : null,
+            management_fee_contribution_pct: holdingForm.management_fee_contribution_pct ? parseFloat(holdingForm.management_fee_contribution_pct) : null,
             notes: holdingForm.notes || null,
           }
         : {
@@ -553,6 +559,8 @@ export default function InvestmentsPage() {
       monthly_contribution_employee: h.monthly_contribution_employee != null ? String(h.monthly_contribution_employee) : "",
       monthly_contribution_employer: h.monthly_contribution_employer != null ? String(h.monthly_contribution_employer) : "",
       fund_status: h.fund_status ?? "active",
+      management_fee_balance_pct: h.management_fee_balance_pct != null ? String(h.management_fee_balance_pct) : "",
+      management_fee_contribution_pct: h.management_fee_contribution_pct != null ? String(h.management_fee_contribution_pct) : "",
     });
     setExpandedAccounts(prev => { const s = new Set(prev); s.add(accountId); return s; });
   }
@@ -580,6 +588,8 @@ export default function InvestmentsPage() {
             monthly_contribution_employee: editHoldingForm.monthly_contribution_employee ? parseFloat(editHoldingForm.monthly_contribution_employee) : null,
             monthly_contribution_employer: editHoldingForm.monthly_contribution_employer ? parseFloat(editHoldingForm.monthly_contribution_employer) : null,
             annual_return_rate: editHoldingForm.annual_return_rate ? parseFloat(editHoldingForm.annual_return_rate) : null,
+            management_fee_balance_pct: editHoldingForm.management_fee_balance_pct ? parseFloat(editHoldingForm.management_fee_balance_pct) : null,
+            management_fee_contribution_pct: editHoldingForm.management_fee_contribution_pct ? parseFloat(editHoldingForm.management_fee_contribution_pct) : null,
             fund_status: editHoldingForm.fund_status || "active",
             notes: editHoldingForm.notes || null,
           }
@@ -596,6 +606,8 @@ export default function InvestmentsPage() {
             total_deposits: editHoldingForm.total_deposits ? parseFloat(editHoldingForm.total_deposits) : null,
             monthly_contribution: editHoldingForm.monthly_contribution ? parseFloat(editHoldingForm.monthly_contribution) : null,
             annual_return_rate: editHoldingForm.annual_return_rate ? parseFloat(editHoldingForm.annual_return_rate) : null,
+            management_fee_balance_pct: editHoldingForm.management_fee_balance_pct ? parseFloat(editHoldingForm.management_fee_balance_pct) : null,
+            management_fee_contribution_pct: editHoldingForm.management_fee_contribution_pct ? parseFloat(editHoldingForm.management_fee_contribution_pct) : null,
             notes: editHoldingForm.notes || null,
           }
         : {
@@ -1328,6 +1340,14 @@ export default function InvestmentsPage() {
                           <Input type="number" placeholder="5.0" value={holdingForm.annual_return_rate} onChange={e => setHoldingForm({ ...holdingForm, annual_return_rate: e.target.value })} />
                         </div>
                         <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Fee on balance % (דמי ניהול מצבירה)</label>
+                          <Input type="number" step="0.01" placeholder="0.5" value={holdingForm.management_fee_balance_pct} onChange={e => setHoldingForm({ ...holdingForm, management_fee_balance_pct: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Fee on contribution % (דמי ניהול מהפקדות)</label>
+                          <Input type="number" step="0.01" placeholder="1.5" value={holdingForm.management_fee_contribution_pct} onChange={e => setHoldingForm({ ...holdingForm, management_fee_contribution_pct: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
                           <label className="text-xs text-muted-foreground">Currency</label>
                           <Input maxLength={3} value={holdingForm.currency} onChange={e => setHoldingForm({ ...holdingForm, currency: e.target.value.toUpperCase() })} />
                         </div>
@@ -1364,6 +1384,14 @@ export default function InvestmentsPage() {
                         <div className="space-y-1">
                           <label className="text-xs text-muted-foreground">Expected annual return (%)</label>
                           <Input type="number" placeholder="5.5" value={holdingForm.annual_return_rate} onChange={e => setHoldingForm({ ...holdingForm, annual_return_rate: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Fee on balance % (דמי ניהול מצבירה)</label>
+                          <Input type="number" step="0.01" placeholder="0.5" value={holdingForm.management_fee_balance_pct} onChange={e => setHoldingForm({ ...holdingForm, management_fee_balance_pct: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Fee on contribution % (דמי ניהול מהפקדות)</label>
+                          <Input type="number" step="0.01" placeholder="1.5" value={holdingForm.management_fee_contribution_pct} onChange={e => setHoldingForm({ ...holdingForm, management_fee_contribution_pct: e.target.value })} />
                         </div>
                         <div className="space-y-1">
                           <label className="text-xs text-muted-foreground">Currency</label>
@@ -1798,6 +1826,14 @@ export default function InvestmentsPage() {
                                         <Input type="number" value={editHoldingForm.annual_return_rate} onChange={e => setEditHoldingForm({ ...editHoldingForm, annual_return_rate: e.target.value })} />
                                       </div>
                                       <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Fee on balance % (דמי ניהול מצבירה)</label>
+                                        <Input type="number" step="0.01" value={editHoldingForm.management_fee_balance_pct} onChange={e => setEditHoldingForm({ ...editHoldingForm, management_fee_balance_pct: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Fee on contribution % (דמי ניהול מהפקדות)</label>
+                                        <Input type="number" step="0.01" value={editHoldingForm.management_fee_contribution_pct} onChange={e => setEditHoldingForm({ ...editHoldingForm, management_fee_contribution_pct: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
                                         <label className="text-xs text-muted-foreground">Currency</label>
                                         <Input maxLength={3} value={editHoldingForm.currency} onChange={e => setEditHoldingForm({ ...editHoldingForm, currency: e.target.value.toUpperCase() })} />
                                       </div>
@@ -1834,6 +1870,14 @@ export default function InvestmentsPage() {
                                       <div className="space-y-1">
                                         <label className="text-xs text-muted-foreground">Expected annual return (%)</label>
                                         <Input type="number" value={editHoldingForm.annual_return_rate} onChange={e => setEditHoldingForm({ ...editHoldingForm, annual_return_rate: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Fee on balance % (דמי ניהול מצבירה)</label>
+                                        <Input type="number" step="0.01" value={editHoldingForm.management_fee_balance_pct} onChange={e => setEditHoldingForm({ ...editHoldingForm, management_fee_balance_pct: e.target.value })} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Fee on contribution % (דמי ניהול מהפקדות)</label>
+                                        <Input type="number" step="0.01" value={editHoldingForm.management_fee_contribution_pct} onChange={e => setEditHoldingForm({ ...editHoldingForm, management_fee_contribution_pct: e.target.value })} />
                                       </div>
                                       <div className="space-y-1">
                                         <label className="text-xs text-muted-foreground">Currency</label>

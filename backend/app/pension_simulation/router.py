@@ -103,6 +103,8 @@ def simulate_fund(
         monthly_contribution=effective_contrib,
         annual_return_rate_pct=rate,
         withdrawal_years=withdrawal_years,
+        management_fee_balance_pct=holding.management_fee_balance_pct or 0.0,
+        management_fee_contribution_pct=holding.management_fee_contribution_pct or 0.0,
     )
 
     return PensionSimulationResult(

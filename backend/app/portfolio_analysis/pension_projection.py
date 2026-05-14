@@ -38,8 +38,12 @@ def project(
             else:
                 monthly = h.monthly_contribution or 0.0
 
-            rate = h.annual_return_rate if h.annual_return_rate is not None else _DEFAULT_RETURN_PCT
-            projected = _fv(balance, monthly, rate, months)
+            gross_rate = h.annual_return_rate if h.annual_return_rate is not None else _DEFAULT_RETURN_PCT
+            fee_balance = h.management_fee_balance_pct or 0.0
+            fee_contrib = h.management_fee_contribution_pct or 0.0
+            net_rate = gross_rate - fee_balance
+            monthly_after_fee = monthly * (1.0 - fee_contrib / 100.0)
+            projected = _fv(balance, monthly_after_fee, net_rate, months)
 
             def _cvt(amount: float, ccy: str) -> float:
                 if ccy == base_currency or amount == 0:
@@ -54,7 +58,7 @@ def project(
                 "asset_type": h.asset_type,
                 "current_balance": round(_cvt(balance, h.currency), 2),
                 "monthly_contribution": round(_cvt(monthly, h.currency), 2),
-                "annual_return_pct": rate,
+                "annual_return_pct": net_rate,
                 "projected_value": round(_cvt(projected, h.currency), 2),
                 "currency": base_currency,
             })
