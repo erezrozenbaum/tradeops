@@ -96,6 +96,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
 
   function handleLogout() {
     localStorage.removeItem("tradeops_investor_id");
+    localStorage.removeItem("tradeops_token");
     router.push("/login");
   }
 

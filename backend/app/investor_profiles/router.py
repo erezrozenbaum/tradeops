@@ -3,11 +3,13 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.auth.dependencies import get_current_user
 from app.db.session import get_db
 from app.financial_profiles import service as fp_service
 from app.financial_scoring.engine import calculate_stability_score
 from app.financial_scoring.schemas import FinancialScoringInput, FinancialStabilityScore
 from app.investor_profiles import service
+from app.models.user import User
 from app.schemas.investor_profile import (
     InvestorProfileCreate,
     InvestorProfileOut,
@@ -18,37 +20,60 @@ router = APIRouter()
 
 
 @router.post("", response_model=InvestorProfileOut, status_code=status.HTTP_201_CREATED)
-def create_investor(data: InvestorProfileCreate, db: Session = Depends(get_db)):
-    return service.create(db, data)
+def create_investor(
+    data: InvestorProfileCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return service.create(db, data, user_id=current_user.id)
 
 
 @router.get("", response_model=list[InvestorProfileOut])
-def list_investors(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return service.get_all(db, skip=skip, limit=limit)
+def list_investors(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return service.get_all(db, user_id=current_user.id, skip=skip, limit=limit)
 
 
 @router.get("/{investor_id}", response_model=InvestorProfileOut)
-def get_investor(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+def get_investor(
+    investor_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     profile = service.get(db, investor_id)
-    if not profile:
+    if not profile or profile.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Investor profile not found")
     return profile
 
 
 @router.put("/{investor_id}", response_model=InvestorProfileOut)
 def update_investor(
-    investor_id: uuid.UUID, data: InvestorProfileUpdate, db: Session = Depends(get_db)
+    investor_id: uuid.UUID,
+    data: InvestorProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    profile = service.update(db, investor_id, data)
-    if not profile:
+    profile = service.get(db, investor_id)
+    if not profile or profile.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Investor profile not found")
-    return profile
+    updated = service.update(db, investor_id, data)
+    return updated
 
 
 @router.delete("/{investor_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_investor(investor_id: uuid.UUID, db: Session = Depends(get_db)):
-    if not service.delete(db, investor_id):
+def delete_investor(
+    investor_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    profile = service.get(db, investor_id)
+    if not profile or profile.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Investor profile not found")
+    service.delete(db, investor_id)
 
 
 @router.get("/{investor_id}/stability-score", response_model=FinancialStabilityScore)

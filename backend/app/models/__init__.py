@@ -20,6 +20,7 @@ from app.models.investment_account import InvestmentAccount, InvestmentHolding, 
 from app.models.currency_rate import CurrencyRate
 from app.models.price_snapshot import PriceSnapshot
 from app.models.portfolio_snapshot import PortfolioSnapshot
+from app.models.user import User
 
 __all__ = [
     "InvestorProfile",
@@ -54,4 +55,5 @@ __all__ = [
     "CurrencyRate",
     "PriceSnapshot",
     "PortfolioSnapshot",
+    "User",
 ]
