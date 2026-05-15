@@ -1490,16 +1490,19 @@ export default function InvestmentsPage() {
                           <Input type="number" placeholder="1500" value={holdingForm.monthly_contribution_employer} onChange={e => setHoldingForm({ ...holdingForm, monthly_contribution_employer: e.target.value })} />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">Expected annual return (%)</label>
-                          <Input type="number" placeholder="5.0" value={holdingForm.annual_return_rate} onChange={e => setHoldingForm({ ...holdingForm, annual_return_rate: e.target.value })} />
+                          <label className="text-xs text-muted-foreground">Expected annual return — gross (%)</label>
+                          <Input type="number" step="0.5" placeholder="5.0" value={holdingForm.annual_return_rate} onChange={e => setHoldingForm({ ...holdingForm, annual_return_rate: e.target.value })} />
+                          <p className="text-[10px] text-muted-foreground">Conservative: 4–5% · Moderate: 5–6% · Historical avg: 7–9%. Net = gross minus fee on balance.</p>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">Fee on balance % (דמי ניהול מצבירה)</label>
-                          <Input type="number" step="0.01" placeholder="0.5" value={holdingForm.management_fee_balance_pct} onChange={e => setHoldingForm({ ...holdingForm, management_fee_balance_pct: e.target.value })} />
+                          <label className="text-xs text-muted-foreground">Fee on balance % — דמי ניהול מצבירה</label>
+                          <Input type="number" step="0.01" placeholder="0.25" value={holdingForm.management_fee_balance_pct} onChange={e => setHoldingForm({ ...holdingForm, management_fee_balance_pct: e.target.value })} />
+                          <p className="text-[10px] text-muted-foreground">Typical: 0.25–0.5% (כה&quot;ת) · Check your policy document.</p>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">Fee on contribution % (דמי ניהול מהפקדות)</label>
-                          <Input type="number" step="0.01" placeholder="1.5" value={holdingForm.management_fee_contribution_pct} onChange={e => setHoldingForm({ ...holdingForm, management_fee_contribution_pct: e.target.value })} />
+                          <label className="text-xs text-muted-foreground">Fee on contribution % — דמי ניהול מהפקדות</label>
+                          <Input type="number" step="0.01" placeholder="1.0" value={holdingForm.management_fee_contribution_pct} onChange={e => setHoldingForm({ ...holdingForm, management_fee_contribution_pct: e.target.value })} />
+                          <p className="text-[10px] text-muted-foreground">Typical: 0.5–1.5%. Deducted from each deposit before it compounds.</p>
                         </div>
                         <div className="space-y-1">
                           <label className="text-xs text-muted-foreground">Currency</label>
@@ -1536,16 +1539,19 @@ export default function InvestmentsPage() {
                           <Input type="number" placeholder="2000" value={holdingForm.monthly_contribution} onChange={e => setHoldingForm({ ...holdingForm, monthly_contribution: e.target.value })} />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">Expected annual return (%)</label>
-                          <Input type="number" placeholder="5.5" value={holdingForm.annual_return_rate} onChange={e => setHoldingForm({ ...holdingForm, annual_return_rate: e.target.value })} />
+                          <label className="text-xs text-muted-foreground">Expected annual return — gross (%)</label>
+                          <Input type="number" step="0.5" placeholder="5.5" value={holdingForm.annual_return_rate} onChange={e => setHoldingForm({ ...holdingForm, annual_return_rate: e.target.value })} />
+                          <p className="text-[10px] text-muted-foreground">Conservative: 4–5% · Moderate: 5–6% · Historical avg: 7–9%. Net = gross minus fee on balance. Use realistic net for planning.</p>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">Fee on balance % (דמי ניהול מצבירה)</label>
+                          <label className="text-xs text-muted-foreground">Fee on balance % — דמי ניהול מצבירה</label>
                           <Input type="number" step="0.01" placeholder="0.5" value={holdingForm.management_fee_balance_pct} onChange={e => setHoldingForm({ ...holdingForm, management_fee_balance_pct: e.target.value })} />
+                          <p className="text-[10px] text-muted-foreground">Typical: 0.5–1% (ביטוח מנהלים) · Check your policy document (פוליסה).</p>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">Fee on contribution % (דמי ניהול מהפקדות)</label>
+                          <label className="text-xs text-muted-foreground">Fee on contribution % — דמי ניהול מהפקדות</label>
                           <Input type="number" step="0.01" placeholder="1.5" value={holdingForm.management_fee_contribution_pct} onChange={e => setHoldingForm({ ...holdingForm, management_fee_contribution_pct: e.target.value })} />
+                          <p className="text-[10px] text-muted-foreground">Typical: 1–2% (ביטוח מנהלים). Deducted from each deposit before it compounds.</p>
                         </div>
                         <div className="space-y-1">
                           <label className="text-xs text-muted-foreground">Currency</label>
@@ -1728,6 +1734,11 @@ export default function InvestmentsPage() {
                                 )}
                                 {isPension && (
                                   <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/30 px-1.5 py-0 text-[10px] font-medium text-blue-700 dark:text-blue-400">Pension fund</span>
+                                )}
+                                {isSavingsFund && h.annual_return_rate !== null && h.annual_return_rate > 7 && (
+                                  <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0 text-[10px] font-medium text-amber-700 dark:text-amber-400" title="Return rate above 7% — may be a historical gross rate, not a realistic net planning rate. Click edit (✏️) to update.">
+                                    ⚠️ {h.annual_return_rate}% rate
+                                  </span>
                                 )}
                                 {isStudyFund && taxInfo?.status && (
                                   <span className={`inline-flex items-center rounded-full px-1.5 py-0 text-[10px] font-medium ${taxInfo.status === "Tax-Free" ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" : "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400"}`}>
@@ -2049,16 +2060,19 @@ export default function InvestmentsPage() {
                                         <Input type="number" value={editHoldingForm.monthly_contribution_employer} onChange={e => setEditHoldingForm({ ...editHoldingForm, monthly_contribution_employer: e.target.value })} />
                                       </div>
                                       <div className="space-y-1">
-                                        <label className="text-xs text-muted-foreground">Expected annual return (%)</label>
-                                        <Input type="number" value={editHoldingForm.annual_return_rate} onChange={e => setEditHoldingForm({ ...editHoldingForm, annual_return_rate: e.target.value })} />
+                                        <label className="text-xs text-muted-foreground">Expected annual return — gross (%)</label>
+                                        <Input type="number" step="0.5" value={editHoldingForm.annual_return_rate} onChange={e => setEditHoldingForm({ ...editHoldingForm, annual_return_rate: e.target.value })} />
+                                        <p className="text-[10px] text-muted-foreground">Conservative: 4–5% · Moderate: 5–6% · Historical avg: 7–9%. Net = gross minus fee on balance.</p>
                                       </div>
                                       <div className="space-y-1">
-                                        <label className="text-xs text-muted-foreground">Fee on balance % (דמי ניהול מצבירה)</label>
-                                        <Input type="number" step="0.01" value={editHoldingForm.management_fee_balance_pct} onChange={e => setEditHoldingForm({ ...editHoldingForm, management_fee_balance_pct: e.target.value })} />
+                                        <label className="text-xs text-muted-foreground">Fee on balance % — דמי ניהול מצבירה</label>
+                                        <Input type="number" step="0.01" placeholder="0.25" value={editHoldingForm.management_fee_balance_pct} onChange={e => setEditHoldingForm({ ...editHoldingForm, management_fee_balance_pct: e.target.value })} />
+                                        <p className="text-[10px] text-muted-foreground">Typical: 0.25–0.5% (כה&quot;ת) · Check your policy document.</p>
                                       </div>
                                       <div className="space-y-1">
-                                        <label className="text-xs text-muted-foreground">Fee on contribution % (דמי ניהול מהפקדות)</label>
-                                        <Input type="number" step="0.01" value={editHoldingForm.management_fee_contribution_pct} onChange={e => setEditHoldingForm({ ...editHoldingForm, management_fee_contribution_pct: e.target.value })} />
+                                        <label className="text-xs text-muted-foreground">Fee on contribution % — דמי ניהול מהפקדות</label>
+                                        <Input type="number" step="0.01" placeholder="1.0" value={editHoldingForm.management_fee_contribution_pct} onChange={e => setEditHoldingForm({ ...editHoldingForm, management_fee_contribution_pct: e.target.value })} />
+                                        <p className="text-[10px] text-muted-foreground">Typical: 0.5–1.5%. Deducted from each deposit before it compounds.</p>
                                       </div>
                                       <div className="space-y-1">
                                         <label className="text-xs text-muted-foreground">Currency</label>
@@ -2095,16 +2109,19 @@ export default function InvestmentsPage() {
                                         <Input type="number" value={editHoldingForm.monthly_contribution} onChange={e => setEditHoldingForm({ ...editHoldingForm, monthly_contribution: e.target.value })} />
                                       </div>
                                       <div className="space-y-1">
-                                        <label className="text-xs text-muted-foreground">Expected annual return (%)</label>
-                                        <Input type="number" value={editHoldingForm.annual_return_rate} onChange={e => setEditHoldingForm({ ...editHoldingForm, annual_return_rate: e.target.value })} />
+                                        <label className="text-xs text-muted-foreground">Expected annual return — gross (%)</label>
+                                        <Input type="number" step="0.5" value={editHoldingForm.annual_return_rate} onChange={e => setEditHoldingForm({ ...editHoldingForm, annual_return_rate: e.target.value })} />
+                                        <p className="text-[10px] text-muted-foreground">Conservative: 4–5% · Moderate: 5–6% · Historical avg: 7–9%. Net = gross minus fee on balance. Use realistic net for planning.</p>
                                       </div>
                                       <div className="space-y-1">
-                                        <label className="text-xs text-muted-foreground">Fee on balance % (דמי ניהול מצבירה)</label>
-                                        <Input type="number" step="0.01" value={editHoldingForm.management_fee_balance_pct} onChange={e => setEditHoldingForm({ ...editHoldingForm, management_fee_balance_pct: e.target.value })} />
+                                        <label className="text-xs text-muted-foreground">Fee on balance % — דמי ניהול מצבירה</label>
+                                        <Input type="number" step="0.01" placeholder="0.5" value={editHoldingForm.management_fee_balance_pct} onChange={e => setEditHoldingForm({ ...editHoldingForm, management_fee_balance_pct: e.target.value })} />
+                                        <p className="text-[10px] text-muted-foreground">Typical: 0.5–1% (ביטוח מנהלים) · Check your policy document (פוליסה).</p>
                                       </div>
                                       <div className="space-y-1">
-                                        <label className="text-xs text-muted-foreground">Fee on contribution % (דמי ניהול מהפקדות)</label>
-                                        <Input type="number" step="0.01" value={editHoldingForm.management_fee_contribution_pct} onChange={e => setEditHoldingForm({ ...editHoldingForm, management_fee_contribution_pct: e.target.value })} />
+                                        <label className="text-xs text-muted-foreground">Fee on contribution % — דמי ניהול מהפקדות</label>
+                                        <Input type="number" step="0.01" placeholder="1.0" value={editHoldingForm.management_fee_contribution_pct} onChange={e => setEditHoldingForm({ ...editHoldingForm, management_fee_contribution_pct: e.target.value })} />
+                                        <p className="text-[10px] text-muted-foreground">Typical: 1–2% (ביטוח מנהלים). Deducted from each deposit before it compounds.</p>
                                       </div>
                                       <div className="space-y-1">
                                         <label className="text-xs text-muted-foreground">Currency</label>
