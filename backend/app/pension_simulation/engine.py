@@ -19,6 +19,7 @@ def simulate(
     withdrawal_years: int = 25,
     management_fee_balance_pct: float = 0.0,
     management_fee_contribution_pct: float = 0.0,
+    makdam: float | None = None,
 ) -> dict:
     years = max(0.0, retirement_age - current_age)
     months = years * 12
@@ -37,7 +38,14 @@ def simulate(
     projected = fv_balance + fv_contributions
     contributions_added = monthly_after_fee * months
     gains = projected - current_balance - contributions_added
-    monthly_pension = projected / (withdrawal_years * 12) if withdrawal_years > 0 else 0.0
+
+    # Use makdam (Israeli pension coefficient) when provided — more accurate for
+    # executive insurance plans where the makdam is contractually guaranteed.
+    # Fall back to linear drawdown over withdrawal_years when makdam is not set.
+    if makdam and makdam > 0:
+        monthly_pension = projected / makdam
+    else:
+        monthly_pension = projected / (withdrawal_years * 12) if withdrawal_years > 0 else 0.0
 
     return {
         "years_to_retirement": round(years, 1),
@@ -48,4 +56,5 @@ def simulate(
         "total_contributions_added": round(contributions_added, 2),
         "total_gains": round(gains, 2),
         "monthly_pension_estimate": round(monthly_pension, 2),
+        "makdam_used": makdam if (makdam and makdam > 0) else None,
     }
