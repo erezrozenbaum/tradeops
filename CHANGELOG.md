@@ -10,6 +10,23 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.68.0] — 2026-05-15
+
+### Added — TASK 71: Resilience Stress-Test Module
+
+**TASK 71 — Resilience Stress-Test**
+- **`resilience/`** (new module): `engine.py` simulates a life-event scenario (job loss, expense spike) against tiered liquid assets. `simulate_depletion()` is a pure function: drains the cash reserve (Tier 0 = `liquid_savings` from financial profile) first, then Tier 1 (T+2) and Tier 2 (1-week) holdings in cost-efficiency order (cheapest-to-liquidate first, same sort as emergency lever). Never touches Tier 3 (locked: pension, real estate) — breach of Tier 3 is the failure mode. Returns `(depletion_path, months_covered, tier3_breach)`.
+- **Survival Score**: `min(100, months_covered / duration_months * 100)` — 100 means Tier 3 never touched; <100 means Tier 3 breach required. Verdicts: Safe (≥80), At Risk (50–79), Critical (<50). Deterministic, no AI.
+- **AI Recommendation**: Optional Claude Haiku call (skipped if no `ANTHROPIC_API_KEY`). Prompt encodes scenario params, survival score, months covered, Tier 3 total. Returns 2–3 sentence personalised recommendation.
+- **`resilience/schemas.py`**: `LifeEventRequest` (duration_months 1–36, monthly_income_loss ≥0, monthly_expense_increase ≥0, optional scenario_label), `DepletionStep` (month, source_label, holding_name, ticker, gross_sold, tax_paid, net_received, cumulative_net_raised), `ResilienceResult` (full simulation output including monthly_burn, total_cash_needed, cash_reserve, tier3_total_gross, months_covered, tier3_breach, survival_score, survival_verdict, depletion_path, ai_recommendation).
+- **`resilience/router.py`**: `POST /api/v1/investors/{id}/portfolio/resilience` — validates request body, fetches investor + portfolio + financial profile, calls `compute_resilience()`.
+- **`ResilienceSimulatorCard.tsx`** (new component): Form with 4 inputs (duration, income loss, extra expenses, optional label); "Run Simulation" button; verdict banner with coloured shield icon + survival score bar; key metrics grid (monthly burn, total needed, cash reserve, Tier 3 locked); months-covered progress bar; collapsible depletion path table (month, asset, tier, gross sold, tax, net received); AI recommendation block when available. Added to the bottom of the **Stress Test** page.
+- **`tests/test_resilience.py`** (new, 36 tests): `TestSurvivalScore` (6 tests — no-breach=100, breach-at-0=0, proportional, cap at 99 when breached), `TestSurvivalVerdict` (6 tests — 100=Safe, 80=Safe, 79=At Risk, 50=At Risk, 49=Critical, 0=Critical), `TestSimulateDepletion` (10 tests — zero burn, cash covers full duration, holds liquidated when cash exhausted, tier3 breach when pool empty, months-covered equals duration when survived, mid-scenario breach, cumulative raised, drain order, step field population, negative burn treated as zero), `TestComputeResilience` (14 tests — return type, income covers=no-breach, income loss burn calc, expense increase burn calc, no excess burn, breach flag, tier3 total, score=100 when covered, no AI key, label default/custom, currency, cash reserve from financial profile, no financial profile uses zeros).
+
+**Tests:** 359 backend tests passing (+36 new). 0 TypeScript errors. No DB migrations.
+
+---
+
 ## [0.67.0] — 2026-05-15
 
 ### Added — TASK 61: Family Consolidated View + TASK 70: Liquidity Runway Engine
