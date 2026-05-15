@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, RefreshCw, Bell, BellOff, CheckCircle2 } from "lucide-react";
+import { AlertCircle, RefreshCw, Bell, BellOff, CheckCircle2, Mail } from "lucide-react";
 
 interface InvestorProfile {
   id: string;
@@ -18,6 +18,7 @@ interface InvestorProfile {
   is_minor: boolean;
   alert_email: string | null;
   email_alerts_enabled: boolean;
+  weekly_digest_enabled: boolean;
 }
 
 interface HoldingInfo {
@@ -40,6 +41,7 @@ export default function SettingsPage() {
 
   const [alertEmail, setAlertEmail] = useState("");
   const [alertsEnabled, setAlertsEnabled] = useState(false);
+  const [weeklyDigestEnabled, setWeeklyDigestEnabled] = useState(false);
   const [savingAlerts, setSavingAlerts] = useState(false);
   const [alertsSaved, setAlertsSaved] = useState(false);
 
@@ -52,6 +54,7 @@ export default function SettingsPage() {
         if (p) {
           setAlertEmail(p.alert_email ?? "");
           setAlertsEnabled(p.email_alerts_enabled ?? false);
+          setWeeklyDigestEnabled(p.weekly_digest_enabled ?? false);
         }
       })
       .catch((e) => setError(e.message));
@@ -110,6 +113,7 @@ export default function SettingsPage() {
         body: JSON.stringify({
           alert_email: alertEmail.trim() || null,
           email_alerts_enabled: alertsEnabled,
+          weekly_digest_enabled: weeklyDigestEnabled,
         }),
       });
       setAlertsSaved(true);
@@ -231,6 +235,29 @@ export default function SettingsPage() {
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
                   alertsEnabled ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Weekly digest toggle */}
+          <div className="flex items-center justify-between py-2 border-b border-border">
+            <div>
+              <p className="text-sm font-medium flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                Weekly AI Digest
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">Friday 18:00 UTC — portfolio performance, goal progress, and 1–3 AI suggestions</p>
+            </div>
+            <button
+              onClick={() => setWeeklyDigestEnabled(!weeklyDigestEnabled)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                weeklyDigestEnabled ? "bg-primary" : "bg-muted"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  weeklyDigestEnabled ? "translate-x-6" : "translate-x-1"
                 }`}
               />
             </button>

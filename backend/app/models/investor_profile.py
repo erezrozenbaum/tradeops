@@ -66,6 +66,7 @@ class InvestorProfile(Base, UUIDMixin, TimestampMixin):
     # Alert settings
     alert_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     email_alerts_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    weekly_digest_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # Relationships
     financial_profile: Mapped["FinancialProfile | None"] = relationship(
