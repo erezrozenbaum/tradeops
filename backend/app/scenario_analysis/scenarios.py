@@ -14,6 +14,8 @@ class Scenario:
     high_risk_drawdown: float  # crypto
     # FX shock for ILS investors (USD/ILS change %)
     ils_fx_shock: float        # positive = shekel weakens (USD gets more expensive → foreign assets gain)
+    # Historical months to full recovery from trough (None = not yet recovered / hypothetical)
+    recovery_months: int | None = None
 
 
 SCENARIOS: list[Scenario] = [
@@ -25,7 +27,8 @@ SCENARIOS: list[Scenario] = [
         low_risk_drawdown=-5.0,
         growth_drawdown=-50.0,
         high_risk_drawdown=-60.0,
-        ils_fx_shock=+15.0,  # dollar strengthened sharply
+        ils_fx_shock=+15.0,
+        recovery_months=54,  # S&P 500 recovered to pre-crisis peak by early 2013
     ),
     Scenario(
         id="covid_crash",
@@ -36,6 +39,7 @@ SCENARIOS: list[Scenario] = [
         growth_drawdown=-34.0,
         high_risk_drawdown=-50.0,
         ils_fx_shock=+10.0,
+        recovery_months=6,
     ),
     Scenario(
         id="2022_rate_hike",
@@ -45,7 +49,8 @@ SCENARIOS: list[Scenario] = [
         low_risk_drawdown=-18.0,  # bonds crashed too
         growth_drawdown=-25.0,
         high_risk_drawdown=-65.0,
-        ils_fx_shock=-5.0,        # shekel held relatively well early on
+        ils_fx_shock=-5.0,
+        recovery_months=24,  # S&P 500 recovered by end of 2023
     ),
     Scenario(
         id="tech_crash_40",
@@ -56,6 +61,7 @@ SCENARIOS: list[Scenario] = [
         growth_drawdown=-40.0,
         high_risk_drawdown=-30.0,
         ils_fx_shock=0.0,
+        recovery_months=None,
     ),
     Scenario(
         id="ils_depreciation",
@@ -66,5 +72,6 @@ SCENARIOS: list[Scenario] = [
         growth_drawdown=0.0,
         high_risk_drawdown=0.0,
         ils_fx_shock=+22.0,
+        recovery_months=None,
     ),
 ]

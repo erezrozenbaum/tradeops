@@ -11,6 +11,7 @@ import { formatCurrency, formatPercent } from "@/lib/utils";
 import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronRight, Briefcase, RefreshCw, Scale, CheckCircle2, XCircle, ShieldCheck, Shield, AlertTriangle } from "lucide-react";
 import { FxImpactCard } from "@/components/FxImpactCard";
 import { ProactiveInsightsCard } from "@/components/ProactiveInsightsCard";
+import { PaydayCalendarCard } from "@/components/PaydayCalendarCard";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -1263,6 +1264,9 @@ export default function InvestmentsPage() {
 
       {/* FX Impact Analysis */}
       {investorId && <FxImpactCard investorId={investorId} />}
+
+      {/* Payday Calendar */}
+      {investorId && <PaydayCalendarCard investorId={investorId} />}
 
       {/* Options P&L summary */}
       {optionsSummary && optionsSummary.total_positions > 0 && (

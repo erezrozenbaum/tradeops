@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useInvestorId } from "@/hooks/useInvestorId";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, TrendingDown, TrendingUp, BarChart2, Zap, Target } from "lucide-react";
+import { AlertTriangle, TrendingDown, TrendingUp, BarChart2, Zap, Target, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
@@ -28,6 +28,15 @@ interface RetirementReadiness {
   currency: string;
 }
 
+interface HoldingImpact {
+  name: string;
+  ticker: string | null;
+  asset_type: string;
+  current_value: number;
+  simulated_loss: number;
+  simulated_value: number;
+}
+
 interface ScenarioImpact {
   scenario_id: string;
   scenario_name: string;
@@ -40,6 +49,8 @@ interface ScenarioImpact {
   growth_loss: number;
   high_risk_loss: number;
   fx_impact: number;
+  recovery_months: number | null;
+  holding_impacts: HoldingImpact[];
 }
 
 interface MonteCarloPercentile {
@@ -72,6 +83,13 @@ const SCENARIO_COLORS: Record<string, string> = {
   ils_depreciation: "#06b6d4",
 };
 
+function recoveryLabel(months: number | null): string {
+  if (months === null) return "Hypothetical";
+  if (months < 12) return `Recovered in ~${months}mo`;
+  const years = (months / 12).toFixed(1).replace(/\.0$/, "");
+  return `Recovered in ~${years}yr`;
+}
+
 // ── Chart tooltip ──────────────────────────────────────────────────────────
 
 function McTooltip({ active, payload, label, currency }: any) {
@@ -99,6 +117,7 @@ export default function StressTestPage() {
   const [data, setData] = useState<StressTestResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
+  const [showAllHoldings, setShowAllHoldings] = useState(false);
   const [retirement, setRetirement] = useState<RetirementReadiness | null>(null);
 
   useEffect(() => {
@@ -177,7 +196,7 @@ export default function StressTestPage() {
                 return (
                   <button
                     key={s.scenario_id}
-                    onClick={() => setSelected(isSel ? null : s.scenario_id)}
+                    onClick={() => { setSelected(isSel ? null : s.scenario_id); setShowAllHoldings(false); }}
                     className={`text-left rounded-xl border p-4 transition-all hover:shadow-md ${
                       isSel ? "border-primary ring-1 ring-primary" : "border-border"
                     }`}
@@ -207,8 +226,11 @@ export default function StressTestPage() {
                       />
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-muted-foreground">Simulated value</span>
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        {recoveryLabel(s.recovery_months)}
+                      </div>
                       <span className={`text-sm font-bold ${isGain ? "text-green-500" : "text-red-500"}`}>
                         {formatCurrency(s.simulated_value, currency)}
                       </span>
@@ -223,12 +245,21 @@ export default function StressTestPage() {
           {selectedScenario && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  {selectedScenario.scenario_name} — Breakdown
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    {selectedScenario.scenario_name} — Breakdown
+                  </CardTitle>
+                  {selectedScenario.recovery_months !== null && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
+                      <Clock className="h-3 w-3" />
+                      {recoveryLabel(selectedScenario.recovery_months)}
+                    </div>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                {/* Tier breakdown */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                   {[
                     { label: "Portfolio Impact", value: formatCurrency(selectedScenario.portfolio_loss, currency), positive: selectedScenario.portfolio_loss >= 0 },
@@ -243,7 +274,54 @@ export default function StressTestPage() {
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-muted-foreground mt-3">{selectedScenario.description}</p>
+
+                {/* Per-holding impact table */}
+                {selectedScenario.holding_impacts.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Per-holding impact</p>
+                    <div className="rounded-lg border border-border overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead className="bg-muted/40">
+                          <tr>
+                            <th className="text-left px-3 py-2 font-medium text-muted-foreground">Holding</th>
+                            <th className="text-right px-3 py-2 font-medium text-muted-foreground">Current</th>
+                            <th className="text-right px-3 py-2 font-medium text-muted-foreground">Impact</th>
+                            <th className="text-right px-3 py-2 font-medium text-muted-foreground">After crash</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {(showAllHoldings
+                            ? selectedScenario.holding_impacts
+                            : selectedScenario.holding_impacts.slice(0, 8)
+                          ).map((h, i) => (
+                            <tr key={i} className="hover:bg-muted/20">
+                              <td className="px-3 py-2">
+                                <span className="font-medium">{h.name}</span>
+                                {h.ticker && <span className="text-muted-foreground ml-1.5 font-mono">{h.ticker}</span>}
+                              </td>
+                              <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(h.current_value, currency)}</td>
+                              <td className={`px-3 py-2 text-right tabular-nums font-medium ${h.simulated_loss < 0 ? "text-red-500" : "text-green-500"}`}>
+                                {h.simulated_loss >= 0 ? "+" : ""}{formatCurrency(h.simulated_loss, currency)}
+                              </td>
+                              <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{formatCurrency(h.simulated_value, currency)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {selectedScenario.holding_impacts.length > 8 && (
+                      <button
+                        onClick={() => setShowAllHoldings(!showAllHoldings)}
+                        className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showAllHoldings ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                        {showAllHoldings ? "Show less" : `Show all ${selectedScenario.holding_impacts.length} holdings`}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-xs text-muted-foreground">{selectedScenario.description}</p>
               </CardContent>
             </Card>
           )}

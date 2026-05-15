@@ -3,6 +3,15 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class HoldingImpact(BaseModel):
+    name: str
+    ticker: str | None
+    asset_type: str
+    current_value: float
+    simulated_loss: float   # negative = loss, positive = gain (base currency)
+    simulated_value: float
+
+
 class ScenarioImpact(BaseModel):
     scenario_id: str
     scenario_name: str
@@ -15,6 +24,8 @@ class ScenarioImpact(BaseModel):
     growth_loss: float
     high_risk_loss: float
     fx_impact: float             # FX contribution (ILS portfolios with USD exposure)
+    recovery_months: int | None  # historical months to recover from trough (None = hypothetical)
+    holding_impacts: list[HoldingImpact]  # per-holding breakdown sorted by simulated_loss
 
 
 class MonteCarloPercentile(BaseModel):

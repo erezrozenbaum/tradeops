@@ -24,4 +24,5 @@ class IncomeResult(BaseModel):
     portfolio_yield_on_cost: float
     holdings: list[DividendHolding]
     upcoming_ex_dates: list[dict]   # [{ticker, name, ex_date, estimated_payment}]
+    monthly_income: dict[int, float]  # month 1-12 → estimated base-currency income
     computed_at: datetime
