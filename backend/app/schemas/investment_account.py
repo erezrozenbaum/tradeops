@@ -98,6 +98,7 @@ class InvestmentHoldingOut(BaseModel):
     underlying_ticker: str | None = None
     contract_multiplier: float | None = None
     position_type: str | None = None
+    purchase_fx_rate: float | None = None
     created_at: datetime
     updated_at: datetime
 

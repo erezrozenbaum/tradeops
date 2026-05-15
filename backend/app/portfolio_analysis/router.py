@@ -255,6 +255,96 @@ def get_portfolio_history(
     return PortfolioHistoryResult(investor_id=investor_id, snapshots=snapshots)
 
 
+@router.get("/insights")
+def get_proactive_insights(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Run drift detection and return AI-narrated insights with rebalancing actions.
+
+    - Ticker concentration > 20%: single-asset exposure alert
+    - Risk tier drift > 5%: rebalancing needed
+    - Options expiring within 30 days: expiry warning (short positions flagged as danger)
+    - Options P&L uses contract_multiplier for exposure calculation
+    Calls Claude (haiku) to narrate each event if ANTHROPIC_API_KEY is set.
+    """
+    from app.core.config import settings
+    from app.proactive_insights.engine import detect_drift, generate_insights
+
+    if settings.ANTHROPIC_API_KEY:
+        report = generate_insights(db, investor_id, settings.ANTHROPIC_API_KEY)
+    else:
+        report = detect_drift(db, investor_id)
+
+    return {
+        "investor_id": str(report.investor_id),
+        "base_currency": report.base_currency,
+        "total_portfolio_value": report.total_portfolio_value,
+        "drift_events": [
+            {
+                "event_id": e.event_id,
+                "event_type": e.event_type,
+                "severity": e.severity,
+                "ticker": e.ticker,
+                "name": e.name,
+                "value_pct": e.value_pct,
+                "delta_pct": e.delta_pct,
+                "tier": e.tier,
+                "days_to_expiry": e.days_to_expiry,
+                **e.data,
+            }
+            for e in report.drift_events
+        ],
+        "insights": [
+            {"event_id": i.event_id, "insight": i.insight, "action": i.action}
+            for i in report.insights
+        ],
+        "has_alerts": len(report.drift_events) > 0,
+    }
+
+
+@router.get("/fx-impact")
+def get_fx_impact(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Decompose portfolio P&L into asset P&L (price change) and currency P&L (FX shift).
+
+    Requires purchase_fx_rate to be captured on holding creation (auto-populated since v0.64).
+    Holdings created before v0.64 will show fx_data_available=false.
+    Options positions use contract_multiplier in cost basis calculation.
+    """
+    from app.fx_impact.engine import compute as compute_fx_impact
+    result = compute_fx_impact(db, investor_id)
+    return {
+        "investor_id": str(result.investor_id),
+        "base_currency": result.base_currency,
+        "total_cost_basis": result.total_cost_basis,
+        "total_asset_pnl": result.total_asset_pnl,
+        "total_fx_pnl": result.total_fx_pnl,
+        "total_pnl": result.total_pnl,
+        "holdings_missing_fx_data": result.holdings_missing_fx_data,
+        "holdings": [
+            {
+                "holding_id": h.holding_id,
+                "name": h.name,
+                "ticker": h.ticker,
+                "asset_type": h.asset_type,
+                "currency": h.currency,
+                "quantity": h.quantity,
+                "avg_buy_price": h.avg_buy_price,
+                "purchase_fx_rate": h.purchase_fx_rate,
+                "current_fx_rate": h.current_fx_rate,
+                "cost_basis_local": h.cost_basis_local,
+                "cost_basis_base": h.cost_basis_base,
+                "current_value_base": h.current_value_base,
+                "asset_pnl": h.asset_pnl,
+                "fx_pnl": h.fx_pnl,
+                "total_pnl": h.total_pnl,
+                "asset_pnl_pct": h.asset_pnl_pct,
+                "fx_pnl_pct": h.fx_pnl_pct,
+                "same_currency": h.same_currency,
+                "fx_data_available": h.fx_data_available,
+            }
+            for h in result.holdings
+        ],
+    }
+
+
 @router.get("/options")
 def get_options_summary(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     """Return all options positions with P&L, expiry info, and risk warnings."""

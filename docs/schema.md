@@ -1,8 +1,8 @@
 # TradeOps AI — Database Schema Reference
 
-**Version:** 0.63.0  
+**Version:** 0.64.0  
 **Last updated:** 2026-05-15  
-**Migration head:** 0028
+**Migration head:** 0029
 
 All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete unless noted.
 
@@ -354,6 +354,7 @@ Individual positions within an investment account.
 | underlying_ticker | VARCHAR(20) | YES | — | |
 | contract_multiplier | FLOAT | YES | — | Default 100 if null |
 | position_type | VARCHAR(10) | YES | — | `long` \| `short` |
+| purchase_fx_rate | FLOAT | YES | — | FX rate (base → holding.currency) at purchase time; auto-set on holding create (migration 0029) |
 | created_at | TIMESTAMPTZ | NO | `now()` | |
 | updated_at | TIMESTAMPTZ | NO | `now()` | |
 
@@ -623,3 +624,4 @@ price_snapshots       — global cache, no FK
 | 0026 | Management fees on holdings (management_fee_balance_pct, management_fee_contribution_pct) |
 | 0027 | Options fields on holdings (strike_price, expiry_date, option_type, underlying_ticker, contract_multiplier, position_type) |
 | 0028 | Weekly digest opt-in on investor_profiles (weekly_digest_enabled) |
+| 0029 | purchase_fx_rate on investment_holdings (FX impact analysis) |
