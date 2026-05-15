@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to TradeOps AI are documented here.  
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).  
@@ -10,19 +10,58 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.73.0] — 2026-05-15
+
+### Added — Personal/Joint Account Ownership + Projected Balance Badge + Error Boundary
+
+**Personal/Joint Account Ownership**
+- **`investments/page.tsx`**: Added "Personal / Joint" segmented toggle to the account creation form. Default is `personal`; selecting `joint` sends `owner_type: "joint"` to the backend. Joint accounts display a purple "Joint" badge on the account card header. Backend schema and migration (0033) were already in place.
+
+**Projected Balance Badge**
+- **`investments/page.tsx`**: Holdings with `price_source = "projected"` now show an amber "Projected" badge in the holdings table row. Tooltip explains it is auto-projected using compound interest from the last recorded balance date. The "Manual — refresh for live" badge no longer triggers for projected holdings (separate condition guards).
+
+**Dashboard Error Boundary**
+- **`frontend/src/app/(dashboard)/error.tsx`** (new): Next.js route-segment error boundary covering all dashboard pages. Shows a friendly "Something went wrong" panel with error ID (digest) and a "Try again" reset button. Prevents any unhandled exception from leaving the user on a blank page.
+
+**CHANGELOG cleanup**
+- Stripped all `TASK XX:`, `TASK A:`, `TASK B:` internal prefixes from CHANGELOG section headers and bold body titles. Public changelog now uses feature names only.
+
+**Tests:** 408 backend tests passing. 0 TypeScript errors.
+
+---
+
+## [0.72.0] — 2026-05-15
+
+### Fixed — Emergency Fund, Pension Simulator, High-Rate Alert
+
+**Emergency Fund from Flagged Holdings**
+- **`dashboard/service.py`**: Dashboard now queries holdings and accounts flagged with `is_emergency_fund = True` to compute `total_value / monthly_expenses`. Uses `max(profile_value, computed)` — previously only read the manually-entered field and ignored flagged holdings.
+
+**Pension Simulator Makdam Consistency**
+- **`pension_simulation/engine.py`**: `simulate()` now accepts optional `makdam` parameter. If provided, computes `monthly_pension = projected / makdam`; otherwise falls back to linear drawdown `projected / (withdrawal_years × 12)`.
+- **`pension_simulation/router.py`**: Passes `holding.makdam` for `pension_fund` holdings.
+- **`investments/page.tsx`**: Simulator subtitle shows `מקדם X` when makdam-based, or `over N yrs` for linear fallback.
+
+**High-Rate Pension Alert Dismiss**
+- **`dashboard/page.tsx`**: Added "I understand" dismiss button to the >7% return-rate warning. Persisted in `localStorage` keyed by fund names. Warning reappears if new high-rate funds are added.
+
+**Tests:** 408 backend tests passing. 0 TypeScript errors.
+
+---
+
 ## [0.71.0] — 2026-05-15
 
-### Added — TASK A: Auto-Projected Pension/Fund Balances
+### Added — Auto-Projected Pension/Fund Balances
 
-**TASK A — Auto-Projected Pension/Fund Balances**
+**Auto-Projected Pension/Fund Balances**
 - **`portfolio_analysis/engine.py`**: Added `_project_pension_balance()` — compound-interest FV formula accounting for net annual return, fee %, and monthly contributions. Pension/savings fund holdings with `annual_return_rate > 0` and a `balance_updated_at` reference date now auto-project forward to today; `price_source = "projected"`.
 - **`holdings/service.py`**: Sets `balance_updated_at = now()` automatically when `current_balance` is provided on create or update — providing the projection reference timestamp.
 - **`models/investment_account.py`**: Added `balance_updated_at` (`DateTime`, nullable) to `InvestmentHolding`.
 - **`schemas/investment_account.py`**: Added `balance_updated_at: datetime | None` to `InvestmentHoldingOut`.
 
-### Added — TASK B: Multi-User Family System (Invite + Linked Portfolios + Household Bucket)
+### Added — Multi-User Family System (Invite + Linked Portfolios + Household Bucket)
 
-**TASK B — Multi-User Family System**
+**Multi-User Family System**
 - **`alembic/versions/0033_family_multiuser_and_projected_balance.py`**: Adds `balance_updated_at` to `investment_holdings`, `owner_type` to `investment_accounts` (personal|joint), and invite fields to `family_members` (invite_email, invite_token, invite_status, invite_expires_at).
 - **`models/investment_account.py`**: Added `owner_type: str` (default: "personal") to `InvestmentAccount`; joint accounts appear in a household bucket in the family view.
 - **`models/family_profile.py`**: Added invite fields to `FamilyMember` ORM model.
@@ -41,9 +80,9 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.70.0] — 2026-05-15
 
-### Added — TASK 73: Admin AI API Cost Tracking
+### Added — Admin AI API Cost Tracking
 
-**TASK 73 — Admin AI API Cost Tracking**
+**Admin AI API Cost Tracking**
 - **`models/ai_usage_log.py`** (new): `AiUsageLog` table — id, user_id (nullable), investor_id (nullable), feature_name, model, input_tokens, output_tokens, cost_usd, called_at.
 - **`alembic/versions/0032_ai_usage_logs.py`**: migration adding `ai_usage_logs` table with indexes on user_id and called_at.
 - **`ai_usage/logger.py`** (new): `log_ai_call()` utility — computes cost from token counts using per-model rate table (Haiku $0.80/$4.00 per MTok in/out, Sonnet $3.00/$15.00), logs to DB. `compute_cost()` exposed for tests.
@@ -61,9 +100,9 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.69.0] — 2026-05-15
 
-### Added — TASK 72: Market Signal Monitor
+### Added — Market Signal Monitor
 
-**TASK 72 — Market Signal Monitor**
+**Market Signal Monitor**
 - **`market_signals/`** (new module): `worker.py` runs daily via APScheduler (20:15 UTC) — fetches yfinance news headlines for all held tickers, calls Claude Haiku once per ticker to score sentiment (−1.0 to +1.0), detect institutional investor (whale) mentions in headlines, and generate a personalized 2-sentence rationale embedding actual portfolio context (position value, %, unrealized P&L, holding days, currency).
 - **`market_signals/guard.py`** (pure functions): `evaluate_signal()` applies a two-check Personal Signal Guard — stability mute (composite_score < 50) → MUTED, concentration mute (ticker > 15% of portfolio) → MUTED, stability takes priority; `compute_composite_score()` maps sentiment to 0–100 with +15 WHALE_MENTION bonus (capped at 100); `compute_trend_direction()` splits 7-day scores into first/second half, delta > 0.1 = improving, < −0.1 = deteriorating; `build_connected_insight()` detects tax-loss harvest, rebalancing, and accumulation opportunities from portfolio context.
 - **`market_signals/schemas.py`**: `SentimentTick` (date, sentiment, composite), `TickerSignal` (signal_id, ticker, signal_type, sentiment/composite scores, rationale, whale_entities, guard_status, mute_reason, position context, trend_direction, trend_history, connected_insight), `MarketSignalsResult` (aggregate counts + signals list).
@@ -79,9 +118,9 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.68.0] — 2026-05-15
 
-### Added — TASK 71: Resilience Stress-Test Module
+### Added — Resilience Stress-Test Module
 
-**TASK 71 — Resilience Stress-Test**
+**Resilience Stress-Test**
 - **`resilience/`** (new module): `engine.py` simulates a life-event scenario (job loss, expense spike) against tiered liquid assets. `simulate_depletion()` is a pure function: drains the cash reserve (Tier 0 = `liquid_savings` from financial profile) first, then Tier 1 (T+2) and Tier 2 (1-week) holdings in cost-efficiency order (cheapest-to-liquidate first, same sort as emergency lever). Never touches Tier 3 (locked: pension, real estate) — breach of Tier 3 is the failure mode. Returns `(depletion_path, months_covered, tier3_breach)`.
 - **Survival Score**: `min(100, months_covered / duration_months * 100)` — 100 means Tier 3 never touched; <100 means Tier 3 breach required. Verdicts: Safe (≥80), At Risk (50–79), Critical (<50). Deterministic, no AI.
 - **AI Recommendation**: Optional Claude Haiku call (skipped if no `ANTHROPIC_API_KEY`). Prompt encodes scenario params, survival score, months covered, Tier 3 total. Returns 2–3 sentence personalised recommendation.
@@ -96,16 +135,16 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.67.0] — 2026-05-15
 
-### Added — TASK 61: Family Consolidated View + TASK 70: Liquidity Runway Engine
+### Added — Family Consolidated View + Liquidity Runway Engine
 
-**TASK 61 — Family Consolidated View**
+**Family Consolidated View**
 - **`family_portfolio/`** (new module): `engine.py` aggregates all investment accounts by `family_member_id` FK, groups into per-member portfolios, computes household totals. `build_family_summary()` is a pure function (no DB calls) accepting pre-fetched family, portfolio, and account→member map for testability. `generation_for()` maps `relationship_type` → generation bucket (primary, partners, children, parents, grandparents, siblings, other). `is_minor(age)` returns True for age < 18, flagging `education_mode=True` on the member.
 - **`family_portfolio/schemas.py`**: `FamilyMemberPortfolio` (per-member breakdown with generation, age, is_minor, education_mode, asset_allocation), `OverlapHolding` (tickers held by 2+ members — concentration risk), `FamilyPortfolioSummary` (household AUM, by-generation totals, household asset allocation, cross-member overlap, has_minors flag).
 - **`family_portfolio/router.py`**: `GET /api/v1/investors/{id}/family-portfolio` — returns 404 when no family profile exists.
 - **`family/page.tsx`** (updated): `HouseholdPortfolioCard` sub-component shows household AUM, unrealized P&L, generation breakdown bar with colour-coded segments, per-member portfolio bars with education-mode warning badges, and cross-member ticker overlap alert. Minor members get "Minor" badge in member list. Card renders only when family has at least one member.
 - **`tests/test_family_portfolio.py`** (new, 25 tests): `TestGenerationFor` (10 tests — all relationship types + unknown fallback), `TestIsMinor` (4 tests — 0, 17, 18, None), `TestBuildFamilySummary` (11 tests — primary bucket, generation grouping, minor education mode, adult no-education mode, has_minors flag, overlap detection, no-overlap, household asset allocation, P&L% math, member_count with no-account members).
 
-**TASK 70 — Liquidity Runway Engine**
+**Liquidity Runway Engine**
 - **`liquidity_runway/`** (new module): `engine.py` tiers every holding (stock/ETF/crypto → Tier 1 T+2, bonds/funds → Tier 2 1wk, real estate/pension/study fund → Tier 3 Locked). Account type overrides: `keren_hishtalmut` and `pension` accounts force Tier 3 regardless of holding asset type. Net-to-pocket = gross − estimated CGT (gains only, country-specific rate from tax_rules) − market impact buffer (Tier 1: 0.5%, Tier 2: 0%). Locked holdings excluded from liquidity calculation.
 - **Emergency Lever (greedy)**: When `target_amount` is provided, sorts liquidatable holdings by `(tax+impact)/gross` ascending (cheapest-to-liquidate first), greedily selects until target is met. `selected_for_target` flag on each holding, `target_met` bool in response.
 - **`liquidity_runway/schemas.py`**: `LiquidityBucket` (tier, label, total_gross, total_net_to_pocket, holding_count), `LiquidityHolding` (full breakdown per holding), `LiquidityRunway` (buckets, totals, emergency lever output).
@@ -120,15 +159,15 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.66.0] — 2026-05-15
 
-### Added — TASK 68: Tax-Alpha Harvest Alerts + TASK 69: Complexity Premium
+### Added — Tax-Alpha Harvest Alerts + Complexity Premium
 
-**TASK 68 — Tax-Alpha Harvest Alerts**
+**Tax-Alpha Harvest Alerts**
 - **`tax_harvesting/schemas.py`**: `HarvestOpportunity` gains `holding_period_label: str | None` (e.g., "187 days (short-term)"), `suggested_replacement: str | None`, `replacement_rationale: str | None`.
 - **`tax_harvesting/service.py`**: Conservative ETF replacement suggestions per asset class — VTI (stocks), VT (ETFs/funds), AGG (bonds), VNQ (real estate). Crypto excluded (no tax-equivalent). `_holding_period_label()` and `_suggest_replacement()` helpers extracted for testability. Harvest candidates now sorted by `estimated_tax_saving` descending (most actionable first, was: loss magnitude).
 - **`performance/page.tsx`**: Harvest candidate rows updated — `holding_period_label` replaces generic "Short-term/Long-term" badge, "Similar position" chip with rationale displayed below each candidate that has a suggestion.
 - **`tests/test_tax_harvesting.py`** (new, 20 tests): replacement map coverage (all asset types), holding period label formatting, sort order verification, gain offset population, total saving sum invariant, no-purchase-date edge case.
 
-**TASK 69 — Smart Benchmarking & Complexity Premium**
+**Smart Benchmarking & Complexity Premium**
 - **`performance_analytics/schemas.py`**: New `LazyPortfolioComparison` model — `data_gate_passed`, `snapshot_days`, `portfolio_return_pct`, `portfolio_sharpe`, `lazy_return_pct`, `lazy_sharpe`, `lazy_composition`, `complexity_premium_pct`, `risk_adjusted_premium`, `verdict`.
 - **`performance_analytics/lazy_portfolio.py`** (new module): `fetch_lazy_returns(start, end)` fetches VT and AGG returns via yfinance (Docker-only, 24h cache). `build_comparison()` is pure Python — computes lazy return (60% VT / 40% AGG), complexity premium, estimated lazy Sharpe (using ~10% annualised 60/40 vol), verdict string. 30-day data gate enforced.
 - **`portfolio_analysis/router.py`**: New `GET /api/v1/investors/{id}/portfolio/complexity-premium` endpoint — reads all snapshots, computes analytics, fetches VT/AGG returns, calls `build_comparison()`.
@@ -141,15 +180,15 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.65.0] — 2026-05-15
 
-### Added — TASK 66: Payday Calendar + TASK 67: SWAN Stress Test
+### Added — Payday Calendar + SWAN Stress Test
 
-**TASK 66 — Payday Calendar (Dividend Income)**
+**Payday Calendar (Dividend Income)**
 - **`income_projection/distribution.py`** (new pure module): `monthly_distribution()` distributes each holding's annual dividend income across 12 calendar months based on ex-date and payment frequency. Quarterly: 4 equal payments spaced 3 months from ex-date. Monthly: 1/12 per month. Annual: full amount in ex-date month. Extracted to a dependency-free module for testability.
 - **`income_projection/schemas.py`**: `IncomeResult` gains `monthly_income: dict[int, float]` — month 1–12 → estimated income in base currency.
 - **`PaydayCalendarCard.tsx`** (new component): 12-bar chart (Recharts BarChart) showing expected dividend income per calendar month; current month highlighted in primary colour; "Next payday" banner showing nearest upcoming ex-dividend date with estimated payment; toggle to expand full holdings table (frequency, yield on value, annual income). Hidden when portfolio has no dividend income.
 - **`investments/page.tsx`**: `PaydayCalendarCard` added below FX Impact card.
 
-**TASK 67 — SWAN Stress Test ("Sleep Well at Night")**
+**SWAN Stress Test ("Sleep Well at Night")**
 - **`scenario_analysis/scenarios.py`**: `Scenario` dataclass gains `recovery_months: int | None` — historical months for equity markets to recover to pre-crash peak. Set to 54 (2008 GFC), 6 (COVID), 24 (2022 rate cycle), `None` for hypothetical scenarios.
 - **`scenario_analysis/schemas.py`**: `HoldingImpact` model added (`name, ticker, asset_type, current_value, simulated_loss, simulated_value`). `ScenarioImpact` gains `recovery_months: int | None` and `holding_impacts: list[HoldingImpact]`.
 - **`scenario_analysis/engine.py`**: `_apply_scenario()` now computes per-holding impact by mapping each holding's `asset_type` to its tier drawdown, floors simulated_value at 0. Holdings sorted by `simulated_loss` (biggest loss first). Existing tier-level totals unchanged.
@@ -163,7 +202,7 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.64.0] — 2026-05-15
 
-### Added — TASK 64: Proactive Insights Engine + FX Impact Analysis
+### Added — Proactive Insights Engine + FX Impact Analysis
 
 **FX Impact Analysis**
 - **DB migration 0029**: adds `purchase_fx_rate` (Float, nullable) to `investment_holdings`.
@@ -187,16 +226,16 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.63.0] — 2026-05-15
 
-### Added — TASK 62: AI Weekly Digest Email + TASK 63: Natural Language Portfolio Queries
+### Added — AI Weekly Digest Email + Natural Language Portfolio Queries
 
-**TASK 62 — AI Weekly Digest Email**
+**AI Weekly Digest Email**
 - **DB migration 0028**: adds `weekly_digest_enabled` (Boolean, default false) to `investor_profiles`.
 - **`weekly_digest/renderer.py`**: calls `claude-haiku-4-5-20251001` with real portfolio + goals data to generate a headline, performance summary, goal update, and 1–3 actionable suggestions; renders a fully styled HTML email.
 - **`workers/jobs/weekly_digest.py`**: iterates opted-in investors, calls renderer, sends via SMTP using the existing `smtplib` infrastructure (HTML `MIMEMultipart`); gracefully skips if SMTP or API key is not configured.
 - **Scheduler**: `weekly_digest` job registered on `CronTrigger(day_of_week="fri", hour=18)` — every Friday at 18:00 UTC.
 - **Frontend — Settings page**: added **Weekly AI Digest** toggle inside the Email Notifications card; saved alongside `alert_email` and `email_alerts_enabled` via `PUT /investors/{id}`.
 
-**TASK 63 — Natural Language Portfolio Queries**
+**Natural Language Portfolio Queries**
 - **`portfolio_chat/session.py`**: in-memory per-investor conversation history, last 5 turns, resets on restart.
 - **`portfolio_chat/engine.py`**: gathers live portfolio, risk model, and goals-analysis data; passes as system context to `claude-haiku-4-5-20251001`; returns a grounded, concise reply (never invents data).
 - **`POST /investors/{id}/chat`**: accepts `{ message }`, returns `{ reply, data }`.
@@ -207,7 +246,7 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.62.0] — 2026-05-14
 
-### Added — TASK 61: Options Tracking
+### Added — Options Tracking
 
 - **DB migration 0027**: adds 6 nullable columns to `investment_holdings`: `strike_price`, `expiry_date`, `option_type` (call|put), `underlying_ticker`, `contract_multiplier`, `position_type` (long|short).
 - **`HoldingAssetType`**: new values `call_option` and `put_option` (stored as `String(50)` — no DB-level enum change needed).
@@ -220,7 +259,7 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.61.0] — 2026-05-14
 
-### Added — TASK 60: PWA Support
+### Added — PWA Support
 
 - **`next.config.ts`**: sets `Cache-Control: no-cache` + `Service-Worker-Allowed: /` headers on `/sw.js`.
 - **`src/app/manifest.ts`**: native Next.js 14 `MetadataRoute.Manifest` — name, short_name, theme color `#0f172a`, 192×192 and 512×512 icons.
@@ -258,7 +297,7 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.59.0] — 2026-05-14
 
-### Added — TASK 53: Production Auth & Multi-user
+### Added — Production Auth & Multi-user
 
 - **DB migration 0024** (`0024_users`): creates `users` table (`id`, `email`, `password_hash`, `role`, `created_at`) and adds nullable `user_id` FK on `investor_profiles`.
 - **Migration chain fixed**: migration 0025 `down_revision` updated from 0023 → 0024.
@@ -278,7 +317,7 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.58.0] — 2026-05-13
 
-### Added — TASK 58: Mobile-First Responsive UI
+### Added — Mobile-First Responsive UI
 - **Collapsible sidebar on mobile**: desktop keeps fixed left sidebar; mobile gets a hamburger top bar that opens a full-height drawer overlay.
 - **Responsive layout**: `DashboardLayout` adds `pt-14 lg:pt-0` and `lg:ml-60` so content accounts for the mobile top bar.
 - **All dashboard pages**: outer containers changed from fixed `p-8` to responsive `p-4 sm:p-6 lg:p-8`, and `space-y-6 lg:space-y-8`.
@@ -289,7 +328,7 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.57.0] — 2026-05-13
 
-### Added — TASK 57: Broker Auto-Sync Scheduler
+### Added — Broker Auto-Sync Scheduler
 - **DB migration 0025** (`0025_account_auto_sync`): adds `auto_sync_enabled` (bool), `last_synced_at` (timestamptz), and `sync_broker_type` (varchar) to `investment_accounts`.
 - **Model + schema**: `InvestmentAccount` model and `InvestmentAccountOut` schema updated with new fields.
 - **API endpoint**: `PATCH /api/v1/investors/{id}/accounts/{account_id}/auto-sync` — enables/disables daily auto-sync for a specific account.
@@ -300,7 +339,7 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.56.0] — 2026-05-13
 
-### Added — TASK 56: Altshuler Shaham Trade + ALTrade Import
+### Added — Altshuler Shaham Trade + ALTrade Import
 - New parsers in `broker_sync/parsers/`:
   - `altshuler_shaham.py`: parses CSV and Excel (.xlsx) exports from Altshuler Shaham Trade. Supports bilingual (Hebrew/English) column headers using a 30+ alias mapping. Hebrew column names include שם ני"ע, כמות, מחיר ממוצע, שווי, מטבע and their English equivalents. Supports `windows-1255` encoding for Hebrew CSV files.
   - `altrade.py`: parses CSV and Excel exports from ALTrade with its own column alias set (Security/נייר ערך, Purchase Price/מחיר קנייה, Market Value/שווי שוק, etc.).
@@ -310,7 +349,7 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.55.0] — 2026-05-13
 
-### Added — TASK 54+55: Broker Import Framework + IBKR + eToro
+### Added — Broker Import Framework + IBKR + eToro
 - New `broker_sync` module (`schemas.py`, `service.py`, `router.py`, `parsers/`).
 - **API endpoint**: `POST /api/v1/investors/{id}/accounts/{account_id}/broker-sync` — multipart upload with `file` + `broker_type` field.
 - **Upsert logic**: matches existing holdings by ISIN → ticker → name (case-insensitive). Updates quantity, avg_buy_price, current_value on match; creates new holding otherwise. Returns `BrokerSyncResult { imported, updated, skipped, errors }`.
@@ -323,7 +362,7 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.54.0] — 2026-05-13
 
-### Added — TASK 51: Goals Linked to Accounts
+### Added — Goals Linked to Accounts
 - **Alembic migration 0023**: nullable `linked_account_id` FK column on `financial_goals` → `investment_accounts.id` (ON DELETE SET NULL). Zero downtime — existing rows unaffected.
 - `FinancialGoal` model: new `linked_account_id` mapped column.
 - `FinancialGoalCreate` / `FinancialGoalUpdate` / `FinancialGoalOut` schemas: added `linked_account_id: uuid | None` and `linked_account_name: str | None` (resolved at API layer, not persisted).
@@ -336,7 +375,7 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.53.0] — 2026-05-13
 
-### Added — TASK 50: Retirement Readiness Score
+### Added — Retirement Readiness Score
 - New `retirement_readiness` module: `schemas.py`, `engine.py`, `router.py`.
 - Pure engine combines pension projection (existing `pension_projection` module) + Monte Carlo P50 at retirement horizon (from `scenario_analysis`) + 4% safe withdrawal rate to produce a `ReadinessScore`.
 - Score 0–100 based on income coverage ratio: projected monthly SWR income vs current monthly expenses. Verdicts: "On track" / "Mostly on track" / "At risk" / "Significant gap" / "Critical shortfall".
@@ -349,18 +388,18 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.52.0] — 2026-05-12
 
-### Added — TASK 48: Realized P&L from closed positions
+### Added — Realized P&L from closed positions
 - WAVG cost-basis computation from buy/sell transaction log (`holding_transactions`). For each sell, realized P&L = proceeds − WAVG unit cost × quantity. Aggregated as `realized_pnl_total` (all time) and `realized_pnl_ytd` (current calendar year) in base currency.
 - `PortfolioSummary` schema: added `realized_pnl_total` and `realized_pnl_ytd` fields.
 - Investments page: 5th summary card "Realized P&L" shows total and YTD gains from closed positions; displays `—` when no sell transactions exist; grid changed to responsive 5-column layout.
 
-### Added — TASK 49: Money-Weighted Return (IRR)
+### Added — Money-Weighted Return (IRR)
 - Newton-Raphson IRR computed from all buy transactions as cash outflows vs current portfolio value as inflow. Annualized to produce `mwr_pct` (% / year).
 - `PerformanceAnalytics` schema: added `mwr_pct: float | None`.
 - Performance page: "Total Return" card relabeled "Total Return (TWR)"; MWR/IRR displayed as a sub-section with contrasting color. TWR vs MWR gap reveals whether deposit timing helped or hurt overall return.
 - Analytics router queries buy transactions, converts to base currency, and passes cash flows to the engine.
 
-### Added — TASK 52: Actionable rebalancing with exact unit counts
+### Added — Actionable rebalancing with exact unit counts
 - `SuggestedTrade` model: `ticker`, `name`, `action` (buy/sell), `suggested_units`, `unit_price`, `estimated_value`, `currency`.
 - `RebalanceTier` now includes `suggested_trades: list[SuggestedTrade]`. For each off-target tier, the largest live-priced holding in that tier is selected: `suggested_units = gap_amount / unit_price_base`.
 - Investments page rebalance section: generic "Buy ~X ILS" replaced with "↑ Buy ~12.34 units TICKER @ 120.00 ≈ 1,480 ILS" actionable guidance. Falls back to monetary hint when no live-priced holdings are present in the tier.
@@ -369,27 +408,27 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.51.0] — 2026-05-11
 
-### Fixed — TASK 42: Fee-inclusive cost basis
+### Fixed — Fee-inclusive cost basis
 - Brokerage fees (`InvestmentHolding.fees`) are now added to cost basis: `cost_local = quantity × avg_buy_price + fees`. Previously fees were tracked but ignored, overstating P&L for holdings with transaction costs.
 
-### Fixed — TASK 43: Pension fund tax treatment
+### Fixed — Pension fund tax treatment
 - Pension funds (`pension_fund`) and study funds (`study_fund`) no longer have flat 25% capital gains tax applied. They are taxed as income at withdrawal (not CGT) with a substantial exemption — applying CGT was producing a vastly inflated tax burden in the UI and PDF report.
 
-### Added — TASK 44: Price staleness warning
+### Added — Price staleness warning
 - `PortfolioSummary` now exposes `has_stale_prices: bool` and `prices_updated_at: datetime | None`
 - Engine sets `has_stale_prices = True` when any tickered holding falls back to cost basis (no live or manual price available)
 - Service tracks the oldest live-price timestamp and surfaces it to the frontend
 - Investments page shows an amber warning banner when prices are stale, prompting the user to click "Refresh prices"
 
-### Added — TASK 45: Beta vs benchmark metric
+### Added — Beta vs benchmark metric
 - Performance analytics now computes **Beta** (portfolio sensitivity to benchmark). Beta = Cov(portfolio returns, benchmark returns) / Var(benchmark returns), computed by aligning portfolio snapshot periods with the benchmark daily series.
 - Displayed as a 6th metric card on the Performance page alongside Sharpe/Sortino; `None` when fewer than 4 matched data points.
 
-### Added — TASK 46: Per-holding CAGR in attribution
+### Added — Per-holding CAGR in attribution
 - `HoldingContribution` now includes `cagr_pct: float | None` — annualised return since purchase date. Formula: `(current_value / cost_basis) ^ (365/days_held) - 1`. Only computed for holdings with a `purchase_date` and held ≥ 30 days.
 - Shown alongside return_pct in the Top Contributors and Top Detractors panels.
 
-### Added — TASK 47: Single-stock concentration risk flag
+### Added — Single-stock concentration risk flag
 - Portfolio correlation engine now flags any single ticker representing > 15% of the portfolio by value. Adds a warning to `ConcentrationRisk.warnings` and +20 pts to `risk_score` per concentrated ticker. Complements the existing sector-level concentration check (> 40%).
 
 ---
@@ -406,7 +445,7 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.50.0] — 2026-05-09
 
-### Added — TASK 41: Professional Client Report (PDF Export)
+### Added — Professional Client Report (PDF Export)
 
 - New module `reports/` — multi-page PDF report generator using `reportlab` (pure Python, no system dependencies, Docker-friendly)
 - PDF report sections: cover page (investor name, period, base currency, generation timestamp), portfolio overview (value / cost basis / unrealized P&L + holdings table up to 30 rows), performance analytics (Sharpe, Sortino, max drawdown, annualised return, rolling returns 1M/3M/6M/1Y, benchmark comparison, top 5 contributors, top 5 detractors), stress test scenarios (5 historical crash scenarios + Monte Carlo P10/P50/P90), tax-loss harvesting summary (harvest candidates + disclaimer)
@@ -419,7 +458,7 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.49.0] — 2026-05-09
 
-### Added — TASK 40: Tax-Loss Harvesting Alerts
+### Added — Tax-Loss Harvesting Alerts
 
 - New module `tax_harvesting/` — detects portfolio holdings with unrealized losses above the 5% threshold that can offset capital gains
 - Country-aware capital gains rate from the `tax_rules` engine (IL: 25%, US: 15% long-term, DE: 26.4%, FR: 30%)
@@ -433,7 +472,7 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.48.0] — 2026-05-09
 
-### Added — TASK 39: Dividend & Income Calendar
+### Added — Dividend & Income Calendar
 
 - New module `income_projection/` — fetches forward annual dividend rate + next ex-date via yfinance for all tickered holdings
 - FX conversion: dividend income converted to investor base currency
@@ -448,7 +487,7 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.47.0] — 2026-05-09
 
-### Added — TASK 38: Scenario Analysis & Stress Testing
+### Added — Scenario Analysis & Stress Testing
 
 - New module `scenario_analysis/` — deterministic crash scenario engine + log-normal Monte Carlo
 - **5 pre-built scenarios**: 2008 GFC (−50% equities), COVID crash (−34%), 2022 Rate Hike Cycle (−18% bonds, −25% equities), 40% Tech Correction, ILS Depreciation Shock (+22% USD/ILS)
@@ -462,7 +501,7 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.46.0] — 2026-05-09
 
-### Added — Phase 8: Professional Investment Intelligence (TASK 37)
+### Added — Professional Investment Intelligence
 
 **Performance Attribution & Benchmark Comparison**
 - New endpoint `GET /portfolio/attribution` — holding-level attribution + rolling returns + benchmark alpha
@@ -541,29 +580,29 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.42.0] — 2026-05-08
 
-### Added — TASK 32: Economic Calendar
+### Added — Economic Calendar
 - **`economic_calendar/` module** — fetches upcoming earnings dates for all held + watched tickers via yfinance `.calendar`. Cached 24h per ticker.
 - **`GET /api/v1/investors/{id}/calendar`** — returns `EarningsEvent` list sorted by date ascending.
 - **Dashboard earnings panel** — "Upcoming Earnings" card showing ticker, company, date, and days-until indicator (amber ≤7d, blue ≤14d).
 - **Investments page earnings badge** — each holding row shows an inline "Earnings in Xd" badge for tickers with upcoming earnings.
 
-### Added — TASK 33: Correlation Matrix & Concentration Risk
+### Added — Correlation Matrix & Concentration Risk
 - **`portfolio_correlation/` module** — computes pairwise Pearson correlation using 90-day daily return history from yfinance. Flags pairs >0.8 as high-correlation. Sector concentration analysis: >40% in single sector is flagged. Risk score 0–100.
 - **`GET /api/v1/investors/{id}/portfolio/correlation`** — returns full correlation matrix + concentration risk.
 - **Performance page heatmap** — colour-coded correlation matrix (red=high, amber=moderate, green=negative). Concentration Risk card with sector weight bars, warnings, and risk score badge. Loads independently (non-blocking).
 
-### Added — TASK 34: Position Sizing & Max-Loss Guidance
+### Added — Position Sizing & Max-Loss Guidance
 - **`InstrumentRecommendation` schema extended** — adds `suggested_position_size_pct`, `max_loss_amount`, `stop_loss_note` fields (all optional for backward compatibility).
 - **Analyzer prompt updated** — Claude now provides per-recommendation position sizing: % of investable capital (capped at 10% per position) + monetary max loss at a 10% stop-loss.
 - **Recommendations page** — position size and max-loss badges rendered on each instrument card.
 
-### Added — TASK 35: Holdings News Feed
+### Added — Holdings News Feed
 - **`holdings_news/` module** — fetches recent headlines for held + watched tickers via yfinance `.news`. Cached 1h per ticker.
 - **`GET /api/v1/investors/{id}/news?limit=20`** — returns `NewsItem` list sorted by date descending.
 - **`/news` page** — standalone news feed page, grouped by ticker with clickable headlines and publisher metadata. Accessible via sidebar "News Feed".
 - **Dashboard news widget** — "Holdings News" card showing top 5 headlines with ticker labels and dates.
 
-### Note — TASK 36: CSV Import
+### Note — CSV Import
 - Already fully implemented in a prior session. Backend: `holdings/csv_parser.py` + `POST /import-csv` endpoint. Frontend: per-account CSV upload button on investments page.
 
 ---
@@ -589,25 +628,25 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [0.40.0] — 2026-05-08
 
-### Added — TASK 28: Performance History & Equity Curve
+### Added — Performance History & Equity Curve
 - **Daily snapshot writer** (`workers/jobs/snapshot_writer.py`) — runs at 21:00 UTC, captures portfolio state for all investors with holdings; idempotent (one snapshot per investor per day).
 - **`/portfolio/history` period filter** — endpoint now accepts `period=1m|3m|6m|1y|all` instead of just `limit`; returns up to 500 snapshots for the requested range.
 - **`/performance` page** — equity curve (AreaChart), cost-basis overlay, period selector (1M/3M/6M/1Y/All), key metric cards (Total Return, Max Drawdown, Sharpe, Volatility, vs S&P 500).
 
-### Added — TASK 29: Core Risk Metrics
+### Added — Core Risk Metrics
 - **`performance_analytics/` module** — pure-Python engine computing: total return %, annualised CAGR, max drawdown, current drawdown, Sharpe ratio, Sortino ratio, annualised volatility, best/worst snapshot period.
 - **SPY benchmark comparison** — yfinance-fetched cumulative return series normalised to portfolio start date; 24-hour in-memory cache.
 - **`GET /investors/{id}/portfolio/analytics`** — returns `PerformanceAnalytics` JSON; period filter same as history endpoint.
 - **Return vs benchmark chart** — dual-line chart on performance page showing portfolio % return vs S&P 500 from the same starting point.
 
-### Added — TASK 30: Transaction Log / Trade Journal
+### Added — Transaction Log / Trade Journal
 - **Migration 0019** — `holding_transactions` table: investor_id, account_id, holding_id (nullable), transaction_type (buy/sell/dividend/fee/split/bonus), ticker, quantity, price_per_unit, total_amount, fees, currency, transaction_date, notes.
 - **`transactions/` module** — full CRUD service + router.
 - **`GET/POST /investors/{id}/transactions`** — list (with filters: account, ticker, type, date range) and create.
 - **`GET/PUT/DELETE /investors/{id}/transactions/{tx_id}`** — read, update, delete.
 - **`/transactions` page** — summary cards (total bought/sold/fees), add-transaction form with auto-computed total (qty × price), filterable table, delete with confirmation.
 
-### Added — TASK 31: Price Alerts on Specific Levels
+### Added — Price Alerts on Specific Levels
 - **Migration 0020** — `price_alerts` table: investor_id, ticker, alert_type (above/below), target_price, currency, is_active, triggered_at, triggered_price.
 - **`price_alerts/` module** — service + router.
 - **`GET/POST /investors/{id}/alerts`** — list and create alerts.
@@ -671,7 +710,7 @@ Versions are assigned retroactively to match the git commit history.
 ## [0.38.0] — 2026-05-07
 
 ### Added
-- **Deep Market Research Engine (TASK 26)** — new `market_research/` backend module + `/market-research` frontend page providing genuine fundamental analysis, not generic ETF advice.
+- **Deep Market Research Engine** — new `market_research/` backend module + `/market-research` frontend page providing genuine fundamental analysis, not generic ETF advice.
   - **Fundamental screener**: screens 60+ stocks and ETFs across 8 sectors using `yfinance` (free, no API key). Scores each instrument on 5 axes: analyst conviction (upside to consensus target + rating), valuation (forward P/E, PEG ratio), revenue growth, quality (profit margin, ROE), and 52-week entry position. Results cached 6 hours; concurrent fetching via `ThreadPoolExecutor(max_workers=10)`.
   - **Sector performance tracking**: live 1M / 3M / 1Y returns for XLK, XLF, XLV, XLE, XLY, XLI, XLC, XLU sector ETFs with bullish/neutral/bearish classification.
   - **AI investment brief**: Claude Sonnet receives top 25 screened candidates with full fundamentals + sector data + investor profile. Returns specific, data-backed investment theses across three tiers (stable / moderate / high_opportunity). Each thesis references actual P/E ratios, revenue growth, analyst targets, and time-horizon reasoning — not generic advice.
@@ -704,7 +743,7 @@ Versions are assigned retroactively to match the git commit history.
 ## [0.36.0] — 2026-05-06
 
 ### Added
-- **Live Market Opportunity Engine (TASK 24)** — replaces static catalog recommendations with real market intelligence:
+- **Live Market Opportunity Engine** — replaces static catalog recommendations with real market intelligence:
   - New `live_market_intel` module: `fetcher.py` pulls live data from CoinGecko Markets API (top crypto with 24h/7d changes) and Yahoo Finance (stocks/ETFs with 52-week range + 7-day price history); `scanner.py` classifies each instrument as `dip / near_low / recovery / momentum / stable` and ranks by opportunity score; 30-minute in-memory cache to avoid excessive API calls
   - AI recommendations engine now receives real price data (current price, 24h%, 7d%, 52w position, signal note) for every instrument before generating advice — recommendations now reference actual market conditions
   - New `Live Market Signals` section on recommendations page: grid of signal cards with current price, 24h/7d % badges (green/red), signal type badge, 52-week range bar, and "Add to Watchlist" button; only shows non-stable signals
@@ -768,20 +807,20 @@ Versions are assigned retroactively to match the git commit history.
 
 ### Added
 - **Portfolio value history** — `price_refresh` worker now saves a portfolio snapshot for every investor after daily price refresh; chart on investments page populates automatically over time
-- **Debt Payoff Planner (TASK C)** — `GET /api/v1/investors/{id}/debt-planner?strategy=avalanche|snowball&extra_monthly=N`
+- **Debt Payoff Planner** — `GET /api/v1/investors/{id}/debt-planner?strategy=avalanche|snowball&extra_monthly=N`
   - Avalanche (highest-interest-first) and snowball (smallest-balance-first) strategies
   - Returns per-debt payoff order, months to debt-free, total interest, debt-free date
   - `/debt-planner` page: strategy selector, extra payment input, summary cards, ordered debt cards
-- **Watchlist (TASK D)** — track market instruments without owning them
+- **Watchlist** — track market instruments without owning them
   - Migration 0017: `watchlist_items` table with unique constraint per investor+ticker
   - `GET/POST/DELETE /api/v1/investors/{id}/watchlist` — cached price and age enriched on read
   - Daily `price_refresh` worker now also fetches prices for watchlist tickers
   - `/watchlist` page: add by ticker/name/type, shows current price and data age
-- **In-app Notification Center (TASK B)** — computed on-the-fly from existing data
+- **In-app Notification Center** — computed on-the-fly from existing data
   - `GET /api/v1/investors/{id}/notifications` — returns at-risk goals, rebalance alerts, stale prices, setup suggestions
   - `/notifications` page: severity-grouped list with direct navigation links
   - Sidebar: Notifications link in System section
-- **AI Investment Agent (TASK 23)** — flagship multi-context Claude agent
+- **AI Investment Agent** — flagship multi-context Claude agent
   - `GET /api/v1/investors/{id}/agent` — gathers full investor context (profile, portfolio, goals, stability score, risk model, 40+ catalog instruments with live prices) and calls Claude Sonnet
   - Returns: `portfolio_health_score` (0-100), `market_pulse`, `portfolio_assessment`, `action_plan` (concrete actions with amounts), `top_opportunities` (fit-scored instruments), `capital_thresholds` (step-by-step plan at each savings milestone), `risk_warnings`
   - Capital thresholds: tells you exactly what to buy with 500 / 1000 / 2500 / 5000 base-currency units — the plan is ready when you have the capital
@@ -806,13 +845,13 @@ Versions are assigned retroactively to match the git commit history.
 - **Vehicle as a financial asset type** — added `vehicle` to the `AssetType` enum; migration 0014 adds it to the PostgreSQL enum; financial profile add/edit dropdowns now include "Vehicle"
 
 ### Added
-- **Email alerts (TASK 20)** — daily goal at-risk notifications via SMTP
+- **Email alerts** — daily goal at-risk notifications via SMTP
   - Migration 0015: adds `alert_email` (VARCHAR 255) and `email_alerts_enabled` (BOOLEAN, default false) to `investor_profiles`
   - `app/notifications/email.py` — `send_alert_email()` using `smtplib` + STARTTLS; silent no-op when SMTP env vars are absent
   - `goal_evaluation` worker now sends personalised alert email to any investor who has `email_alerts_enabled=true` and at-risk goals
   - Profile page: "Email Alerts" section with alert email address field + enable checkbox in edit form; view mode shows current settings
   - Configure via env: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `ALERT_FROM_EMAIL`
-- **CSV import for holdings (TASK 21)** — bulk import holdings from a CSV file
+- **CSV import for holdings** — bulk import holdings from a CSV file
   - Backend: `POST /api/v1/investors/{id}/accounts/{account_id}/holdings/import-csv` — accepts multipart CSV upload; returns `{ imported, errors }`
   - `app/holdings/csv_parser.py` — parses rows, validates `asset_type`, handles UTF-8/BOM/Latin-1, returns per-row errors for invalid rows while continuing to import valid ones
   - CSV format: `name`, `asset_type`, `currency` (required); `ticker`, `isin`, `quantity`, `avg_buy_price`, `purchase_date`, `notes` (optional)
