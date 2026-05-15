@@ -38,6 +38,7 @@ from app.admin.router import router as admin_router
 from app.portfolio_chat.router import router as portfolio_chat_router
 from app.family_portfolio.router import router as family_portfolio_router
 from app.liquidity_runway.router import router as liquidity_runway_router
+from app.resilience.router import router as resilience_router
 
 api_router = APIRouter()
 
@@ -79,3 +80,4 @@ api_router.include_router(admin_router, prefix="/admin", tags=["admin"])
 api_router.include_router(portfolio_chat_router, prefix="/investors/{investor_id}/chat", tags=["chat"])
 api_router.include_router(family_portfolio_router, prefix="/investors/{investor_id}/family-portfolio", tags=["family-portfolio"])
 api_router.include_router(liquidity_runway_router, prefix="/investors/{investor_id}/portfolio", tags=["liquidity-runway"])
+api_router.include_router(resilience_router, prefix="/investors/{investor_id}/portfolio", tags=["resilience"])

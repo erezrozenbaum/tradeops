@@ -5,6 +5,7 @@ import { useInvestorId } from "@/hooks/useInvestorId";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, TrendingDown, TrendingUp, BarChart2, Zap, Target, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { ResilienceSimulatorCard } from "@/components/ResilienceSimulatorCard";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
@@ -398,6 +399,9 @@ export default function StressTestPage() {
 
       {/* Retirement Readiness */}
       {retirement && <RetirementReadinessSection data={retirement} />}
+
+      {/* Life-Event Resilience Simulator */}
+      {investorId && <ResilienceSimulatorCard investorId={investorId} />}
     </div>
   );
 }

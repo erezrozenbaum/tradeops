@@ -36,6 +36,7 @@ Investor Profile → Financial Context → Risk Model → Portfolio Tracking →
 22. **Single-stock concentration flag** — correlation engine warns when any single ticker > 15% of portfolio value
 23. **Family Consolidated View** — household AUM aggregated across all family members grouped by generation; cross-member ticker overlap detection; education-mode badges for minors (age < 18)
 24. **Liquidity Runway Engine** — tiers every holding by settlement speed (T+2 / 1wk / Locked); net-to-pocket = gross − estimated CGT − market impact; Emergency Lever greedily selects cheapest holdings to sell to meet a cash target
+25. **Resilience Stress-Test** — simulates a life-event scenario (job loss, expense spike) by draining cash reserve → Tier 1 → Tier 2 in cost-efficiency order; produces a Survival Score (0–100), depletion timeline, and optional Claude-generated recommendation
 
 ---
 
@@ -157,6 +158,7 @@ tradeops/
 │   │   ├── tax_rules/               # Country-specific CGT rules for AI context
 │   │   ├── family_portfolio/        # Household portfolio aggregation by family member + generation
 │   │   ├── liquidity_runway/        # Liquidity tiering + net-to-pocket + emergency lever
+│   │   ├── resilience/              # Life-event depletion simulation + survival score
 │   │   ├── reports/                 # PDF report generation (reportlab)
 │   │   ├── ai_analysis/             # Claude integration
 │   │   ├── audit/
@@ -215,6 +217,7 @@ Key endpoints:
 | GET | `/api/v1/investors/{id}/portfolio/tax-opportunities` | Tax-loss harvesting alerts + estimated savings |
 | GET | `/api/v1/investors/{id}/portfolio/complexity-premium` | Complexity Premium vs passive 60/40 lazy portfolio |
 | GET | `/api/v1/investors/{id}/portfolio/liquidity-runway` | Liquidity tier breakdown + optional Emergency Lever (`?target_amount=`) |
+| POST | `/api/v1/investors/{id}/portfolio/resilience` | Life-event resilience simulation — depletion path, survival score (0–100), optional AI recommendation |
 | GET | `/api/v1/investors/{id}/family-portfolio` | Household portfolio aggregated by family member + generation |
 | GET | `/api/v1/investors/{id}/portfolio/rebalance` | Rebalance recommendations vs target allocation |
 | GET | `/api/v1/investors/{id}/reports/pdf` | PDF report download (`?period=monthly\|quarterly`) |
@@ -229,6 +232,98 @@ Key endpoints:
 | POST | `/api/v1/investors/{id}/ai-report` | Generate AI financial report |
 | GET | `/api/v1/investors/{id}/audit-events` | Audit log |
 | GET | `/api/v1/strategies/templates` | Strategy template library |
+
+---
+
+## Architecture
+
+### System overview
+
+```mermaid
+graph TD
+    subgraph Browser["Browser (Next.js 14 App Router)"]
+        UI[Dashboard / Pages]
+    end
+
+    subgraph API["FastAPI Backend (Python 3.11)"]
+        PA[Portfolio Analysis\nP&L · Allocation · FX]
+        PERF[Performance Analytics\nSharpe · Sortino · Attribution]
+        SC[Scenario Analysis\nCrash Scenarios · Monte Carlo]
+        RES[Resilience Engine\nLife-Event Simulation · Survival Score]
+        LQ[Liquidity Runway\nTier Bucketing · Emergency Lever]
+        FP[Family Portfolio\nHousehold AUM · Generations]
+        TX[Tax Harvesting\nLoss Alerts · Replacement]
+        AI[AI Analysis\nClaude-Powered Reports]
+        STRAT[Strategy Library\n+ Selection + Backtest]
+        BROKER[Broker Import\nIBKR · eToro · Altshuler · ALTrade]
+        MD[Market Data\nyfinance · ER-API Cache]
+    end
+
+    subgraph Data["PostgreSQL 16"]
+        DB[(Database)]
+    end
+
+    UI -->|REST| PA & PERF & SC & RES & LQ & FP & TX & AI & STRAT & BROKER
+    PA & PERF & SC & RES & LQ & FP & TX & STRAT & BROKER --> DB
+    MD --> DB
+    AI -->|Anthropic API| Claude[(Claude)]
+```
+
+### Database schema (key tables)
+
+```mermaid
+erDiagram
+    investor_profiles ||--o{ investment_accounts : owns
+    investor_profiles ||--o| financial_profiles : has
+    investor_profiles ||--o{ financial_goals : sets
+    investor_profiles ||--o{ risk_models : has
+    investor_profiles ||--o{ audit_events : generates
+    investor_profiles ||--o{ portfolio_snapshots : tracks
+
+    family_profiles ||--o{ family_members : contains
+    family_members ||--o{ investment_accounts : attributed_to
+
+    investment_accounts ||--o{ investment_holdings : holds
+    investment_holdings ||--o{ holding_transactions : records
+
+    financial_profiles ||--o{ financial_assets : lists
+    financial_profiles ||--o{ financial_liabilities : lists
+
+    strategy_templates ||--o{ generated_strategies : instantiates
+    generated_strategies ||--o{ backtest_runs : tested_by
+    generated_strategies ||--o{ paper_portfolios : simulated_by
+    paper_portfolios ||--o{ paper_trades : executes
+
+    investment_holdings {
+        uuid id
+        string name
+        string ticker
+        string asset_type
+        float quantity
+        float avg_buy_price
+        float brokerage_fee
+        date purchase_date
+        string currency
+    }
+
+    investor_profiles {
+        uuid id
+        string full_name
+        string country
+        string base_currency
+        date date_of_birth
+        string risk_tolerance
+    }
+
+    financial_profiles {
+        uuid id
+        float monthly_income
+        float monthly_expenses
+        float liquid_savings
+        float emergency_fund_months
+        string job_stability
+    }
+```
 
 ---
 
