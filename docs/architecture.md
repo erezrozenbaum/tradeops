@@ -1,7 +1,7 @@
 # TradeOps AI — Architecture
 
-**Version:** 0.29.0  
-**Last updated:** 2026-05-02
+**Version:** 0.63.0  
+**Last updated:** 2026-05-15
 
 ---
 
@@ -413,12 +413,82 @@ Triggered on every push to `main`. Release creation is idempotent — pushing wi
 
 ---
 
-## Known gaps (post-MVP)
+## Features added since v0.29.0 (v0.30–v0.63)
+
+The sections above describe the baseline architecture at v0.29.0. All additions since then follow the same patterns.
+
+### Workers / background jobs (APScheduler)
+
+| Job ID | Schedule | What it does |
+|--------|----------|--------------|
+| `price_refresh` | Daily 20:00 UTC | Fetches live prices for all tickered holdings |
+| `snapshot_writer` | Daily 21:00 UTC | Saves end-of-day portfolio snapshots |
+| `price_alert_checker` | Daily 20:30 UTC | Evaluates price alerts, creates notifications |
+| `goal_evaluation` | Daily 07:00 UTC | Sweeps all goals, updates status |
+| `notification_alerts` | Daily 08:30 UTC | Sends alert email digest if SMTP configured |
+| `broker_auto_sync` | Daily 09:00 UTC | Re-imports from auto-sync broker accounts |
+| `weekly_digest` | Friday 18:00 UTC | AI-generated HTML digest email (v0.63) |
+| `market_prewarm` | Every 30 min | Keeps live market signal cache warm |
+| `research_prewarm` | Every 6 hours | Keeps market research screener cache warm |
+
+### API endpoints added (v0.30–v0.63)
+
+| Endpoint | Module | Notes |
+|----------|--------|-------|
+| `GET /portfolio/history` | portfolio_analysis | Historical snapshots — 1m/3m/6m/1y/all |
+| `GET /portfolio/analytics` | performance_analytics | Sharpe, Sortino, MWR, drawdown, SPY benchmark |
+| `GET /portfolio/attribution` | performance_analytics | Holding-level attribution, rolling returns, alpha |
+| `GET /portfolio/stress-test` | scenario_analysis | Historical crash scenarios + Monte Carlo |
+| `GET /portfolio/income` | income_projection | Dividend income projection |
+| `GET /portfolio/rebalance` | rebalance_engine | Tier-level drift vs risk model, suggested trades |
+| `GET /portfolio/tax-opportunities` | tax_harvesting | Tax-loss harvesting candidates |
+| `GET /portfolio/options` | options_engine | Options P&L, expiry status, short-position flags |
+| `GET /portfolio/fx-impact` | *(planned v0.64)* | Asset P&L vs Currency P&L decomposition |
+| `GET /pension-simulation` | pension_simulation | FV projection with management fees |
+| `GET /retirement-readiness` | retirement_readiness | Retirement readiness score |
+| `POST/GET /transactions` | transactions | Holding transaction log |
+| `GET /goals-analysis` | goals_analysis | Goal gap analysis + contribution needed |
+| `GET /market-scan` | market_scanner | Multi-signal scanner (momentum, RSI, MACD) |
+| `GET /recommendations` | investment_recommendations | AI stock/ETF recommendations |
+| `GET /market-research` | market_research | Sector screener + AI narrative |
+| `GET /news` | holdings_news | News headlines per holding |
+| `GET /calendar` | economic_calendar | Upcoming macro events |
+| `GET /reports` | reports | Full PDF-ready AI report |
+| `POST /chat` | portfolio_chat | Natural language Q&A (v0.63) |
+| `GET /broker-sync` | broker_sync | Import positions from IBKR/eToro/Altshuler |
+| `GET/POST /alerts` | price_alerts | Price alert management |
+| `GET /notifications` | notifications | In-app notification center |
+
+### Frontend pages added
+
+| Page | Route | Description |
+|------|-------|-------------|
+| Investments | `/investments` | Accounts, holdings, options, pension, broker sync |
+| AI Report | `/ai-report` | Full AI analysis report |
+| Backtesting | `/backtesting` | Strategy simulation |
+| Paper Trading | `/paper-trading` | Live paper portfolio simulation |
+| Goals | `/goals` | Goal management + progress |
+| Debt Planner | `/debt-planner` | Debt payoff strategy |
+| Market | `/market` | Scanner + research + calendar |
+| Settings | `/settings` | Email alerts, digest, cache management |
+| Offline | `/offline` | PWA offline fallback (v0.61) |
+
+### PWA (v0.61)
+
+Service worker at `public/sw.js`. API routes = network-only. Navigation = network-first with `/offline` fallback. Static assets = cache-first. Icons generated via `ImageResponse` (192×192, 512×512 maskable).
+
+### Options tracking (v0.62)
+
+`call_option` / `put_option` asset types. P&L engine: `cost_basis = premium × qty × multiplier`. Short positions: max_loss = unlimited. Expiry status: ok / warning (≤30d) / critical (≤7d) / expired.
+
+### AI chat (v0.63)
+
+In-memory 5-turn conversation history per investor. Context includes live portfolio, risk model, and goals analysis. Replies grounded in real data — never invents figures.
+
+## Known gaps (current)
 
 - No authentication — investor switching is based on localStorage only
 - No real live trading (intentionally disabled)
-- No real market data integration (simulated returns only)
-- No bank/brokerage account integration
-- No tax engine
 - No role-based access control
-- Workers module is a placeholder (no background jobs yet)
+- No tax engine (tax-loss harvesting is UI-only analysis)
+- FX historical rates not stored — `currency_rates` table holds only the current rate per pair (relevant for FX impact analysis planned in v0.64)

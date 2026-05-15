@@ -8,7 +8,41 @@
 
 This document must be interpreted according to the **current repository state**, not the original early-stage plan.
 
-As of version **0.8.0**, TradeOps AI already has a working MVP foundation:
+As of version **0.63.0**, TradeOps AI has a full working platform (not just an MVP). See `CHANGELOG.md` for the complete version history.
+
+**Current platform capabilities (v0.63.0):**
+
+* FastAPI backend + PostgreSQL + SQLAlchemy + Alembic (migration head: 0028)
+* Next.js 14 App Router + Tailwind CSS + Recharts + PWA (service worker, installable)
+* Docker Compose dev stack; GitHub Actions CI/CD
+* Investor profiles, family profiles, financial profiles, goals
+* Financial stability scoring + percentage-based risk modeling
+* Strategy templates + recommendation engine
+* Full portfolio tracking: multi-account, multi-currency, FX normalisation
+* Live market prices (Alpha Vantage + Yahoo Finance fallback)
+* Performance analytics: Sharpe, Sortino, MWR/IRR, drawdown, rolling returns, SPY/TA-35 benchmark
+* Portfolio attribution, stress testing, tax-loss harvesting, income projection
+* Rebalancing engine (drift detection vs risk model targets)
+* Options tracking (call/put, long/short, expiry countdown, P&L)
+* Pension/study fund management with management fee modelling
+* AI analysis (Claude Sonnet) — full financial report
+* AI portfolio chat (natural language Q&A, 5-turn history)
+* AI weekly digest email (Friday 18:00 UTC, opt-in)
+* Broker auto-sync (IBKR, eToro, Altshuler Shaham, ALTrade)
+* Notification center + price alerts + daily alert email digest
+* Backtesting + paper trading simulation
+* Market scanner, investment recommendations, market research
+* Economic calendar, holdings news, debt planner
+
+See `docs/schema.md` for the full database schema reference and `docs/architecture.md` for the system overview.
+
+---
+
+*Legacy spec content below (written at v0.8.0 — some sections are outdated but preserved for context):*
+
+---
+
+As of version **0.8.0**, TradeOps AI already had a working MVP foundation:
 
 * FastAPI backend with PostgreSQL, SQLAlchemy, Pydantic, and Alembic
 * Next.js 14 frontend with App Router, Tailwind CSS, Recharts, and dashboard pages
