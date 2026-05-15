@@ -10,6 +10,28 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.65.0] — 2026-05-15
+
+### Added — TASK 66: Payday Calendar + TASK 67: SWAN Stress Test
+
+**TASK 66 — Payday Calendar (Dividend Income)**
+- **`income_projection/distribution.py`** (new pure module): `monthly_distribution()` distributes each holding's annual dividend income across 12 calendar months based on ex-date and payment frequency. Quarterly: 4 equal payments spaced 3 months from ex-date. Monthly: 1/12 per month. Annual: full amount in ex-date month. Extracted to a dependency-free module for testability.
+- **`income_projection/schemas.py`**: `IncomeResult` gains `monthly_income: dict[int, float]` — month 1–12 → estimated income in base currency.
+- **`PaydayCalendarCard.tsx`** (new component): 12-bar chart (Recharts BarChart) showing expected dividend income per calendar month; current month highlighted in primary colour; "Next payday" banner showing nearest upcoming ex-dividend date with estimated payment; toggle to expand full holdings table (frequency, yield on value, annual income). Hidden when portfolio has no dividend income.
+- **`investments/page.tsx`**: `PaydayCalendarCard` added below FX Impact card.
+
+**TASK 67 — SWAN Stress Test ("Sleep Well at Night")**
+- **`scenario_analysis/scenarios.py`**: `Scenario` dataclass gains `recovery_months: int | None` — historical months for equity markets to recover to pre-crash peak. Set to 54 (2008 GFC), 6 (COVID), 24 (2022 rate cycle), `None` for hypothetical scenarios.
+- **`scenario_analysis/schemas.py`**: `HoldingImpact` model added (`name, ticker, asset_type, current_value, simulated_loss, simulated_value`). `ScenarioImpact` gains `recovery_months: int | None` and `holding_impacts: list[HoldingImpact]`.
+- **`scenario_analysis/engine.py`**: `_apply_scenario()` now computes per-holding impact by mapping each holding's `asset_type` to its tier drawdown, floors simulated_value at 0. Holdings sorted by `simulated_loss` (biggest loss first). Existing tier-level totals unchanged.
+- **`stress-test/page.tsx`**: Recovery timeline badge ("Recovered in ~6mo" / "~4.5yr") added to each scenario card and drill-down header. Per-holding impact table shown when scenario is selected: name, ticker, current value, impact, simulated value after crash. "Show all N holdings" expand button when >8 holdings.
+
+**Tests**
+- **`tests/test_scenario_analysis.py`** (new, 16 tests): holding impacts map to correct tier drawdowns, sum matches tier totals, sorted correctly, zero-value holdings excluded, value floor at zero, recovery months pass-through, full `compute()` integration.
+- **`tests/test_income_projection.py`** (new, 14 tests): monthly, quarterly (with year-boundary wrap), annual, unknown frequency, multiple holdings, zero-income exclusion, sum invariants.
+
+---
+
 ## [0.64.0] — 2026-05-15
 
 ### Added — TASK 64: Proactive Insights Engine + FX Impact Analysis
