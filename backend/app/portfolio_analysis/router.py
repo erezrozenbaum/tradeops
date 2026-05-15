@@ -1,3 +1,4 @@
+import time
 import uuid
 from datetime import date, datetime, timedelta, timezone
 
@@ -296,8 +297,16 @@ def get_portfolio_history(
     return PortfolioHistoryResult(investor_id=investor_id, snapshots=snapshots)
 
 
+_insights_cache: dict[str, tuple[float, dict]] = {}
+_INSIGHTS_CACHE_TTL = 3600  # 1 hour — avoids repeated Claude calls per investor
+
+
 @router.get("/insights")
-def get_proactive_insights(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+def get_proactive_insights(
+    investor_id: uuid.UUID,
+    refresh: bool = False,
+    db: Session = Depends(get_db),
+):
     """Run drift detection and return AI-narrated insights with rebalancing actions.
 
     - Ticker concentration > 20%: single-asset exposure alert
@@ -305,16 +314,24 @@ def get_proactive_insights(investor_id: uuid.UUID, db: Session = Depends(get_db)
     - Options expiring within 30 days: expiry warning (short positions flagged as danger)
     - Options P&L uses contract_multiplier for exposure calculation
     Calls Claude (haiku) to narrate each event if ANTHROPIC_API_KEY is set.
+    Responses cached 1 hour per investor; pass ?refresh=true to force re-run.
     """
     from app.core.config import settings
     from app.proactive_insights.engine import detect_drift, generate_insights
+
+    cache_key = str(investor_id)
+    now = time.monotonic()
+    if not refresh and cache_key in _insights_cache:
+        ts, cached_result = _insights_cache[cache_key]
+        if now - ts < _INSIGHTS_CACHE_TTL:
+            return cached_result
 
     if settings.ANTHROPIC_API_KEY:
         report = generate_insights(db, investor_id, settings.ANTHROPIC_API_KEY)
     else:
         report = detect_drift(db, investor_id)
 
-    return {
+    result = {
         "investor_id": str(report.investor_id),
         "base_currency": report.base_currency,
         "total_portfolio_value": report.total_portfolio_value,
@@ -339,6 +356,8 @@ def get_proactive_insights(investor_id: uuid.UUID, db: Session = Depends(get_db)
         ],
         "has_alerts": len(report.drift_events) > 0,
     }
+    _insights_cache[cache_key] = (now, result)
+    return result
 
 
 @router.get("/fx-impact")

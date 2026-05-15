@@ -66,7 +66,10 @@ export function ProactiveInsightsCard({ investorId }: { investorId: string }) {
     if (!investorId) return;
     if (showSpin) setRefreshing(true);
     try {
-      const r = await fetch(`/api/v1/investors/${investorId}/portfolio/insights`);
+      const url = showSpin
+        ? `/api/v1/investors/${investorId}/portfolio/insights?refresh=true`
+        : `/api/v1/investors/${investorId}/portfolio/insights`;
+      const r = await fetch(url);
       if (r.ok) setData(await r.json());
     } catch {
       // silent

@@ -10,6 +10,31 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.74.0] — 2026-05-15
+
+### Added — Proactive Insights Cache + DB CHECK Constraints
+
+**Proactive Insights 1-Hour Cache**
+- **`portfolio_analysis/router.py`**: `GET /portfolio/insights` now caches responses per investor for 1 hour using an in-memory dict. Avoids repeated Claude API calls on every page reload. Pass `?refresh=true` to bypass the cache and force a fresh AI run.
+- **`ProactiveInsightsCard.tsx`**: Refresh button now passes `?refresh=true` to the API. Confirmed `has_alerts` field was already present in the endpoint response (previously documented as missing — was a false positive from code review).
+
+**DB CHECK Constraints on Enum Columns (migration 0034)**
+- Added `CHECK` constraints to 8 enum-like `VARCHAR` columns that previously had no DB-level validation:
+  - `investment_accounts.owner_type` — `IN ('personal', 'joint')`
+  - `family_members.invite_status` — `IN ('not_invited', 'pending', 'accepted', 'expired')`
+  - `investment_holdings.fund_status` — `NULL OR IN ('active', 'inactive')`
+  - `investment_holdings.option_type` — `NULL OR IN ('call', 'put')`
+  - `investment_holdings.position_type` — `NULL OR IN ('long', 'short')`
+  - `price_alerts.alert_type` — `IN ('above', 'below')`
+  - `market_signals.guard_status` — `IN ('APPROVED', 'MUTED')`
+  - `holding_transactions.transaction_type` — `IN ('buy', 'sell', 'dividend', 'fee', 'split', 'bonus')`
+
+**Closed — live_market_intel**: Confirmed `live_market_intel/` is not dead code — it is imported by `investment_recommendations/service.py` and the `market_prewarm` worker.
+
+**Tests:** 408 backend tests passing. 0 TypeScript errors. DB migration: 0034.
+
+---
+
 ## [0.73.0] — 2026-05-15
 
 ### Added — Personal/Joint Account Ownership + Projected Balance Badge + Error Boundary
