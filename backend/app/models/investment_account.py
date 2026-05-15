@@ -100,6 +100,8 @@ class InvestmentHolding(Base, UUIDMixin, TimestampMixin):
     underlying_ticker: Mapped[str | None] = mapped_column(String(20), nullable=True)
     contract_multiplier: Mapped[float | None] = mapped_column(Float, nullable=True)
     position_type: Mapped[str | None] = mapped_column(String(10), nullable=True)  # "long" | "short"
+    # FX rate at purchase time (base_currency / holding.currency) — auto-populated on create
+    purchase_fx_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     account: Mapped["InvestmentAccount"] = relationship(
         "InvestmentAccount", back_populates="holdings"

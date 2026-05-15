@@ -133,6 +133,52 @@ def get_notifications(db: Session, investor_id: uuid.UUID) -> list[AppNotificati
     except Exception:
         pass
 
+    # --- Proactive drift insights ---
+    try:
+        from app.proactive_insights.engine import detect_drift
+        drift_report = detect_drift(db, investor_id)
+        for event in drift_report.drift_events:
+            if event.event_type == "concentration":
+                notifications.append(AppNotification(
+                    id=event.event_id,
+                    type="insight",
+                    severity=event.severity,
+                    title=f"Concentration risk: {event.name}",
+                    message=(
+                        f"{event.ticker} represents {event.value_pct:.1f}% of your portfolio "
+                        f"(threshold: {20:.0f}%). Consider trimming to reduce single-asset exposure."
+                    ),
+                    link="/investments",
+                ))
+            elif event.event_type == "tier_drift":
+                direction = "overweight" if (event.delta_pct or 0) > 0 else "underweight"
+                notifications.append(AppNotification(
+                    id=event.event_id,
+                    type="insight",
+                    severity=event.severity,
+                    title=f"Allocation drift: {event.name}",
+                    message=(
+                        f"Your {event.name} tier is {direction} by {abs(event.delta_pct or 0):.1f}% "
+                        f"vs your risk model target. Review your rebalancing plan."
+                    ),
+                    link="/investments",
+                ))
+            elif event.event_type in ("option_expiry", "short_option_expiry"):
+                short_note = " (short position — unlimited loss risk)" if event.data.get("is_short") else ""
+                notifications.append(AppNotification(
+                    id=event.event_id,
+                    type="insight",
+                    severity=event.severity,
+                    title=f"Option expiring: {event.name}",
+                    message=(
+                        f"{event.name} expires in {event.days_to_expiry} day(s)"
+                        f" (strike {event.data.get('strike_price', '?')}){short_note}."
+                    ),
+                    link="/investments",
+                ))
+    except Exception:
+        pass
+
     # --- Triggered price alerts ---
     try:
         from app.models.price_alert import PriceAlert

@@ -1,15 +1,16 @@
 """APScheduler background scheduler — lifecycle managed by FastAPI lifespan.
 
 Jobs:
-  - price_refresh      : daily at 20:00 UTC (after US market close)
-  - snapshot_writer    : daily at 21:00 UTC (end-of-day portfolio snapshots)
-  - price_alert_checker: daily at 20:30 UTC (check price alerts after price refresh)
-  - goal_evaluation    : daily at 07:00 UTC (morning status sweep)
-  - notification_alerts: daily at 08:30 UTC (email digest)
-  - broker_auto_sync   : daily at 09:00 UTC (refresh prices for auto-sync accounts)
-  - weekly_digest      : every Friday at 18:00 UTC (AI portfolio digest email)
-  - market_prewarm     : every 30 minutes (keeps live market signal cache warm)
-  - research_prewarm   : every 6 hours (keeps market research cache warm)
+  - price_refresh        : daily at 20:00 UTC (after US market close)
+  - snapshot_writer      : daily at 21:00 UTC (end-of-day portfolio snapshots)
+  - price_alert_checker  : daily at 20:30 UTC (check price alerts after price refresh)
+  - goal_evaluation      : daily at 07:00 UTC (morning status sweep)
+  - proactive_insights   : daily at 07:30 UTC (drift detection + AI insights + email)
+  - notification_alerts  : daily at 08:30 UTC (email digest)
+  - broker_auto_sync     : daily at 09:00 UTC (refresh prices for auto-sync accounts)
+  - weekly_digest        : every Friday at 18:00 UTC (AI portfolio digest email)
+  - market_prewarm       : every 30 minutes (keeps live market signal cache warm)
+  - research_prewarm     : every 6 hours (keeps market research cache warm)
 
 Set WORKERS_ENABLED=false in .env to disable all background jobs.
 """
@@ -34,6 +35,7 @@ def _register_jobs() -> None:
     from app.workers.jobs.notification_alerts import send_notification_alerts
     from app.workers.jobs.broker_auto_sync import run_broker_auto_sync
     from app.workers.jobs.weekly_digest import send_weekly_digest
+    from app.workers.jobs.proactive_insights import run_proactive_insights
     from app.workers.jobs.market_prewarm import prewarm_market_signals
     from app.workers.jobs.research_prewarm import prewarm_market_research
 
@@ -80,6 +82,13 @@ def _register_jobs() -> None:
         misfire_grace_time=3600,
     )
     _scheduler.add_job(
+        run_proactive_insights,
+        CronTrigger(hour=7, minute=30),
+        id="proactive_insights",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+    _scheduler.add_job(
         send_weekly_digest,
         CronTrigger(day_of_week="fri", hour=18, minute=0),
         id="weekly_digest",
@@ -111,7 +120,7 @@ def start() -> None:
     _register_jobs()
     _scheduler.start()
     _started = True
-    log.info("Workers scheduler started (jobs: price_refresh, snapshot_writer, price_alert_checker, goal_evaluation, notification_alerts, broker_auto_sync, weekly_digest, market_prewarm, research_prewarm)")
+    log.info("Workers scheduler started (jobs: price_refresh, snapshot_writer, price_alert_checker, goal_evaluation, proactive_insights, notification_alerts, broker_auto_sync, weekly_digest, market_prewarm, research_prewarm)")
 
 
 def stop() -> None:
