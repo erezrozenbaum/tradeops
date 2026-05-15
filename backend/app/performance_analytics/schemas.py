@@ -3,6 +3,25 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class LazyPortfolioComparison(BaseModel):
+    investor_id: uuid.UUID
+    currency: str
+    data_gate_passed: bool          # True if investor has 30+ days of snapshots
+    snapshot_days: int              # actual days of history available
+    # Portfolio metrics (same window as snapshots)
+    portfolio_return_pct: float
+    portfolio_sharpe: float | None
+    # Lazy 60/40 portfolio (60% VT / 40% AGG) over same period
+    lazy_return_pct: float | None
+    lazy_sharpe: float | None       # estimated from same benchmark returns
+    lazy_composition: str           # "60% VT / 40% AGG"
+    # Derived
+    complexity_premium_pct: float | None  # portfolio_return - lazy_return
+    risk_adjusted_premium: float | None   # portfolio_sharpe - lazy_sharpe
+    verdict: str                    # human-readable honest verdict
+    computed_at: datetime
+
+
 class BenchmarkPoint(BaseModel):
     date: str  # ISO date
     cumulative_return_pct: float

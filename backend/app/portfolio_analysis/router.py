@@ -18,7 +18,7 @@ from app.portfolio_analysis.schemas import (
     PriceRefreshResult,
     PortfolioHistoryResult,
 )
-from app.performance_analytics.schemas import PerformanceAnalytics, AttributionResult
+from app.performance_analytics.schemas import PerformanceAnalytics, AttributionResult, LazyPortfolioComparison
 from app.scenario_analysis.schemas import StressTestResult
 from app.income_projection.schemas import IncomeResult
 from app.portfolio_analysis.rebalance_schemas import RebalanceResult
@@ -221,6 +221,47 @@ def get_pension_projection(investor_id: uuid.UUID, db: Session = Depends(get_db)
         return fx_convert(db, amount, from_ccy, to_ccy)
 
     return pension_projection.project(age, accounts, investor.base_currency, convert_fn)
+
+
+@router.get("/complexity-premium", response_model=LazyPortfolioComparison)
+def get_complexity_premium(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Compare portfolio return vs a passive 60/40 lazy portfolio (VT + AGG).
+
+    Returns the 'Complexity Premium' — how much (or little) the investor earned
+    above a dead-simple index strategy over the same window.
+    Requires 30+ days of portfolio snapshots; returns data_gate_passed=False otherwise.
+    """
+    from app.performance_analytics.engine import compute as compute_analytics
+    from app.performance_analytics.lazy_portfolio import fetch_lazy_returns, build_comparison
+    from app.models.investor_profile import InvestorProfile
+
+    investor = db.get(InvestorProfile, investor_id)
+    currency = investor.base_currency if investor else "USD"
+
+    all_snapshots = service.get_history(db, investor_id, since=None)
+    analytics = compute_analytics(all_snapshots, investor_id=investor_id, currency=currency)
+
+    start_dt = all_snapshots[0].snapshot_at if all_snapshots else None
+    end_dt = all_snapshots[-1].snapshot_at if all_snapshots else None
+
+    if start_dt and start_dt.tzinfo is None:
+        start_dt = start_dt.replace(tzinfo=__import__("datetime").timezone.utc)
+    if end_dt and end_dt.tzinfo is None:
+        end_dt = end_dt.replace(tzinfo=__import__("datetime").timezone.utc)
+
+    vt_ret = agg_ret = None
+    if start_dt and end_dt and analytics.period_days >= 30:
+        vt_ret, agg_ret = fetch_lazy_returns(start_dt, end_dt)
+
+    return build_comparison(
+        investor_id=investor_id,
+        currency=currency,
+        snapshot_days=analytics.period_days,
+        portfolio_return_pct=analytics.total_return_pct,
+        portfolio_sharpe=analytics.sharpe_ratio,
+        vt_return_pct=vt_ret,
+        agg_return_pct=agg_ret,
+    )
 
 
 @router.get("/tax-opportunities", response_model=TaxOpportunityResult)

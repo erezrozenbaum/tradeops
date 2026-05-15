@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   TrendingUp, TrendingDown, BarChart2, AlertTriangle,
   Activity, Award, Calendar, RefreshCw, GitBranch, ShieldAlert, Scissors, FileDown,
+  Zap, Scale,
 } from "lucide-react";
 import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -119,9 +120,28 @@ interface HarvestOpportunity {
   unrealized_loss: number;
   unrealized_loss_pct: number;
   holding_days: number | null;
+  holding_period_label: string | null;
   is_short_term: boolean;
   wash_sale_risk: boolean;
   estimated_tax_saving: number;
+  suggested_replacement: string | null;
+  replacement_rationale: string | null;
+}
+
+interface LazyPortfolioComparison {
+  investor_id: string;
+  currency: string;
+  data_gate_passed: boolean;
+  snapshot_days: number;
+  portfolio_return_pct: number;
+  portfolio_sharpe: number | null;
+  lazy_return_pct: number | null;
+  lazy_sharpe: number | null;
+  lazy_composition: string;
+  complexity_premium_pct: number | null;
+  risk_adjusted_premium: number | null;
+  verdict: string;
+  computed_at: string;
 }
 
 interface GainOffset {
@@ -242,6 +262,7 @@ export default function PerformancePage() {
   const [correlation, setCorrelation] = useState<CorrelationResult | null>(null);
   const [attribution, setAttribution] = useState<AttributionResult | null>(null);
   const [taxOpps, setTaxOpps] = useState<TaxOpportunityResult | null>(null);
+  const [lazyComparison, setLazyComparison] = useState<LazyPortfolioComparison | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
 
   const downloadPdf = useCallback(async (reportPeriod: "monthly" | "quarterly") => {
@@ -297,6 +318,9 @@ export default function PerformancePage() {
     fetch(`/api/v1/investors/${investorId}/portfolio/tax-opportunities`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d) setTaxOpps(d); });
+    fetch(`/api/v1/investors/${investorId}/portfolio/complexity-premium`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setLazyComparison(d); });
   }, [investorId]);
 
   // ── Build chart data ─────────────────────────────────────────────────────
@@ -874,7 +898,7 @@ export default function PerformancePage() {
                         variant={op.is_short_term ? "warning" : "muted"}
                         className="text-[10px] py-0 shrink-0"
                       >
-                        {op.is_short_term ? "Short-term" : "Long-term"}
+                        {op.holding_period_label ?? (op.is_short_term ? "Short-term" : "Long-term")}
                       </Badge>
                       {op.wash_sale_risk && (
                         <Badge variant="danger" className="text-[10px] py-0 shrink-0">
@@ -884,8 +908,17 @@ export default function PerformancePage() {
                     </div>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                       {op.account_name}
-                      {op.holding_days !== null ? ` · ${op.holding_days} days held` : ""}
                     </p>
+                    {op.suggested_replacement && (
+                      <div className="flex items-start gap-1.5 mt-1.5 text-[11px] bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-md px-2 py-1.5">
+                        <span className="text-blue-600 dark:text-blue-400 font-semibold shrink-0">
+                          Similar position: {op.suggested_replacement}
+                        </span>
+                        {op.replacement_rationale && (
+                          <span className="text-muted-foreground">— {op.replacement_rationale}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold text-red-500">{op.unrealized_loss_pct.toFixed(1)}%</p>
@@ -921,6 +954,105 @@ export default function PerformancePage() {
             <p className="text-[10px] text-muted-foreground border-t border-border pt-3">
               Estimates use a {taxOpps.capital_gains_rate_pct}% capital gains rate based on your country. Not tax advice — consult a tax professional before acting. Wash-sale rules may defer (not eliminate) recognized losses.
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Complexity Premium — Smart Benchmarking */}
+      {lazyComparison && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <Scale className="h-4 w-4 text-primary" />
+                Complexity Premium — vs Lazy Portfolio
+              </CardTitle>
+              {lazyComparison.data_gate_passed && lazyComparison.complexity_premium_pct !== null && (
+                <Badge
+                  variant={lazyComparison.complexity_premium_pct >= 0 ? "success" : "danger"}
+                  className="text-xs"
+                >
+                  {lazyComparison.complexity_premium_pct >= 0 ? "+" : ""}
+                  {lazyComparison.complexity_premium_pct.toFixed(2)}% vs {lazyComparison.lazy_composition}
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              How much did your active strategy earn above a dead-simple passive index?
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!lazyComparison.data_gate_passed ? (
+              <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <Zap className="h-8 w-8 text-muted-foreground/30" />
+                <p className="text-sm text-muted-foreground">{lazyComparison.verdict}</p>
+              </div>
+            ) : (
+              <>
+                {/* Return comparison grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-muted/40 rounded-lg p-3 text-center">
+                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">Your Return</p>
+                    <p className={`text-lg font-bold ${lazyComparison.portfolio_return_pct >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {pct(lazyComparison.portfolio_return_pct)}
+                    </p>
+                  </div>
+                  <div className="bg-muted/40 rounded-lg p-3 text-center">
+                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">{lazyComparison.lazy_composition}</p>
+                    <p className={`text-lg font-bold ${(lazyComparison.lazy_return_pct ?? 0) >= 0 ? "text-amber-500" : "text-red-500"}`}>
+                      {lazyComparison.lazy_return_pct !== null ? pct(lazyComparison.lazy_return_pct) : "—"}
+                    </p>
+                  </div>
+                  <div className="bg-muted/40 rounded-lg p-3 text-center">
+                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">Complexity Premium</p>
+                    <p className={`text-lg font-bold ${(lazyComparison.complexity_premium_pct ?? 0) >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {lazyComparison.complexity_premium_pct !== null
+                        ? `${lazyComparison.complexity_premium_pct >= 0 ? "+" : ""}${lazyComparison.complexity_premium_pct.toFixed(2)}%`
+                        : "—"}
+                    </p>
+                  </div>
+                  <div className="bg-muted/40 rounded-lg p-3 text-center">
+                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">Risk-Adj. Premium</p>
+                    <p className={`text-lg font-bold ${(lazyComparison.risk_adjusted_premium ?? 0) >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {lazyComparison.risk_adjusted_premium !== null
+                        ? `${lazyComparison.risk_adjusted_premium >= 0 ? "+" : ""}${lazyComparison.risk_adjusted_premium.toFixed(2)}`
+                        : "—"}
+                    </p>
+                    <p className="text-[9px] text-muted-foreground mt-0.5">Sharpe delta</p>
+                  </div>
+                </div>
+
+                {/* Sharpe comparison row */}
+                {(lazyComparison.portfolio_sharpe !== null || lazyComparison.lazy_sharpe !== null) && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center justify-between text-xs bg-muted/30 rounded-lg px-3 py-2">
+                      <span className="text-muted-foreground">Your Sharpe ratio</span>
+                      <span className="font-semibold">{lazyComparison.portfolio_sharpe !== null ? fmt(lazyComparison.portfolio_sharpe) : "—"}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs bg-muted/30 rounded-lg px-3 py-2">
+                      <span className="text-muted-foreground">60/40 est. Sharpe</span>
+                      <span className="font-semibold">{lazyComparison.lazy_sharpe !== null ? fmt(lazyComparison.lazy_sharpe) : "—"}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Verdict */}
+                <div className={`rounded-lg px-4 py-3 text-sm font-medium border ${
+                  (lazyComparison.complexity_premium_pct ?? 0) > 0.5
+                    ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300"
+                    : (lazyComparison.complexity_premium_pct ?? 0) < -0.5
+                    ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300"
+                    : "bg-muted/40 border-border text-foreground"
+                }`}>
+                  {lazyComparison.verdict}
+                </div>
+
+                <p className="text-[10px] text-muted-foreground">
+                  Lazy portfolio: {lazyComparison.lazy_composition} (global equities + bonds). Return computed over {lazyComparison.snapshot_days} days.
+                  Lazy Sharpe is estimated from a typical 60/40 portfolio volatility of ~10% annualised. Not investment advice.
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       )}

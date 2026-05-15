@@ -14,9 +14,12 @@ class HarvestOpportunity(BaseModel):
     unrealized_loss: float          # negative, in base currency
     unrealized_loss_pct: float      # negative, e.g. -8.5
     holding_days: int | None        # None when purchase_date not set
+    holding_period_label: str | None  # "187 days (short-term)"
     is_short_term: bool             # True if held < 365 days
     wash_sale_risk: bool            # True if purchased < 30 days ago
     estimated_tax_saving: float     # abs(loss) × rate, in base currency
+    suggested_replacement: str | None = None   # e.g. "VTI"
+    replacement_rationale: str | None = None   # brief explanation
 
 
 class GainOffset(BaseModel):
