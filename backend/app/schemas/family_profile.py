@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 from app.models.family_profile import RiskTolerance
 
@@ -27,7 +27,29 @@ class FamilyMemberUpdate(BaseModel):
 class FamilyMemberOut(FamilyMemberCreate):
     id: uuid.UUID
     family_profile_id: uuid.UUID
+    invite_status: str = "not_invited"
+    invite_email: str | None = None
     model_config = {"from_attributes": True}
+
+
+# ── Invite ────────────────────────────────────────────────────────────────────
+
+class InviteRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=255)
+
+
+class InviteOut(BaseModel):
+    token: str
+    invite_url: str
+    email: str
+    expires_at: datetime
+
+
+class InviteInfo(BaseModel):
+    family_name: str
+    member_name: str
+    relationship_type: str
+    status: str
 
 
 class FamilyProfileCreate(BaseModel):
