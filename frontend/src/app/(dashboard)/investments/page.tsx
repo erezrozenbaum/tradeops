@@ -69,6 +69,7 @@ interface Account {
   notes: string | null;
   family_member_id: string | null;
   is_emergency_fund: boolean;
+  owner_type: string;
   auto_sync_enabled: boolean;
   last_synced_at: string | null;
   sync_broker_type: string | null;
@@ -157,6 +158,7 @@ interface PensionSimResult {
   total_contributions_added: number;
   total_gains: number;
   monthly_pension_estimate: number;
+  makdam_used: number | null;
   fund_status: string | null;
   tax_status: string | null;
   tax_exemption_date: string | null;
@@ -223,7 +225,7 @@ const ASSET_TYPES = [
   { value: "other", label: "Other" },
 ];
 
-const EMPTY_ACCOUNT = { provider_name: "", account_type: "brokerage", account_name: "", currency: "ILS", notes: "", family_member_id: "", is_emergency_fund: false };
+const EMPTY_ACCOUNT = { provider_name: "", account_type: "brokerage", account_name: "", currency: "ILS", notes: "", family_member_id: "", is_emergency_fund: false, owner_type: "personal" };
 const EMPTY_HOLDING = { ticker: "", isin: "", name: "", asset_type: "stock", quantity: "", avg_buy_price: "", currency: "ILS", fees: "", purchase_date: "", current_value: "", notes: "", current_balance: "", total_deposits: "", monthly_contribution: "", annual_return_rate: "", monthly_contribution_employee: "", monthly_contribution_employer: "", fund_status: "active", management_fee_balance_pct: "", management_fee_contribution_pct: "", makdam: "", strike_price: "", expiry_date: "", option_type: "call", underlying_ticker: "", contract_multiplier: "100", position_type: "long" };
 const _OPTION_TYPES = new Set(["call_option", "put_option"]);
 
@@ -409,6 +411,7 @@ export default function InvestmentsPage() {
           notes: accountForm.notes || null,
           family_member_id: accountForm.family_member_id || null,
           is_emergency_fund: accountForm.is_emergency_fund,
+          owner_type: accountForm.owner_type,
         }),
       });
       if (res.ok) {
@@ -1208,6 +1211,22 @@ export default function InvestmentsPage() {
                   </p>
                 )}
               </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Ownership</label>
+                <div className="flex rounded-md border border-input overflow-hidden w-fit">
+                  {(["personal", "joint"] as const).map(v => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setAccountForm({ ...accountForm, owner_type: v })}
+                      className={`px-4 py-1.5 text-sm font-medium transition-colors ${accountForm.owner_type === v ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+                    >
+                      {v === "personal" ? "Personal" : "Joint"}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground">Joint accounts appear in the household bucket in the family view.</p>
+              </div>
               <div className="col-span-2">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
@@ -1381,6 +1400,11 @@ export default function InvestmentsPage() {
                       {account.is_emergency_fund && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-100 dark:text-amber-400 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
                           <ShieldCheck className="h-3 w-3" /> Emergency Fund
+                        </span>
+                      )}
+                      {account.owner_type === "joint" && (
+                        <span className="inline-flex items-center text-[10px] font-semibold text-purple-700 bg-purple-100 dark:text-purple-400 dark:bg-purple-900/30 px-1.5 py-0.5 rounded">
+                          Joint
                         </span>
                       )}
                     </p>
@@ -1738,7 +1762,15 @@ export default function InvestmentsPage() {
                                 {!isSavingsFund && ha?.price_source === "live" && (
                                   <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-1.5 py-0 text-[10px] font-medium text-green-700 dark:text-green-400">Live</span>
                                 )}
-                                {!isSavingsFund && ha?.price_source !== "live" && h.ticker && (
+                                {ha?.price_source === "projected" && (
+                                  <span
+                                    className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0 text-[10px] font-medium text-amber-700 dark:text-amber-400"
+                                    title="Auto-projected using compound interest from last recorded balance date"
+                                  >
+                                    Projected
+                                  </span>
+                                )}
+                                {!isSavingsFund && ha?.price_source !== "live" && ha?.price_source !== "projected" && h.ticker && (
                                   <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0 text-[10px] font-medium text-amber-700 dark:text-amber-400">Manual — refresh for live</span>
                                 )}
                                 {isPension && (
@@ -1979,7 +2011,9 @@ export default function InvestmentsPage() {
                                         <div className="rounded-lg border border-border bg-background p-3">
                                           <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Monthly pension estimate</p>
                                           <p className="text-lg font-bold text-green-600 dark:text-green-400">{formatCurrency(simResult.monthly_pension_estimate, simResult.currency)}</p>
-                                          <p className="text-xs text-muted-foreground mt-0.5">over {simResult.withdrawal_years} yrs</p>
+                                          <p className="text-xs text-muted-foreground mt-0.5">
+                                            {simResult.makdam_used ? `מקדם ${simResult.makdam_used}` : `over ${simResult.withdrawal_years} yrs`}
+                                          </p>
                                         </div>
                                         <div className="rounded-lg border border-border bg-background p-3">
                                           <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Investment gains</p>

@@ -22,6 +22,7 @@ class PensionSimulationResult(BaseModel):
     total_contributions_added: float
     total_gains: float
     monthly_pension_estimate: float
+    makdam_used: float | None = None      # set when makdam-based formula used
     # Study fund specific
     fund_status: str | None = None
     tax_status: str | None = None          # "Tax-Free" | "Locked"

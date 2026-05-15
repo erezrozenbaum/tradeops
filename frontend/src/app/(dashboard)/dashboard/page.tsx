@@ -956,6 +956,16 @@ function PensionCard({ projection }: { projection: PensionProjection }) {
   // Warn when any fund's net return rate exceeds 7% — likely historical gross, not realistic net
   const highRateFunds = projection.funds.filter(f => f.annual_return_pct > 7);
 
+  // Dismiss key includes all high-rate fund names so alert re-appears if new funds are added
+  const dismissKey = `pension-rate-warning-v1-${highRateFunds.map(f => f.name).sort().join("|")}`;
+  const [alertDismissed, setAlertDismissed] = useState<boolean>(() => {
+    try { return localStorage.getItem(dismissKey) === "1"; } catch { return false; }
+  });
+  function dismissAlert() {
+    try { localStorage.setItem(dismissKey, "1"); } catch {}
+    setAlertDismissed(true);
+  }
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -968,12 +978,19 @@ function PensionCard({ projection }: { projection: PensionProjection }) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {highRateFunds.length > 0 && (
+        {highRateFunds.length > 0 && !alertDismissed && (
           <div className="mb-4 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 px-3 py-2 flex items-start gap-2">
             <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-800 dark:text-amber-300">
+            <p className="text-xs text-amber-800 dark:text-amber-300 flex-1">
               {highRateFunds.map(f => f.name).join(", ")} {highRateFunds.length === 1 ? "is" : "are"} using a return rate above 7% — this may be a historical gross rate, not a realistic net-of-fees planning rate. Israeli pension funds realistically return 4–6% net. <Link href="/investments" className="underline underline-offset-2">Edit the rate on the Investments page</Link> (pencil icon on each fund).
             </p>
+            <button
+              onClick={dismissAlert}
+              className="text-[10px] text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 underline shrink-0 ml-1"
+              title="I understand — hide this warning"
+            >
+              I understand
+            </button>
           </div>
         )}
         <div className="flex flex-wrap gap-8 mb-5">

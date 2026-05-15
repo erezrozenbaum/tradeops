@@ -105,6 +105,7 @@ def simulate_fund(
         withdrawal_years=withdrawal_years,
         management_fee_balance_pct=holding.management_fee_balance_pct or 0.0,
         management_fee_contribution_pct=holding.management_fee_contribution_pct or 0.0,
+        makdam=holding.makdam if not is_study else None,
     )
 
     return PensionSimulationResult(
