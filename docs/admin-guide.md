@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.62.0  
-**Last updated:** 2026-05-14
+**Version:** 0.63.0  
+**Last updated:** 2026-05-15
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
@@ -593,6 +593,8 @@ kubectl describe ingress tradeops
 | Management Fees | Migration 0026 + `pension_projection.py` + `pension_simulation/engine.py` | `management_fee_balance_pct` (% p.a. deducted from return rate) and `management_fee_contribution_pct` (% deducted from each contribution) on pension/study fund holdings. Input fields in Create/Edit holding forms. Applied in both pension projection and standalone pension simulation. |
 | PWA Support | `next.config.ts` + `public/sw.js` + `src/app/manifest.ts` | Installable Progressive Web App. Service worker: API routes always network-only, pages network-first with offline fallback, static assets cache-first. 192×192 and 512×512 icons via `ImageResponse`. Offline page at `/offline`. Add to home screen on mobile/desktop. |
 | Options Tracking | Migration 0027 + `options_engine.py` + `GET /portfolio/options` | `call_option` / `put_option` asset types. Fields: strike_price, expiry_date, option_type, underlying_ticker, contract_multiplier, position_type (long/short). P&L vs cost basis (premium × qty × multiplier). Max loss = premium paid for long; unlimited for short (warning shown). Expiry countdown badges. Options P&L summary card on investments page. |
+| AI Weekly Digest | Migration 0028 + `weekly_digest/` + worker job | Sends a styled HTML email every Friday at 18:00 UTC to investors with `weekly_digest_enabled=true`. Uses `claude-haiku-4-5-20251001` to generate a headline, performance summary, goal progress, and 1–3 actionable suggestions, all grounded in real portfolio data. Requires `ANTHROPIC_API_KEY` and SMTP config. Toggle in Settings → Email Notifications. |
+| AI Portfolio Chat | `portfolio_chat/` + `POST /investors/{id}/chat` | Natural language Q&A grounded in real portfolio, risk model, and goals data. In-memory 5-turn conversation history per investor (resets on restart). Floating chat button on all dashboard pages. Replies never invent data. Requires `ANTHROPIC_API_KEY`. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.
