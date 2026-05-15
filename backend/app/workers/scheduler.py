@@ -38,6 +38,7 @@ def _register_jobs() -> None:
     from app.workers.jobs.proactive_insights import run_proactive_insights
     from app.workers.jobs.market_prewarm import prewarm_market_signals
     from app.workers.jobs.research_prewarm import prewarm_market_research
+    from app.workers.jobs.sentiment_worker import run_sentiment_signals
 
     _scheduler.add_job(
         refresh_all_prices,
@@ -111,6 +112,13 @@ def _register_jobs() -> None:
         misfire_grace_time=1800,
         next_run_time=datetime.now(timezone.utc),  # warm cache on startup
     )
+    _scheduler.add_job(
+        run_sentiment_signals,
+        CronTrigger(hour=20, minute=15),   # after price_refresh (20:00), before snapshot (21:00)
+        id="sentiment_signals",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
 
 
 def start() -> None:
@@ -120,7 +128,7 @@ def start() -> None:
     _register_jobs()
     _scheduler.start()
     _started = True
-    log.info("Workers scheduler started (jobs: price_refresh, snapshot_writer, price_alert_checker, goal_evaluation, proactive_insights, notification_alerts, broker_auto_sync, weekly_digest, market_prewarm, research_prewarm)")
+    log.info("Workers scheduler started (jobs: price_refresh, snapshot_writer, price_alert_checker, goal_evaluation, proactive_insights, notification_alerts, broker_auto_sync, weekly_digest, market_prewarm, research_prewarm, sentiment_signals)")
 
 
 def stop() -> None:
