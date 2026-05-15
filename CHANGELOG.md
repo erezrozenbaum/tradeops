@@ -10,6 +10,26 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.63.0] — 2026-05-15
+
+### Added — TASK 62: AI Weekly Digest Email + TASK 63: Natural Language Portfolio Queries
+
+**TASK 62 — AI Weekly Digest Email**
+- **DB migration 0028**: adds `weekly_digest_enabled` (Boolean, default false) to `investor_profiles`.
+- **`weekly_digest/renderer.py`**: calls `claude-haiku-4-5-20251001` with real portfolio + goals data to generate a headline, performance summary, goal update, and 1–3 actionable suggestions; renders a fully styled HTML email.
+- **`workers/jobs/weekly_digest.py`**: iterates opted-in investors, calls renderer, sends via SMTP using the existing `smtplib` infrastructure (HTML `MIMEMultipart`); gracefully skips if SMTP or API key is not configured.
+- **Scheduler**: `weekly_digest` job registered on `CronTrigger(day_of_week="fri", hour=18)` — every Friday at 18:00 UTC.
+- **Frontend — Settings page**: added **Weekly AI Digest** toggle inside the Email Notifications card; saved alongside `alert_email` and `email_alerts_enabled` via `PUT /investors/{id}`.
+
+**TASK 63 — Natural Language Portfolio Queries**
+- **`portfolio_chat/session.py`**: in-memory per-investor conversation history, last 5 turns, resets on restart.
+- **`portfolio_chat/engine.py`**: gathers live portfolio, risk model, and goals-analysis data; passes as system context to `claude-haiku-4-5-20251001`; returns a grounded, concise reply (never invents data).
+- **`POST /investors/{id}/chat`**: accepts `{ message }`, returns `{ reply, data }`.
+- **`DELETE /investors/{id}/chat`**: clears server-side session history.
+- **Frontend — Chat Drawer**: floating button (bottom-right on all dashboard pages) opens a 420×600 chat panel with message bubbles, suggestion chips on empty state, auto-scroll, loading indicator, clear-history button, and a disclaimer ("grounded in your real portfolio data · Not financial advice").
+
+---
+
 ## [0.62.0] — 2026-05-14
 
 ### Added — TASK 61: Options Tracking

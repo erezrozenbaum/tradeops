@@ -35,6 +35,7 @@ from app.reports.router import router as reports_router
 from app.retirement_readiness.router import router as retirement_readiness_router
 from app.broker_sync.router import router as broker_sync_router
 from app.admin.router import router as admin_router
+from app.portfolio_chat.router import router as portfolio_chat_router
 
 api_router = APIRouter()
 
@@ -73,3 +74,4 @@ api_router.include_router(reports_router, prefix="/investors/{investor_id}/repor
 api_router.include_router(retirement_readiness_router, prefix="/investors/{investor_id}/retirement-readiness", tags=["retirement-readiness"])
 api_router.include_router(broker_sync_router, prefix="/investors", tags=["broker-sync"])
 api_router.include_router(admin_router, prefix="/admin", tags=["admin"])
+api_router.include_router(portfolio_chat_router, prefix="/investors/{investor_id}/chat", tags=["chat"])

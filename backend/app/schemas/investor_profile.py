@@ -41,6 +41,7 @@ class InvestorProfileUpdate(BaseModel):
     guardian_required: bool | None = None
     alert_email: str | None = None
     email_alerts_enabled: bool | None = None
+    weekly_digest_enabled: bool | None = None
 
 
 class InvestorProfileOut(BaseModel):
@@ -62,6 +63,7 @@ class InvestorProfileOut(BaseModel):
     guardian_required: bool
     alert_email: str | None
     email_alerts_enabled: bool
+    weekly_digest_enabled: bool
     created_at: datetime
     updated_at: datetime
 
