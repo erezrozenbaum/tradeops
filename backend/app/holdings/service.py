@@ -116,7 +116,21 @@ def add_holding(
     account = get_account(db, investor_id, account_id)
     if not account:
         return None
-    holding = InvestmentHolding(account_id=account_id, **data.model_dump())
+
+    holding_data = data.model_dump()
+
+    # Auto-capture FX rate at purchase time for FX impact analysis
+    try:
+        investor = db.get(InvestorProfile, investor_id)
+        if investor and data.currency and data.currency != investor.base_currency:
+            from app.currency_engine.rates import get_rate
+            rate = get_rate(db, investor.base_currency, data.currency)
+            if rate and rate > 0:
+                holding_data["purchase_fx_rate"] = rate
+    except Exception:
+        pass  # non-blocking — analysis will show "unavailable" for this holding
+
+    holding = InvestmentHolding(account_id=account_id, **holding_data)
     db.add(holding)
     db.flush()
     audit.log_event(

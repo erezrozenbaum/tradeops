@@ -10,6 +10,30 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.64.0] — 2026-05-15
+
+### Added — TASK 64: Proactive Insights Engine + FX Impact Analysis
+
+**FX Impact Analysis**
+- **DB migration 0029**: adds `purchase_fx_rate` (Float, nullable) to `investment_holdings`.
+- **Auto-population**: `holdings/service.py` captures the live FX rate (base → holding currency) at holding creation time. Holdings created before v0.64 show `fx_data_available: false`.
+- **`fx_impact/engine.py`**: pure math decomposition — `asset_pnl = price-change in local currency × qty × current_rate`; `fx_pnl = cost_basis_local × (current_rate − purchase_rate)`. Options use `contract_multiplier` in cost basis. Short positions carry no special sign (multiplier only).
+- **`GET /portfolio/fx-impact`**: per-holding breakdown of `asset_pnl`, `fx_pnl`, `total_pnl`, their `%` variants, plus portfolio-level totals.
+- **`FxImpactCard.tsx`**: three-column summary row (Total / Asset / FX P&L), market-vs-FX attribution split bar, per-holding detail cards with inline colour bars. Shown on investments page when cross-currency holdings exist.
+
+**Proactive Insights Engine**
+- **`proactive_insights/engine.py`**:
+  - `detect_drift()` — deterministic, no AI: flags ticker concentration > 20% (with severity scaling to danger > 35%), tier deviation from risk model > 5%, and options expiring within 30 days (short options = danger).
+  - `generate_insights()` — calls `claude-haiku-4-5-20251001` to narrate each drift event with a 1-2 sentence insight and a specific safe rebalancing action suggestion.
+  - Options positions use `contract_multiplier` for exposure calculation; `position_type` determines severity for expiry events.
+- **`GET /portfolio/insights`**: returns drift events + AI insights. Falls back to raw events if no API key.
+- **Notification center**: drift events from `detect_drift()` surfaced as in-app notifications (type `insight`), so they appear in the notification bell without an API call.
+- **`workers/jobs/proactive_insights.py`**: daily at 07:30 UTC — runs detect + generate for all investors, sends styled HTML insights email to opted-in investors.
+- **Scheduler**: `proactive_insights` job registered at 07:30 UTC.
+- **`ProactiveInsightsCard.tsx`**: collapse/expand, per-event severity icon + badge, AI insight text + "Action:" suggestion chip. Refresh button reruns the AI call on demand. Shown on investments page.
+
+---
+
 ## [0.63.0] — 2026-05-15
 
 ### Added — TASK 62: AI Weekly Digest Email + TASK 63: Natural Language Portfolio Queries
