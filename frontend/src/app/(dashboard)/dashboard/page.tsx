@@ -939,15 +939,40 @@ function PensionCard({ projection }: { projection: PensionProjection }) {
   const fmt = (n: number) => formatCurrency(n, projection.currency);
   const retireIn = projection.years_to_retirement;
 
+  // Separate pension funds (ביטוח מנהלים / קרן פנסיה) from study funds (כה"ת)
+  // Pension funds → monthly income via Israeli makdam (מקדם) ≈ 200 for male at 67
+  // Study funds → lump sum redeemable at age 67 (not a monthly pension)
+  const pensionProjected = projection.funds
+    .filter(f => f.asset_type === "pension_fund")
+    .reduce((s, f) => s + f.projected_value, 0);
+  const studyProjected = projection.funds
+    .filter(f => f.asset_type === "study_fund")
+    .reduce((s, f) => s + f.projected_value, 0);
+  const monthlyPensionEstimate = pensionProjected > 0 ? Math.round(pensionProjected / 200) : 0;
+
+  // Warn when any fund's net return rate exceeds 7% — likely historical gross, not realistic net
+  const highRateFunds = projection.funds.filter(f => f.annual_return_pct > 7);
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2">
           <PiggyBank className="h-4 w-4 text-primary" />
           Pension &amp; Study Funds — Projection
+          <Link href="/investments" className="ml-auto text-[11px] font-normal text-muted-foreground hover:text-foreground flex items-center gap-1">
+            Edit rates <ExternalLink className="h-3 w-3" />
+          </Link>
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {highRateFunds.length > 0 && (
+          <div className="mb-4 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 px-3 py-2 flex items-start gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-800 dark:text-amber-300">
+              {highRateFunds.map(f => f.name).join(", ")} {highRateFunds.length === 1 ? "is" : "are"} using a return rate above 7% — this may be a historical gross rate, not a realistic net-of-fees planning rate. Israeli pension funds realistically return 4–6% net. <Link href="/investments" className="underline underline-offset-2">Edit the rate on the Investments page</Link> (pencil icon on each fund).
+            </p>
+          </div>
+        )}
         <div className="flex flex-wrap gap-8 mb-5">
           <div>
             <p className="text-xs text-muted-foreground mb-1">Projected at age {projection.retirement_age}</p>
@@ -961,13 +986,18 @@ function PensionCard({ projection }: { projection: PensionProjection }) {
             <p className="text-xs text-muted-foreground mb-1">Monthly contribution</p>
             <p className="text-2xl font-semibold">{fmt(projection.total_monthly_contribution)}</p>
           </div>
-          {projection.total_projected_value > 0 && retireIn > 0 && (
+          {monthlyPensionEstimate > 0 && retireIn > 0 && (
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Est. monthly income at retirement</p>
-              <p className="text-2xl font-semibold">
-                {fmt(Math.round(projection.total_projected_value / (20 * 12)))}
-              </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Assuming 20-year drawdown</p>
+              <p className="text-xs text-muted-foreground mb-1">Est. monthly pension</p>
+              <p className="text-2xl font-semibold">{fmt(monthlyPensionEstimate)}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Using makdam (מקדם) 200</p>
+            </div>
+          )}
+          {studyProjected > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Study funds (כה&quot;ת) at 67</p>
+              <p className="text-2xl font-semibold">{fmt(Math.round(studyProjected))}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Lump sum — not monthly income</p>
             </div>
           )}
         </div>
@@ -975,14 +1005,14 @@ function PensionCard({ projection }: { projection: PensionProjection }) {
           <div className="space-y-2 border-t border-border pt-4">
             {projection.funds.map((f, i) => (
               <div key={i} className="flex items-center justify-between text-sm">
-                <div>
-                  <span className="font-medium">{f.name}</span>
-                  <span className="text-xs text-muted-foreground ml-2 capitalize">{f.asset_type.replace(/_/g, " ")}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-medium truncate">{f.name}</span>
+                  <span className="text-xs text-muted-foreground capitalize shrink-0">{f.asset_type.replace(/_/g, " ")}</span>
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0 ml-4">
                   <span className="font-semibold">{fmt(f.projected_value)}</span>
-                  <span className="text-xs text-muted-foreground ml-2">
-                    at {f.annual_return_pct}% p.a.
+                  <span className={`text-xs ml-2 ${f.annual_return_pct > 7 ? "text-amber-600 dark:text-amber-400 font-medium" : "text-muted-foreground"}`}>
+                    at {f.annual_return_pct}%{f.annual_return_pct > 7 ? " ⚠️" : ""} p.a.
                   </span>
                 </div>
               </div>
@@ -990,7 +1020,7 @@ function PensionCard({ projection }: { projection: PensionProjection }) {
           </div>
         )}
         <p className="text-[10px] text-muted-foreground mt-4">
-          Projection assumes constant returns and contributions. Actual results may vary.
+          Projection uses stored net return rate (gross rate minus fee on balance). Realistic planning rate for Israeli pension: 4–6%. Actual results may vary.
         </p>
       </CardContent>
     </Card>
