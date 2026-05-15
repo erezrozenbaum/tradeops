@@ -4,6 +4,7 @@ from app.models.investment_account import InvestmentAccount
 RETIREMENT_AGE = 67
 _PENSION_TYPES = {"pension_fund", "study_fund"}
 _DEFAULT_RETURN_PCT = 5.0
+_DEFAULT_MAKDAM = 200  # Standard Israeli pension coefficient for male at 67
 
 
 def _fv(balance: float, monthly: float, annual_rate_pct: float, months: int) -> float:
@@ -53,6 +54,7 @@ def project(
                 except Exception:
                     return amount
 
+            makdam = h.makdam if h.makdam else _DEFAULT_MAKDAM
             funds.append({
                 "name": h.name,
                 "asset_type": h.asset_type,
@@ -60,6 +62,7 @@ def project(
                 "monthly_contribution": round(_cvt(monthly, h.currency), 2),
                 "annual_return_pct": net_rate,
                 "projected_value": round(_cvt(projected, h.currency), 2),
+                "makdam": makdam,
                 "currency": base_currency,
             })
 

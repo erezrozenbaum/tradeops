@@ -51,6 +51,7 @@ interface Holding {
   is_emergency_fund: boolean;
   management_fee_balance_pct: number | null;
   management_fee_contribution_pct: number | null;
+  makdam: number | null;
   strike_price: number | null;
   expiry_date: string | null;
   option_type: string | null;
@@ -223,7 +224,7 @@ const ASSET_TYPES = [
 ];
 
 const EMPTY_ACCOUNT = { provider_name: "", account_type: "brokerage", account_name: "", currency: "ILS", notes: "", family_member_id: "", is_emergency_fund: false };
-const EMPTY_HOLDING = { ticker: "", isin: "", name: "", asset_type: "stock", quantity: "", avg_buy_price: "", currency: "ILS", fees: "", purchase_date: "", current_value: "", notes: "", current_balance: "", total_deposits: "", monthly_contribution: "", annual_return_rate: "", monthly_contribution_employee: "", monthly_contribution_employer: "", fund_status: "active", management_fee_balance_pct: "", management_fee_contribution_pct: "", strike_price: "", expiry_date: "", option_type: "call", underlying_ticker: "", contract_multiplier: "100", position_type: "long" };
+const EMPTY_HOLDING = { ticker: "", isin: "", name: "", asset_type: "stock", quantity: "", avg_buy_price: "", currency: "ILS", fees: "", purchase_date: "", current_value: "", notes: "", current_balance: "", total_deposits: "", monthly_contribution: "", annual_return_rate: "", monthly_contribution_employee: "", monthly_contribution_employer: "", fund_status: "active", management_fee_balance_pct: "", management_fee_contribution_pct: "", makdam: "", strike_price: "", expiry_date: "", option_type: "call", underlying_ticker: "", contract_multiplier: "100", position_type: "long" };
 const _OPTION_TYPES = new Set(["call_option", "put_option"]);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -497,6 +498,7 @@ export default function InvestmentsPage() {
             annual_return_rate: holdingForm.annual_return_rate ? parseFloat(holdingForm.annual_return_rate) : null,
             management_fee_balance_pct: holdingForm.management_fee_balance_pct ? parseFloat(holdingForm.management_fee_balance_pct) : null,
             management_fee_contribution_pct: holdingForm.management_fee_contribution_pct ? parseFloat(holdingForm.management_fee_contribution_pct) : null,
+            makdam: holdingForm.makdam ? parseFloat(holdingForm.makdam) : null,
             notes: holdingForm.notes || null,
           }
         : _OPTION_TYPES.has(holdingForm.asset_type)
@@ -597,6 +599,7 @@ export default function InvestmentsPage() {
       fund_status: h.fund_status ?? "active",
       management_fee_balance_pct: h.management_fee_balance_pct != null ? String(h.management_fee_balance_pct) : "",
       management_fee_contribution_pct: h.management_fee_contribution_pct != null ? String(h.management_fee_contribution_pct) : "",
+      makdam: h.makdam != null ? String(h.makdam) : "",
       strike_price: h.strike_price != null ? String(h.strike_price) : "",
       expiry_date: h.expiry_date ?? "",
       option_type: h.option_type ?? "call",
@@ -650,6 +653,7 @@ export default function InvestmentsPage() {
             annual_return_rate: editHoldingForm.annual_return_rate ? parseFloat(editHoldingForm.annual_return_rate) : null,
             management_fee_balance_pct: editHoldingForm.management_fee_balance_pct ? parseFloat(editHoldingForm.management_fee_balance_pct) : null,
             management_fee_contribution_pct: editHoldingForm.management_fee_contribution_pct ? parseFloat(editHoldingForm.management_fee_contribution_pct) : null,
+            makdam: editHoldingForm.makdam ? parseFloat(editHoldingForm.makdam) : null,
             notes: editHoldingForm.notes || null,
           }
         : _OPTION_TYPES.has(editHoldingForm.asset_type)
@@ -1554,6 +1558,11 @@ export default function InvestmentsPage() {
                           <p className="text-[10px] text-muted-foreground">Typical: 1–2% (ביטוח מנהלים). Deducted from each deposit before it compounds.</p>
                         </div>
                         <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Makdam — מקדם פנסיה</label>
+                          <Input type="number" step="1" min="50" max="400" placeholder="200" value={holdingForm.makdam} onChange={e => setHoldingForm({ ...holdingForm, makdam: e.target.value })} />
+                          <p className="text-[10px] text-muted-foreground">Coefficient for monthly pension calc. Old ביטוח מנהלים: fixed (check policy). Post-2013 / קרן פנסיה: ~200–220.</p>
+                        </div>
+                        <div className="space-y-1">
                           <label className="text-xs text-muted-foreground">Currency</label>
                           <Input maxLength={3} value={holdingForm.currency} onChange={e => setHoldingForm({ ...holdingForm, currency: e.target.value.toUpperCase() })} />
                         </div>
@@ -2122,6 +2131,11 @@ export default function InvestmentsPage() {
                                         <label className="text-xs text-muted-foreground">Fee on contribution % — דמי ניהול מהפקדות</label>
                                         <Input type="number" step="0.01" placeholder="1.0" value={editHoldingForm.management_fee_contribution_pct} onChange={e => setEditHoldingForm({ ...editHoldingForm, management_fee_contribution_pct: e.target.value })} />
                                         <p className="text-[10px] text-muted-foreground">Typical: 1–2% (ביטוח מנהלים). Deducted from each deposit before it compounds.</p>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs text-muted-foreground">Makdam — מקדם פנסיה</label>
+                                        <Input type="number" step="1" min="50" max="400" placeholder="200" value={editHoldingForm.makdam} onChange={e => setEditHoldingForm({ ...editHoldingForm, makdam: e.target.value })} />
+                                        <p className="text-[10px] text-muted-foreground">Conversion coefficient for monthly pension. Old ביטוח מנהלים: fixed (check your policy). New post-2013: variable ~200. קרן פנסיה: ~200–220.</p>
                                       </div>
                                       <div className="space-y-1">
                                         <label className="text-xs text-muted-foreground">Currency</label>
