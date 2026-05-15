@@ -12,6 +12,7 @@ import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, Minus, ChevronDown, Chev
 import { FxImpactCard } from "@/components/FxImpactCard";
 import { ProactiveInsightsCard } from "@/components/ProactiveInsightsCard";
 import { PaydayCalendarCard } from "@/components/PaydayCalendarCard";
+import { LiquidityRunwayCard } from "@/components/LiquidityRunwayCard";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -1267,6 +1268,9 @@ export default function InvestmentsPage() {
 
       {/* Payday Calendar */}
       {investorId && <PaydayCalendarCard investorId={investorId} />}
+
+      {/* Liquidity Runway */}
+      {investorId && <LiquidityRunwayCard investorId={investorId} />}
 
       {/* Options P&L summary */}
       {optionsSummary && optionsSummary.total_positions > 0 && (

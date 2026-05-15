@@ -10,6 +10,30 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.67.0] — 2026-05-15
+
+### Added — TASK 61: Family Consolidated View + TASK 70: Liquidity Runway Engine
+
+**TASK 61 — Family Consolidated View**
+- **`family_portfolio/`** (new module): `engine.py` aggregates all investment accounts by `family_member_id` FK, groups into per-member portfolios, computes household totals. `build_family_summary()` is a pure function (no DB calls) accepting pre-fetched family, portfolio, and account→member map for testability. `generation_for()` maps `relationship_type` → generation bucket (primary, partners, children, parents, grandparents, siblings, other). `is_minor(age)` returns True for age < 18, flagging `education_mode=True` on the member.
+- **`family_portfolio/schemas.py`**: `FamilyMemberPortfolio` (per-member breakdown with generation, age, is_minor, education_mode, asset_allocation), `OverlapHolding` (tickers held by 2+ members — concentration risk), `FamilyPortfolioSummary` (household AUM, by-generation totals, household asset allocation, cross-member overlap, has_minors flag).
+- **`family_portfolio/router.py`**: `GET /api/v1/investors/{id}/family-portfolio` — returns 404 when no family profile exists.
+- **`family/page.tsx`** (updated): `HouseholdPortfolioCard` sub-component shows household AUM, unrealized P&L, generation breakdown bar with colour-coded segments, per-member portfolio bars with education-mode warning badges, and cross-member ticker overlap alert. Minor members get "Minor" badge in member list. Card renders only when family has at least one member.
+- **`tests/test_family_portfolio.py`** (new, 25 tests): `TestGenerationFor` (10 tests — all relationship types + unknown fallback), `TestIsMinor` (4 tests — 0, 17, 18, None), `TestBuildFamilySummary` (11 tests — primary bucket, generation grouping, minor education mode, adult no-education mode, has_minors flag, overlap detection, no-overlap, household asset allocation, P&L% math, member_count with no-account members).
+
+**TASK 70 — Liquidity Runway Engine**
+- **`liquidity_runway/`** (new module): `engine.py` tiers every holding (stock/ETF/crypto → Tier 1 T+2, bonds/funds → Tier 2 1wk, real estate/pension/study fund → Tier 3 Locked). Account type overrides: `keren_hishtalmut` and `pension` accounts force Tier 3 regardless of holding asset type. Net-to-pocket = gross − estimated CGT (gains only, country-specific rate from tax_rules) − market impact buffer (Tier 1: 0.5%, Tier 2: 0%). Locked holdings excluded from liquidity calculation.
+- **Emergency Lever (greedy)**: When `target_amount` is provided, sorts liquidatable holdings by `(tax+impact)/gross` ascending (cheapest-to-liquidate first), greedily selects until target is met. `selected_for_target` flag on each holding, `target_met` bool in response.
+- **`liquidity_runway/schemas.py`**: `LiquidityBucket` (tier, label, total_gross, total_net_to_pocket, holding_count), `LiquidityHolding` (full breakdown per holding), `LiquidityRunway` (buckets, totals, emergency lever output).
+- **`liquidity_runway/router.py`**: `GET /api/v1/investors/{id}/portfolio/liquidity-runway?target_amount=50000` — optional target_amount query param (≥0).
+- **`LiquidityRunwayCard.tsx`** (new component): Visual liquidity bar (three coloured segments: green=1–3d, amber=1wk, grey=locked); "Emergency Lever" section with target input and Calculate button; target-met/not-met verdict chip; ordered list of selected holdings to sell; expandable full holdings list sorted by cost efficiency.
+- **`investments/page.tsx`**: `LiquidityRunwayCard` added below Payday Calendar card.
+- **`tests/test_liquidity_runway.py`** (new, 23 tests): `TestGetTier` (10 tests — all asset types + account-type override), `TestComputeLiquidityRunway` (13 tests — bucket structure, tier landing, net-to-pocket math, zero-tax on losses, total_net excludes locked, no-target no-selection, target met, target not met, locked excluded from lever, cheapest-first sort, empty portfolio, currency pass-through).
+
+**Tests:** 323 backend tests passing (+48 new). 0 TypeScript errors. No DB migrations.
+
+---
+
 ## [0.66.0] — 2026-05-15
 
 ### Added — TASK 68: Tax-Alpha Harvest Alerts + TASK 69: Complexity Premium

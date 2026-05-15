@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.66.0  
+**Version:** 0.67.0  
 **Last updated:** 2026-05-15
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -599,6 +599,8 @@ kubectl describe ingress tradeops
 | SWAN Stress Test | `scenario_analysis/` + `GET /portfolio/stress-test` | Per-holding impact table added to each scenario drill-down (sorted by simulated loss, expand button for >8 holdings). Recovery timeline badge on scenario cards (e.g., "Recovered in ~6mo" for COVID, "~4.5yr" for 2008 GFC). Hypothetical scenarios marked accordingly. |
 | Tax-Alpha Harvest Alerts | `tax_harvesting/` + `GET /portfolio/tax-opportunities` | Harvest candidates sorted by estimated tax saving (largest first). `holding_period_label` shows exact days + short/long-term classification. Conservative "Similar position" ETF suggestion per asset class (VTI for stocks, AGG for bonds, VNQ for REITs, VT for ETFs/funds) with brief rationale and wash-sale disclaimer. Crypto excluded (no tax-equivalent). |
 | Complexity Premium | `performance_analytics/lazy_portfolio.py` + `GET /portfolio/complexity-premium` | Compares portfolio return vs a passive 60% VT / 40% AGG lazy portfolio over the same snapshot window. Reports Complexity Premium (portfolio return − lazy return), Risk-Adjusted Premium (Sharpe delta), and an honest verdict. Requires 30+ days of portfolio snapshots; returns `data_gate_passed=false` until then. Panel shown on /performance page. |
+| Family Consolidated View | `family_portfolio/` + `GET /investors/{id}/family-portfolio` | Aggregates investment accounts by family_member_id across all members of the primary investor's household. Groups by generation (primary, partners, children, parents, grandparents). Education mode flagged for members with age < 18. Cross-member ticker overlap shown as concentration risk alert. Rendered as Household Portfolio card below family member list on /family page. No DB migration — uses existing family_members and investment_accounts tables. |
+| Liquidity Runway Engine | `liquidity_runway/` + `GET /portfolio/liquidity-runway` | Tiers every holding: Tier 1 (stocks/ETFs/crypto — T+2), Tier 2 (bonds/funds — 1wk), Tier 3 (locked: pension, keren hishtalmut, real estate). Net-to-pocket = gross − estimated CGT (gains only) − market impact buffer (0.5% Tier 1, 0% Tier 2). Optional `target_amount` query param activates Emergency Lever: greedy selection of cheapest-to-liquidate holdings (lowest cost/gross ratio first). Shown as Liquidity Runway card on /investments page. No DB migration. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.

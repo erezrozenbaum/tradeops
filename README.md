@@ -34,6 +34,8 @@ Investor Profile → Financial Context → Risk Model → Portfolio Tracking →
 20. **Fee-inclusive cost basis** — brokerage fees are now included in cost basis for correct P&L calculation
 21. **Pension fund tax correction** — pension and study funds exempt from flat 25% CGT; taxed as income at withdrawal
 22. **Single-stock concentration flag** — correlation engine warns when any single ticker > 15% of portfolio value
+23. **Family Consolidated View** — household AUM aggregated across all family members grouped by generation; cross-member ticker overlap detection; education-mode badges for minors (age < 18)
+24. **Liquidity Runway Engine** — tiers every holding by settlement speed (T+2 / 1wk / Locked); net-to-pocket = gross − estimated CGT − market impact; Emergency Lever greedily selects cheapest holdings to sell to meet a cash target
 
 ---
 
@@ -153,6 +155,8 @@ tradeops/
 │   │   ├── income_projection/       # Dividend income per holding + ex-date calendar
 │   │   ├── tax_harvesting/          # Tax-loss harvesting opportunity detection
 │   │   ├── tax_rules/               # Country-specific CGT rules for AI context
+│   │   ├── family_portfolio/        # Household portfolio aggregation by family member + generation
+│   │   ├── liquidity_runway/        # Liquidity tiering + net-to-pocket + emergency lever
 │   │   ├── reports/                 # PDF report generation (reportlab)
 │   │   ├── ai_analysis/             # Claude integration
 │   │   ├── audit/
@@ -209,6 +213,9 @@ Key endpoints:
 | GET | `/api/v1/investors/{id}/portfolio/stress-test` | Scenario analysis + Monte Carlo simulation |
 | GET | `/api/v1/investors/{id}/portfolio/income` | Dividend income projection + upcoming ex-dates |
 | GET | `/api/v1/investors/{id}/portfolio/tax-opportunities` | Tax-loss harvesting alerts + estimated savings |
+| GET | `/api/v1/investors/{id}/portfolio/complexity-premium` | Complexity Premium vs passive 60/40 lazy portfolio |
+| GET | `/api/v1/investors/{id}/portfolio/liquidity-runway` | Liquidity tier breakdown + optional Emergency Lever (`?target_amount=`) |
+| GET | `/api/v1/investors/{id}/family-portfolio` | Household portfolio aggregated by family member + generation |
 | GET | `/api/v1/investors/{id}/portfolio/rebalance` | Rebalance recommendations vs target allocation |
 | GET | `/api/v1/investors/{id}/reports/pdf` | PDF report download (`?period=monthly\|quarterly`) |
 | GET | `/api/v1/market/quote/{ticker}` | Get cached or fresh quote for a ticker |
