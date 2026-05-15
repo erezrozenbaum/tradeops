@@ -51,6 +51,7 @@ interface FundProjection {
   monthly_contribution: number;
   annual_return_pct: number;
   projected_value: number;
+  makdam: number;
   currency: string;
 }
 
@@ -940,15 +941,17 @@ function PensionCard({ projection }: { projection: PensionProjection }) {
   const retireIn = projection.years_to_retirement;
 
   // Separate pension funds (ביטוח מנהלים / קרן פנסיה) from study funds (כה"ת)
-  // Pension funds → monthly income via Israeli makdam (מקדם) ≈ 200 for male at 67
+  // Pension funds → monthly income via stored makdam (מקדם) per fund, default 200
   // Study funds → lump sum redeemable at age 67 (not a monthly pension)
-  const pensionProjected = projection.funds
-    .filter(f => f.asset_type === "pension_fund")
-    .reduce((s, f) => s + f.projected_value, 0);
+  const pensionFunds = projection.funds.filter(f => f.asset_type === "pension_fund");
   const studyProjected = projection.funds
     .filter(f => f.asset_type === "study_fund")
     .reduce((s, f) => s + f.projected_value, 0);
-  const monthlyPensionEstimate = pensionProjected > 0 ? Math.round(pensionProjected / 200) : 0;
+  // Sum each pension fund's monthly estimate using its own makdam
+  const monthlyPensionEstimate = Math.round(
+    pensionFunds.reduce((s, f) => s + f.projected_value / (f.makdam || 200), 0)
+  );
+  const pensionProjected = pensionFunds.reduce((s, f) => s + f.projected_value, 0);
 
   // Warn when any fund's net return rate exceeds 7% — likely historical gross, not realistic net
   const highRateFunds = projection.funds.filter(f => f.annual_return_pct > 7);
@@ -990,7 +993,9 @@ function PensionCard({ projection }: { projection: PensionProjection }) {
             <div>
               <p className="text-xs text-muted-foreground mb-1">Est. monthly pension</p>
               <p className="text-2xl font-semibold">{fmt(monthlyPensionEstimate)}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Using makdam (מקדם) 200</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                Using makdam (מקדם) {pensionFunds.length === 1 ? (pensionFunds[0].makdam || 200) : "per fund"} — edit in Investments
+              </p>
             </div>
           )}
           {studyProjected > 0 && (
@@ -1014,6 +1019,11 @@ function PensionCard({ projection }: { projection: PensionProjection }) {
                   <span className={`text-xs ml-2 ${f.annual_return_pct > 7 ? "text-amber-600 dark:text-amber-400 font-medium" : "text-muted-foreground"}`}>
                     at {f.annual_return_pct}%{f.annual_return_pct > 7 ? " ⚠️" : ""} p.a.
                   </span>
+                  {f.asset_type === "pension_fund" && (
+                    <span className="block text-[10px] text-muted-foreground">
+                      {fmt(Math.round(f.projected_value / (f.makdam || 200)))}/mo · מקדם {f.makdam || 200}
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
