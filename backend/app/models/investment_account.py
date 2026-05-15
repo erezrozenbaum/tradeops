@@ -93,6 +93,7 @@ class InvestmentHolding(Base, UUIDMixin, TimestampMixin):
     is_emergency_fund: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     management_fee_balance_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
     management_fee_contribution_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    makdam: Mapped[float | None] = mapped_column(Float, nullable=True)  # Israeli pension conversion coefficient (מקדם)
     # Options fields (call_option / put_option asset types)
     strike_price: Mapped[float | None] = mapped_column(Float, nullable=True)
     expiry_date: Mapped[date | None] = mapped_column(Date, nullable=True)
