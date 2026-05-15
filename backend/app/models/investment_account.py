@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -56,6 +56,7 @@ class InvestmentAccount(Base, UUIDMixin, TimestampMixin):
         ForeignKey("family_members.id", ondelete="SET NULL"),
         nullable=True,
     )
+    owner_type: Mapped[str] = mapped_column(String(20), nullable=False, default="personal")
 
     holdings: Mapped[list["InvestmentHolding"]] = relationship(
         "InvestmentHolding", back_populates="account", cascade="all, delete-orphan"
@@ -103,6 +104,8 @@ class InvestmentHolding(Base, UUIDMixin, TimestampMixin):
     position_type: Mapped[str | None] = mapped_column(String(10), nullable=True)  # "long" | "short"
     # FX rate at purchase time (base_currency / holding.currency) — auto-populated on create
     purchase_fx_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Auto-projected balance: timestamp of last manual balance entry
+    balance_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     account: Mapped["InvestmentAccount"] = relationship(
         "InvestmentAccount", back_populates="holdings"

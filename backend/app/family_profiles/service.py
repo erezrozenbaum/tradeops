@@ -1,4 +1,6 @@
+import secrets
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
@@ -147,3 +149,77 @@ def remove_member(
     db.delete(member)
     db.commit()
     return True
+
+
+# ── Invites ───────────────────────────────────────────────────────────────────
+
+def create_invite(
+    db: Session,
+    family_id: uuid.UUID,
+    member_id: uuid.UUID,
+    email: str,
+) -> FamilyMember | None:
+    family = get(db, family_id)
+    if not family:
+        return None
+    member = db.get(FamilyMember, member_id)
+    if not member or member.family_profile_id != family_id:
+        return None
+    if member.is_primary:
+        return None  # can't invite the primary member
+
+    token = secrets.token_hex(32)
+    member.invite_email = email
+    member.invite_token = token
+    member.invite_status = "pending"
+    member.invite_expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    audit.log_event(
+        db,
+        event_type="family_member.invited",
+        description=f"Invite sent to {email} for '{member.name}'",
+        investor_profile_id=family.primary_investor_id,
+        metadata={"member_id": str(member_id), "email": email},
+    )
+    db.commit()
+    db.refresh(member)
+    return member
+
+
+def get_invite_by_token(db: Session, token: str) -> FamilyMember | None:
+    return db.query(FamilyMember).filter(FamilyMember.invite_token == token).first()
+
+
+def accept_invite(
+    db: Session,
+    token: str,
+    investor_profile_id: uuid.UUID,
+) -> FamilyMember | None:
+    """Link the given investor_profile to the family member identified by token."""
+    from app.models.investor_profile import InvestorProfile
+
+    member = get_invite_by_token(db, token)
+    if not member:
+        return None
+    if member.invite_status != "pending":
+        return None
+    if member.invite_expires_at and member.invite_expires_at < datetime.now(timezone.utc):
+        member.invite_status = "expired"
+        db.commit()
+        return None
+
+    investor = db.get(InvestorProfile, investor_profile_id)
+    if not investor:
+        return None
+
+    member.investor_profile_id = investor_profile_id
+    member.invite_status = "accepted"
+    audit.log_event(
+        db,
+        event_type="family_member.invite_accepted",
+        description=f"'{member.name}' linked to investor profile",
+        investor_profile_id=investor_profile_id,
+        metadata={"member_id": str(member.id), "family_id": str(member.family_profile_id)},
+    )
+    db.commit()
+    db.refresh(member)
+    return member

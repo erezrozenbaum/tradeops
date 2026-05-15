@@ -1,7 +1,8 @@
 import enum
 import uuid
+from datetime import datetime
 
-from sqlalchemy import Enum, ForeignKey, Integer, String
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -45,6 +46,12 @@ class FamilyMember(Base, UUIDMixin):
     individual_risk_tolerance: Mapped[RiskTolerance | None] = mapped_column(
         Enum(RiskTolerance), nullable=True
     )
+
+    # Invite fields
+    invite_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    invite_token: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True, unique=True)
+    invite_status: Mapped[str] = mapped_column(String(20), nullable=False, default="not_invited")
+    invite_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     family: Mapped["FamilyProfile"] = relationship("FamilyProfile", back_populates="members")
     investor: Mapped["InvestorProfile | None"] = relationship(

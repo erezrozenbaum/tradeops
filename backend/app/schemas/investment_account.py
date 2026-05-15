@@ -102,6 +102,7 @@ class InvestmentHoldingOut(BaseModel):
     contract_multiplier: float | None = None
     position_type: str | None = None
     purchase_fx_rate: float | None = None
+    balance_updated_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -123,6 +124,7 @@ class InvestmentAccountCreate(BaseModel):
     notes: str | None = None
     family_member_id: uuid.UUID | None = None
     is_emergency_fund: bool = False
+    owner_type: str = Field("personal", pattern="^(personal|joint)$")
 
 
 class InvestmentAccountUpdate(BaseModel):
@@ -133,6 +135,7 @@ class InvestmentAccountUpdate(BaseModel):
     notes: str | None = None
     family_member_id: uuid.UUID | None = None
     is_emergency_fund: bool | None = None
+    owner_type: str | None = Field(None, pattern="^(personal|joint)$")
 
 
 class InvestmentAccountOut(BaseModel):
@@ -144,6 +147,7 @@ class InvestmentAccountOut(BaseModel):
     currency: str
     notes: str | None
     family_member_id: uuid.UUID | None
+    owner_type: str = "personal"
     is_emergency_fund: bool = False
     auto_sync_enabled: bool = False
     last_synced_at: datetime | None = None
