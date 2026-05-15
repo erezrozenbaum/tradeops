@@ -14,6 +14,29 @@ _GAIN_THRESHOLD_PCT = 2.5       # flag gains > 2.5% as offset candidates
 _WASH_SALE_DAYS = 30            # warn if purchased within last 30 days
 _SHORT_TERM_DAYS = 365          # < 365 days = short-term holding
 
+# Conservative ETF replacements per asset class (not financial advice)
+_REPLACEMENT_MAP: dict[str, tuple[str, str]] = {
+    "stock":        ("VTI",  "Broad US equity ETF — maintains market exposure while harvesting the loss"),
+    "etf":          ("VT",   "Global total market ETF — diversified replacement while avoiding wash-sale"),
+    "bond":         ("AGG",  "US aggregate bond ETF — similar duration and credit exposure"),
+    "fund":         ("VT",   "Global total market ETF — diversified replacement while avoiding wash-sale"),
+    "real_estate":  ("VNQ",  "US REIT ETF — maintains real estate sector exposure"),
+}
+
+
+def _suggest_replacement(asset_type: str) -> tuple[str | None, str | None]:
+    entry = _REPLACEMENT_MAP.get(asset_type)
+    if entry is None:
+        return None, None
+    return entry[0], entry[1]
+
+
+def _holding_period_label(holding_days: int | None, is_short_term: bool) -> str | None:
+    if holding_days is None:
+        return None
+    term = "short-term" if is_short_term else "long-term"
+    return f"{holding_days} days ({term})"
+
 
 def _capital_gains_rate(country: str) -> float:
     """Return the representative CGT rate (%) for a country."""
@@ -78,6 +101,8 @@ def compute_opportunities(
                 wash_sale_risk = holding_days is not None and holding_days < _WASH_SALE_DAYS
 
                 estimated_saving = abs(h.unrealized_pnl) * tax_rate / 100.0
+                replacement, rationale = _suggest_replacement(h.asset_type)
+                period_label = _holding_period_label(holding_days, is_short_term)
 
                 harvest_ops.append(HarvestOpportunity(
                     holding_id=h.id,
@@ -88,9 +113,12 @@ def compute_opportunities(
                     unrealized_loss=round(h.unrealized_pnl, 2),
                     unrealized_loss_pct=round(loss_pct, 2),
                     holding_days=holding_days,
+                    holding_period_label=period_label,
                     is_short_term=is_short_term,
                     wash_sale_risk=wash_sale_risk,
                     estimated_tax_saving=round(estimated_saving, 2),
+                    suggested_replacement=replacement,
+                    replacement_rationale=rationale,
                 ))
 
             elif loss_pct > _GAIN_THRESHOLD_PCT:
@@ -103,8 +131,8 @@ def compute_opportunities(
                     unrealized_gain_pct=round(loss_pct, 2),
                 ))
 
-    # Sort by loss magnitude (most negative first)
-    harvest_ops.sort(key=lambda x: x.unrealized_loss)
+    # Sort by estimated tax saving (largest saving first — most actionable)
+    harvest_ops.sort(key=lambda x: x.estimated_tax_saving, reverse=True)
     # Sort gain offsets by gain magnitude (largest first)
     gain_offsets.sort(key=lambda x: x.unrealized_gain, reverse=True)
 
