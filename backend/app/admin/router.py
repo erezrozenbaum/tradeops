@@ -1,13 +1,19 @@
 import uuid
+from datetime import datetime, timezone, timedelta
+from collections import defaultdict
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.admin.dependencies import require_admin
-from app.admin.schemas import AdminProfileOut, AdminStats, AdminUserOut, AssignProfile, RoleUpdate
+from app.admin.schemas import (
+    AdminProfileOut, AdminStats, AdminUserOut, AssignProfile, RoleUpdate,
+    AiUsageSummary, AiUsageFeatureRow, AiUsageUserRow,
+)
 from app.db.session import get_db
 from app.models.investor_profile import InvestorProfile
 from app.models.user import User
+from app.models.ai_usage_log import AiUsageLog
 
 router = APIRouter()
 
@@ -90,4 +96,88 @@ def assign_profile(profile_id: uuid.UUID, data: AssignProfile, db: Session = Dep
         id=profile.id, full_name=profile.full_name, country=profile.country,
         base_currency=profile.base_currency, user_id=profile.user_id,
         user_email=email, created_at=profile.created_at,
+    )
+
+
+@router.get("/ai-usage", response_model=AiUsageSummary)
+def get_ai_usage(
+    days: int = Query(30, ge=1, le=365),
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    logs = (
+        db.query(AiUsageLog)
+        .filter(AiUsageLog.called_at >= since)
+        .order_by(AiUsageLog.called_at.desc())
+        .all()
+    )
+
+    # Build investor_id → user email lookup
+    investor_email: dict[uuid.UUID, str | None] = {}
+    for log_entry in logs:
+        if log_entry.investor_id and log_entry.investor_id not in investor_email:
+            profile = db.get(InvestorProfile, log_entry.investor_id)
+            if profile and profile.user_id:
+                user = db.get(User, profile.user_id)
+                investor_email[log_entry.investor_id] = user.email if user else None
+            else:
+                investor_email[log_entry.investor_id] = None
+
+    # Aggregate by feature
+    feature_agg: dict[str, dict] = defaultdict(lambda: {"calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0})
+    for l in logs:
+        feature_agg[l.feature_name]["calls"] += 1
+        feature_agg[l.feature_name]["input_tokens"] += l.input_tokens
+        feature_agg[l.feature_name]["output_tokens"] += l.output_tokens
+        feature_agg[l.feature_name]["cost_usd"] += l.cost_usd
+
+    by_feature = [
+        AiUsageFeatureRow(feature_name=k, **v)
+        for k, v in sorted(feature_agg.items(), key=lambda x: -x[1]["cost_usd"])
+    ]
+
+    # Aggregate by investor
+    investor_agg: dict[uuid.UUID | None, dict] = defaultdict(
+        lambda: {"calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "by_feature": defaultdict(lambda: {"calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0})}
+    )
+    for l in logs:
+        key = l.investor_id
+        investor_agg[key]["calls"] += 1
+        investor_agg[key]["input_tokens"] += l.input_tokens
+        investor_agg[key]["output_tokens"] += l.output_tokens
+        investor_agg[key]["cost_usd"] += l.cost_usd
+        investor_agg[key]["by_feature"][l.feature_name]["calls"] += 1
+        investor_agg[key]["by_feature"][l.feature_name]["input_tokens"] += l.input_tokens
+        investor_agg[key]["by_feature"][l.feature_name]["output_tokens"] += l.output_tokens
+        investor_agg[key]["by_feature"][l.feature_name]["cost_usd"] += l.cost_usd
+
+    by_user = []
+    for inv_id, agg in sorted(investor_agg.items(), key=lambda x: -x[1]["cost_usd"]):
+        user_features = [
+            AiUsageFeatureRow(feature_name=k, **v)
+            for k, v in sorted(agg["by_feature"].items(), key=lambda x: -x[1]["cost_usd"])
+        ]
+        by_user.append(AiUsageUserRow(
+            user_email=investor_email.get(inv_id) if inv_id else None,
+            investor_id=inv_id,
+            calls=agg["calls"],
+            input_tokens=agg["input_tokens"],
+            output_tokens=agg["output_tokens"],
+            cost_usd=round(agg["cost_usd"], 6),
+            by_feature=user_features,
+        ))
+
+    total_cost = sum(l.cost_usd for l in logs)
+    total_in = sum(l.input_tokens for l in logs)
+    total_out = sum(l.output_tokens for l in logs)
+
+    return AiUsageSummary(
+        period_label=f"Last {days} days",
+        total_calls=len(logs),
+        total_input_tokens=total_in,
+        total_output_tokens=total_out,
+        total_cost_usd=round(total_cost, 6),
+        by_feature=by_feature,
+        by_user=by_user,
     )

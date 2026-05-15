@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Users, UserCircle, Trash2, RefreshCw } from "lucide-react";
+import { ShieldCheck, Users, UserCircle, Trash2, RefreshCw, Bot, ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -30,21 +30,103 @@ interface Stats {
   unassigned_profiles: number;
 }
 
+interface AiFeatureRow {
+  feature_name: string;
+  calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+}
+
+interface AiUserRow {
+  user_email: string | null;
+  investor_id: string | null;
+  calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+  by_feature: AiFeatureRow[];
+}
+
+interface AiUsageSummary {
+  period_label: string;
+  total_calls: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  total_cost_usd: number;
+  by_feature: AiFeatureRow[];
+  by_user: AiUserRow[];
+}
+
+function fmtCost(usd: number): string {
+  if (usd < 0.001) return `$${(usd * 100).toFixed(4)}¢`;
+  return `$${usd.toFixed(4)}`;
+}
+
+function fmtTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+function FeatureLabel({ name }: { name: string }) {
+  const labels: Record<string, string> = {
+    market_signals: "Market Signals",
+    ai_report: "AI Report",
+  };
+  return <span>{labels[name] ?? name}</span>;
+}
+
+function UserCostRow({ row }: { row: AiUserRow }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <tr
+        className="border-b border-border hover:bg-muted/30 cursor-pointer"
+        onClick={() => setOpen(o => !o)}
+      >
+        <td className="px-5 py-3">
+          <div className="flex items-center gap-1.5">
+            {open ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+            <span className="font-medium">{row.user_email ?? <span className="text-muted-foreground italic">Unknown</span>}</span>
+          </div>
+        </td>
+        <td className="px-4 py-3 text-muted-foreground">{row.calls}</td>
+        <td className="px-4 py-3 text-muted-foreground">{fmtTokens(row.input_tokens + row.output_tokens)}</td>
+        <td className="px-4 py-3 font-medium tabular-nums">{fmtCost(row.cost_usd)}</td>
+      </tr>
+      {open && row.by_feature.map(f => (
+        <tr key={f.feature_name} className="border-b border-border bg-muted/20">
+          <td className="pl-12 pr-4 py-2 text-xs text-muted-foreground">
+            <FeatureLabel name={f.feature_name} />
+          </td>
+          <td className="px-4 py-2 text-xs text-muted-foreground">{f.calls}</td>
+          <td className="px-4 py-2 text-xs text-muted-foreground">{fmtTokens(f.input_tokens + f.output_tokens)}</td>
+          <td className="px-4 py-2 text-xs tabular-nums">{fmtCost(f.cost_usd)}</td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [profiles, setProfiles] = useState<AdminProfile[]>([]);
+  const [aiUsage, setAiUsage] = useState<AiUsageSummary | null>(null);
+  const [aiDays, setAiDays] = useState(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [assignTarget, setAssignTarget] = useState<{ profileId: string; userId: string } | null>(null);
 
   async function loadAll() {
     try {
-      const [sRes, uRes, pRes] = await Promise.all([
+      const [sRes, uRes, pRes, aRes] = await Promise.all([
         fetch("/api/v1/admin/stats"),
         fetch("/api/v1/admin/users"),
         fetch("/api/v1/admin/profiles"),
+        fetch(`/api/v1/admin/ai-usage?days=${aiDays}`),
       ]);
       if (sRes.status === 403 || uRes.status === 403) {
         router.push("/dashboard");
@@ -53,6 +135,7 @@ export default function AdminPage() {
       setStats(await sRes.json());
       setUsers(await uRes.json());
       setProfiles(await pRes.json());
+      if (aRes.ok) setAiUsage(await aRes.json());
     } catch {
       setError("Failed to load admin data");
     } finally {
@@ -60,7 +143,7 @@ export default function AdminPage() {
     }
   }
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => { loadAll(); }, [aiDays]);
 
   async function toggleRole(user: AdminUser) {
     const newRole = user.role === "admin" ? "user" : "admin";
@@ -134,6 +217,119 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* AI Usage */}
+      <div className="rounded-lg border border-border bg-card">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Bot className="h-4 w-4 text-muted-foreground" />
+            <h2 className="font-semibold text-sm">AI API Cost</h2>
+            {aiUsage && (
+              <span className="text-xs text-muted-foreground">({aiUsage.period_label})</span>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            {[7, 30, 90].map(d => (
+              <button
+                key={d}
+                onClick={() => setAiDays(d)}
+                className={`text-xs px-2.5 py-1 rounded transition-colors ${
+                  aiDays === d
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {d}d
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {aiUsage ? (
+          <div className="p-5 space-y-5">
+            {/* Summary cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="rounded-md border border-border bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground mb-1">Total cost</p>
+                <p className="text-xl font-bold tabular-nums">{fmtCost(aiUsage.total_cost_usd)}</p>
+              </div>
+              <div className="rounded-md border border-border bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground mb-1">API calls</p>
+                <p className="text-xl font-bold">{aiUsage.total_calls}</p>
+              </div>
+              <div className="rounded-md border border-border bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground mb-1">Input tokens</p>
+                <p className="text-xl font-bold">{fmtTokens(aiUsage.total_input_tokens)}</p>
+              </div>
+              <div className="rounded-md border border-border bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground mb-1">Output tokens</p>
+                <p className="text-xl font-bold">{fmtTokens(aiUsage.total_output_tokens)}</p>
+              </div>
+            </div>
+
+            {/* By feature */}
+            {aiUsage.by_feature.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">By feature</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 text-xs font-medium text-muted-foreground">Feature</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-muted-foreground">Calls</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-muted-foreground">Tokens (in+out)</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-muted-foreground">Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {aiUsage.by_feature.map(f => (
+                        <tr key={f.feature_name} className="border-b border-border last:border-0">
+                          <td className="py-2 font-medium"><FeatureLabel name={f.feature_name} /></td>
+                          <td className="px-4 py-2 text-muted-foreground">{f.calls}</td>
+                          <td className="px-4 py-2 text-muted-foreground">{fmtTokens(f.input_tokens + f.output_tokens)}</td>
+                          <td className="px-4 py-2 font-medium tabular-nums">{fmtCost(f.cost_usd)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* By user */}
+            {aiUsage.by_user.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">By user — click to expand</p>
+                <div className="overflow-x-auto rounded-md border border-border">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/20">
+                        <th className="text-left px-5 py-2 text-xs font-medium text-muted-foreground">User</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-muted-foreground">Calls</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-muted-foreground">Tokens</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-muted-foreground">Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {aiUsage.by_user.map((row, i) => (
+                        <UserCostRow key={row.investor_id ?? i} row={row} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {aiUsage.total_calls === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No AI calls recorded in this period. Logs appear after the daily market signals worker runs (20:15 UTC) or after an AI report is generated.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="p-5 text-sm text-muted-foreground">Failed to load AI usage data.</div>
+        )}
+      </div>
 
       {/* Users */}
       <div className="rounded-lg border border-border bg-card">

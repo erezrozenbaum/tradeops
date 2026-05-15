@@ -3,8 +3,9 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.ai_analysis.analyzer import build_context, generate_report
+from app.ai_analysis.analyzer import _SONNET_MODEL, build_context, generate_report
 from app.audit import service as audit
+from app.ai_usage.logger import log_ai_call
 from app.backtesting import service as backtest_service
 from app.core.config import settings
 from app.financial_profiles import service as fp_service
@@ -43,7 +44,7 @@ def generate(db: Session, investor_id: uuid.UUID) -> dict | None:
         tax_context=tax_context,
     )
 
-    report = generate_report(context, api_key=settings.ANTHROPIC_API_KEY)
+    report, in_tok, out_tok = generate_report(context, api_key=settings.ANTHROPIC_API_KEY)
 
     audit.log_event(
         db,
@@ -51,6 +52,14 @@ def generate(db: Session, investor_id: uuid.UUID) -> dict | None:
         description="AI financial analysis report generated.",
         investor_profile_id=investor_id,
         metadata={"sections": list(report.keys())},
+    )
+    log_ai_call(
+        db=db,
+        feature_name="ai_report",
+        model=_SONNET_MODEL,
+        input_tokens=in_tok,
+        output_tokens=out_tok,
+        investor_id=investor_id,
     )
     db.commit()
 

@@ -229,36 +229,40 @@ class TestBuildContext:
 
 
 class TestGenerateReport:
-    def test_calls_anthropic_and_parses_json(self):
+    def _mock_response(self, text: str) -> MagicMock:
         mock_response = MagicMock()
-        mock_response.content = [MagicMock(text='{"summary":"ok","financial_health":"good","risk_profile":"low","strategy_analysis":"balanced","backtest_insights":"N/A","paper_trading_performance":"N/A","recommendations":"save more"}')]
+        mock_response.content = [MagicMock(text=text)]
+        mock_response.usage = MagicMock(input_tokens=100, output_tokens=50)
+        return mock_response
 
+    def test_calls_anthropic_and_parses_json(self):
+        mock_response = self._mock_response(
+            '{"summary":"ok","financial_health":"good","risk_profile":"low","strategy_analysis":"balanced","backtest_insights":"N/A","paper_trading_performance":"N/A","recommendations":"save more"}'
+        )
         with patch("app.ai_analysis.analyzer.anthropic.Anthropic") as mock_cls:
             mock_cls.return_value.messages.create.return_value = mock_response
-            result = generate_report({"investor": {"age": 35}}, api_key="test-key")
+            result, in_tok, out_tok = generate_report({"investor": {"age": 35}}, api_key="test-key")
 
         assert result["summary"] == "ok"
         assert result["financial_health"] == "good"
         assert "recommendations" in result
+        assert in_tok == 100
+        assert out_tok == 50
 
     def test_strips_markdown_code_fences(self):
         raw = '```json\n{"summary":"s","financial_health":"h","risk_profile":"r","strategy_analysis":"a","backtest_insights":"b","paper_trading_performance":"p","recommendations":"rec"}\n```'
-        mock_response = MagicMock()
-        mock_response.content = [MagicMock(text=raw)]
-
+        mock_response = self._mock_response(raw)
         with patch("app.ai_analysis.analyzer.anthropic.Anthropic") as mock_cls:
             mock_cls.return_value.messages.create.return_value = mock_response
-            result = generate_report({}, api_key="test-key")
+            result, _, _ = generate_report({}, api_key="test-key")
 
         assert result["summary"] == "s"
 
     def test_returns_fallback_on_invalid_json(self):
-        mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="not valid json at all")]
-
+        mock_response = self._mock_response("not valid json at all")
         with patch("app.ai_analysis.analyzer.anthropic.Anthropic") as mock_cls:
             mock_cls.return_value.messages.create.return_value = mock_response
-            result = generate_report({}, api_key="test-key")
+            result, _, _ = generate_report({}, api_key="test-key")
 
         assert "summary" in result
         assert "recommendations" in result

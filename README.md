@@ -38,6 +38,7 @@ Investor Profile → Financial Context → Risk Model → Portfolio Tracking →
 24. **Liquidity Runway Engine** — tiers every holding by settlement speed (T+2 / 1wk / Locked); net-to-pocket = gross − estimated CGT − market impact; Emergency Lever greedily selects cheapest holdings to sell to meet a cash target
 25. **Resilience Stress-Test** — simulates a life-event scenario (job loss, expense spike) by draining cash reserve → Tier 1 → Tier 2 in cost-efficiency order; produces a Survival Score (0–100), depletion timeline, and optional Claude-generated recommendation
 26. **Market Signal Monitor** — daily yfinance news sentiment per held ticker (Claude Haiku); Personal Signal Guard mutes unstable or over-concentrated signals; 7-day rolling trend; whale (institutional) mention detection; connected insights (tax-loss harvest, rebalancing, accumulation)
+27. **Admin AI Cost Tracking** — logs every Claude API call (market signals + AI reports) with token counts and USD cost; admin panel shows totals, per-feature breakdown, and per-user expandable table with 7/30/90-day period selector
 
 ---
 
