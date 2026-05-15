@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.68.0  
+**Version:** 0.69.0  
 **Last updated:** 2026-05-15
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -602,6 +602,7 @@ kubectl describe ingress tradeops
 | Family Consolidated View | `family_portfolio/` + `GET /investors/{id}/family-portfolio` | Aggregates investment accounts by family_member_id across all members of the primary investor's household. Groups by generation (primary, partners, children, parents, grandparents). Education mode flagged for members with age < 18. Cross-member ticker overlap shown as concentration risk alert. Rendered as Household Portfolio card below family member list on /family page. No DB migration — uses existing family_members and investment_accounts tables. |
 | Liquidity Runway Engine | `liquidity_runway/` + `GET /portfolio/liquidity-runway` | Tiers every holding: Tier 1 (stocks/ETFs/crypto — T+2), Tier 2 (bonds/funds — 1wk), Tier 3 (locked: pension, keren hishtalmut, real estate). Net-to-pocket = gross − estimated CGT (gains only) − market impact buffer (0.5% Tier 1, 0% Tier 2). Optional `target_amount` query param activates Emergency Lever: greedy selection of cheapest-to-liquidate holdings (lowest cost/gross ratio first). Shown as Liquidity Runway card on /investments page. No DB migration. |
 | Resilience Stress-Test | `resilience/` + `POST /portfolio/resilience` | Life-event simulation (job loss, expense spike). Drains cash reserve (liquid_savings) → Tier 1 → Tier 2 in cost-efficiency order. Survival Score (0–100): 100 = Tier 3 never touched; <100 = Tier 3 breach required. Verdicts: Safe (≥80), At Risk (50–79), Critical (<50). Optional Claude Haiku AI recommendation (skipped if no API key). Depletion path shows month-by-month which assets are liquidated. Added to /stress-test page as ResilienceSimulatorCard. No DB migration. |
+| Market Signal Monitor | `market_signals/` + migration 0030 + `GET /market-signals` + `POST /market-signals/{id}/dismiss` | Daily APScheduler job (20:15 UTC) fetches yfinance news for all held tickers, calls Claude Haiku for sentiment (−1.0 to +1.0), whale mention detection, and personalized rationale. Personal Signal Guard mutes signals with composite_score < 50 (stability) or ticker > 15% of portfolio (concentration). 7-day rolling trend (improving/deteriorating/stable). Connected insights: tax-loss harvest, rebalancing, accumulation. Idempotent via unique index on (investor_id, ticker, signal_date). MarketSignalCard on /investments page. DB migration: 0030. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.

@@ -10,6 +10,24 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.69.0] — 2026-05-15
+
+### Added — TASK 72: Market Signal Monitor
+
+**TASK 72 — Market Signal Monitor**
+- **`market_signals/`** (new module): `worker.py` runs daily via APScheduler (20:15 UTC) — fetches yfinance news headlines for all held tickers, calls Claude Haiku once per ticker to score sentiment (−1.0 to +1.0), detect institutional investor (whale) mentions in headlines, and generate a personalized 2-sentence rationale embedding actual portfolio context (position value, %, unrealized P&L, holding days, currency).
+- **`market_signals/guard.py`** (pure functions): `evaluate_signal()` applies a two-check Personal Signal Guard — stability mute (composite_score < 50) → MUTED, concentration mute (ticker > 15% of portfolio) → MUTED, stability takes priority; `compute_composite_score()` maps sentiment to 0–100 with +15 WHALE_MENTION bonus (capped at 100); `compute_trend_direction()` splits 7-day scores into first/second half, delta > 0.1 = improving, < −0.1 = deteriorating; `build_connected_insight()` detects tax-loss harvest, rebalancing, and accumulation opportunities from portfolio context.
+- **`market_signals/schemas.py`**: `SentimentTick` (date, sentiment, composite), `TickerSignal` (signal_id, ticker, signal_type, sentiment/composite scores, rationale, whale_entities, guard_status, mute_reason, position context, trend_direction, trend_history, connected_insight), `MarketSignalsResult` (aggregate counts + signals list).
+- **`market_signals/router.py`**: `GET /api/v1/investors/{id}/market-signals?include_muted&days` — approved non-dismissed signals with 7-day trend; `POST /{signal_id}/dismiss` → 204.
+- **`models/market_signal.py`** + **`alembic/versions/0030_market_signals.py`**: `market_signals` table — id, investor_id (FK CASCADE), ticker, signal_type, signal_date, sentiment_score, composite_score, rationale, whale_entities (JSONB), personal_guard_metadata (JSONB), guard_status, mute_reason, is_dismissed, created_at. Unique index on (investor_id, ticker, signal_date) for idempotency.
+- **`workers/jobs/sentiment_worker.py`** + scheduler registration: `sentiment_signals` job at CronTrigger(hour=20, minute=15) — after price_refresh (20:00), before snapshot_writer (21:00).
+- **`MarketSignalCard.tsx`** (new component): summary strip (tickers monitored, approved count, whale chip); per-ticker cards with NEWS/WHALE badge, composite score bar, 7-day sentiment sparkline with dot color, trend direction icon, position context row (%, value, P&L, holding days), amber insight block for connected insights, violet whale-entity chips, collapsible "View rationale", dismiss button. Empty state: "No signals yet — the daily worker runs at 20:15 UTC". Added to **Investments** page after LiquidityRunwayCard.
+- **`tests/test_market_signals.py`** (new, 30 tests): `TestEvaluateSignal` (9 — approved, stability mute, threshold boundary, concentration mute, exact limit, priority, metadata fields); `TestComputeCompositeScore` (7 — neutral=50, max bullish=100, max bearish=0, whale bonus=+15, capped at 100, 0.5=75, −0.5=25); `TestComputeTrendDirection` (7 — single=stable, empty=stable, improving, deteriorating, small delta=stable, 2-point improving, 2-point stable); `TestBuildConnectedInsight` (7 — tax harvest, rebalancing, accumulation, neutral=None, small loss=None, short-term label, long-term label).
+
+**Tests:** 389 backend tests passing (+30 new). 0 TypeScript errors. DB migration: 0030.
+
+---
+
 ## [0.68.0] — 2026-05-15
 
 ### Added — TASK 71: Resilience Stress-Test Module

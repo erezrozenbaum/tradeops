@@ -37,6 +37,7 @@ Investor Profile → Financial Context → Risk Model → Portfolio Tracking →
 23. **Family Consolidated View** — household AUM aggregated across all family members grouped by generation; cross-member ticker overlap detection; education-mode badges for minors (age < 18)
 24. **Liquidity Runway Engine** — tiers every holding by settlement speed (T+2 / 1wk / Locked); net-to-pocket = gross − estimated CGT − market impact; Emergency Lever greedily selects cheapest holdings to sell to meet a cash target
 25. **Resilience Stress-Test** — simulates a life-event scenario (job loss, expense spike) by draining cash reserve → Tier 1 → Tier 2 in cost-efficiency order; produces a Survival Score (0–100), depletion timeline, and optional Claude-generated recommendation
+26. **Market Signal Monitor** — daily yfinance news sentiment per held ticker (Claude Haiku); Personal Signal Guard mutes unstable or over-concentrated signals; 7-day rolling trend; whale (institutional) mention detection; connected insights (tax-loss harvest, rebalancing, accumulation)
 
 ---
 
@@ -159,6 +160,7 @@ tradeops/
 │   │   ├── family_portfolio/        # Household portfolio aggregation by family member + generation
 │   │   ├── liquidity_runway/        # Liquidity tiering + net-to-pocket + emergency lever
 │   │   ├── resilience/              # Life-event depletion simulation + survival score
+│   │   ├── market_signals/          # Daily sentiment + Personal Signal Guard + trend + whale detection
 │   │   ├── reports/                 # PDF report generation (reportlab)
 │   │   ├── ai_analysis/             # Claude integration
 │   │   ├── audit/
@@ -218,6 +220,8 @@ Key endpoints:
 | GET | `/api/v1/investors/{id}/portfolio/complexity-premium` | Complexity Premium vs passive 60/40 lazy portfolio |
 | GET | `/api/v1/investors/{id}/portfolio/liquidity-runway` | Liquidity tier breakdown + optional Emergency Lever (`?target_amount=`) |
 | POST | `/api/v1/investors/{id}/portfolio/resilience` | Life-event resilience simulation — depletion path, survival score (0–100), optional AI recommendation |
+| GET | `/api/v1/investors/{id}/market-signals` | Daily news sentiment per held ticker — composite score, trend direction, whale detection, connected insights |
+| POST | `/api/v1/investors/{id}/market-signals/{signal_id}/dismiss` | Dismiss a signal so it no longer appears in the monitor |
 | GET | `/api/v1/investors/{id}/family-portfolio` | Household portfolio aggregated by family member + generation |
 | GET | `/api/v1/investors/{id}/portfolio/rebalance` | Rebalance recommendations vs target allocation |
 | GET | `/api/v1/investors/{id}/reports/pdf` | PDF report download (`?period=monthly\|quarterly`) |
