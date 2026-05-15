@@ -1,8 +1,8 @@
 # TradeOps AI — Database Schema Reference
 
-**Version:** 0.64.0  
+**Version:** 0.65.0  
 **Last updated:** 2026-05-15  
-**Migration head:** 0029
+**Migration head:** 0029 (no new migrations in v0.65.0)
 
 All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete unless noted.
 

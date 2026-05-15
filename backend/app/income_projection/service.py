@@ -9,6 +9,7 @@ import yfinance as yf
 from app.portfolio_analysis.schemas import PortfolioSummary
 from app.currency_engine.rates import convert as fx_convert
 from app.income_projection.schemas import DividendHolding, IncomeResult
+from app.income_projection.distribution import monthly_distribution
 
 log = logging.getLogger(__name__)
 
@@ -100,6 +101,7 @@ def compute_income(
             portfolio_yield_on_cost=0.0,
             holdings=[],
             upcoming_ex_dates=[],
+            monthly_income={m: 0.0 for m in range(1, 13)},
             computed_at=now,
         )
 
@@ -168,5 +170,6 @@ def compute_income(
         portfolio_yield_on_cost=round(total_income / total_cost * 100, 2) if total_cost > 0 else 0.0,
         holdings=holdings,
         upcoming_ex_dates=upcoming,
+        monthly_income=monthly_distribution(holdings),
         computed_at=now,
     )

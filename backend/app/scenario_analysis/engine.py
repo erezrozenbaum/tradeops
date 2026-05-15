@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from app.portfolio_analysis.schemas import PortfolioSummary
 from app.scenario_analysis.scenarios import SCENARIOS, Scenario
 from app.scenario_analysis.schemas import (
+    HoldingImpact,
     ScenarioImpact,
     MonteCarloPercentile,
     MonteCarloResult,
@@ -60,6 +61,8 @@ def _apply_scenario(
             growth_loss=0.0,
             high_risk_loss=0.0,
             fx_impact=0.0,
+            recovery_months=scenario.recovery_months,
+            holding_impacts=[],
         )
 
     low_loss = tier_values["low_risk"] * scenario.low_risk_drawdown / 100
@@ -70,11 +73,34 @@ def _apply_scenario(
     # gain/lose value when USD strengthens/weakens vs ILS
     fx_impact = 0.0
     if currency == "ILS" and scenario.ils_fx_shock != 0.0:
-        # USD exposure in portfolio (in ILS) × shock %
         fx_impact = tier_values.get("currency_usd", 0.0) * scenario.ils_fx_shock / 100
 
     total_loss = low_loss + growth_loss + high_loss + fx_impact
     simulated = total + total_loss
+
+    # Per-holding impact: apply the tier drawdown to each individual holding
+    _tier_drawdown: dict[str, float] = {
+        "low_risk": scenario.low_risk_drawdown,
+        "growth": scenario.growth_drawdown,
+        "high_risk": scenario.high_risk_drawdown,
+    }
+    holding_impacts: list[HoldingImpact] = []
+    for acc in portfolio.accounts:
+        for h in acc.holdings:
+            if h.current_value_base <= 0:
+                continue
+            tier = _TIER.get(h.asset_type, "growth")
+            drawdown_pct = _tier_drawdown.get(tier, 0.0)
+            loss = h.current_value_base * drawdown_pct / 100
+            holding_impacts.append(HoldingImpact(
+                name=h.name,
+                ticker=h.ticker,
+                asset_type=h.asset_type,
+                current_value=round(h.current_value_base, 2),
+                simulated_loss=round(loss, 2),
+                simulated_value=round(max(h.current_value_base + loss, 0.0), 2),
+            ))
+    holding_impacts.sort(key=lambda x: x.simulated_loss)  # biggest loss first
 
     return ScenarioImpact(
         scenario_id=scenario.id,
@@ -88,6 +114,8 @@ def _apply_scenario(
         growth_loss=round(growth_loss, 2),
         high_risk_loss=round(high_loss, 2),
         fx_impact=round(fx_impact, 2),
+        recovery_months=scenario.recovery_months,
+        holding_impacts=holding_impacts,
     )
 
 

@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.64.0  
+**Version:** 0.65.0  
 **Last updated:** 2026-05-15
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -595,6 +595,8 @@ kubectl describe ingress tradeops
 | Options Tracking | Migration 0027 + `options_engine.py` + `GET /portfolio/options` | `call_option` / `put_option` asset types. Fields: strike_price, expiry_date, option_type, underlying_ticker, contract_multiplier, position_type (long/short). P&L vs cost basis (premium × qty × multiplier). Max loss = premium paid for long; unlimited for short (warning shown). Expiry countdown badges. Options P&L summary card on investments page. |
 | AI Weekly Digest | Migration 0028 + `weekly_digest/` + worker job | Sends a styled HTML email every Friday at 18:00 UTC to investors with `weekly_digest_enabled=true`. Uses `claude-haiku-4-5-20251001` to generate a headline, performance summary, goal progress, and 1–3 actionable suggestions, all grounded in real portfolio data. Requires `ANTHROPIC_API_KEY` and SMTP config. Toggle in Settings → Email Notifications. |
 | AI Portfolio Chat | `portfolio_chat/` + `POST /investors/{id}/chat` | Natural language Q&A grounded in real portfolio, risk model, and goals data. In-memory 5-turn conversation history per investor (resets on restart). Floating chat button on all dashboard pages. Replies never invent data. Requires `ANTHROPIC_API_KEY`. |
+| Payday Calendar | `income_projection/distribution.py` + `GET /portfolio/income` | Monthly bar chart showing expected dividend income per calendar month. Distribution computed from ex-dividend date + payment frequency. "Next payday" banner with nearest upcoming ex-date and estimated payment. Holdings table with yield-on-value and annual income. Shown on investments page when portfolio has dividend-paying holdings. |
+| SWAN Stress Test | `scenario_analysis/` + `GET /portfolio/stress-test` | Per-holding impact table added to each scenario drill-down (sorted by simulated loss, expand button for >8 holdings). Recovery timeline badge on scenario cards (e.g., "Recovered in ~6mo" for COVID, "~4.5yr" for 2008 GFC). Hypothetical scenarios marked accordingly. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.
