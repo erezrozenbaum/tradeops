@@ -10,6 +10,27 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.66.0] — 2026-05-15
+
+### Added — TASK 68: Tax-Alpha Harvest Alerts + TASK 69: Complexity Premium
+
+**TASK 68 — Tax-Alpha Harvest Alerts**
+- **`tax_harvesting/schemas.py`**: `HarvestOpportunity` gains `holding_period_label: str | None` (e.g., "187 days (short-term)"), `suggested_replacement: str | None`, `replacement_rationale: str | None`.
+- **`tax_harvesting/service.py`**: Conservative ETF replacement suggestions per asset class — VTI (stocks), VT (ETFs/funds), AGG (bonds), VNQ (real estate). Crypto excluded (no tax-equivalent). `_holding_period_label()` and `_suggest_replacement()` helpers extracted for testability. Harvest candidates now sorted by `estimated_tax_saving` descending (most actionable first, was: loss magnitude).
+- **`performance/page.tsx`**: Harvest candidate rows updated — `holding_period_label` replaces generic "Short-term/Long-term" badge, "Similar position" chip with rationale displayed below each candidate that has a suggestion.
+- **`tests/test_tax_harvesting.py`** (new, 20 tests): replacement map coverage (all asset types), holding period label formatting, sort order verification, gain offset population, total saving sum invariant, no-purchase-date edge case.
+
+**TASK 69 — Smart Benchmarking & Complexity Premium**
+- **`performance_analytics/schemas.py`**: New `LazyPortfolioComparison` model — `data_gate_passed`, `snapshot_days`, `portfolio_return_pct`, `portfolio_sharpe`, `lazy_return_pct`, `lazy_sharpe`, `lazy_composition`, `complexity_premium_pct`, `risk_adjusted_premium`, `verdict`.
+- **`performance_analytics/lazy_portfolio.py`** (new module): `fetch_lazy_returns(start, end)` fetches VT and AGG returns via yfinance (Docker-only, 24h cache). `build_comparison()` is pure Python — computes lazy return (60% VT / 40% AGG), complexity premium, estimated lazy Sharpe (using ~10% annualised 60/40 vol), verdict string. 30-day data gate enforced.
+- **`portfolio_analysis/router.py`**: New `GET /api/v1/investors/{id}/portfolio/complexity-premium` endpoint — reads all snapshots, computes analytics, fetches VT/AGG returns, calls `build_comparison()`.
+- **`performance/page.tsx`**: "Complexity Premium — vs Lazy Portfolio" card added at bottom of performance page. Shows return grid (portfolio vs lazy vs premium), Sharpe comparison row, honest verdict banner (green/amber/neutral). Data gate empty state shown when <30 days of history.
+- **`tests/test_lazy_portfolio.py`** (new, 13 tests): data gate boundary (29 vs 30 days), premium arithmetic (60/40 weighted average), positive/negative verdict logic, nil when benchmark unavailable, risk-adjusted premium, snapshot_days and currency pass-through.
+
+**Tests:** 275 backend tests passing (33 new). 0 TypeScript errors.
+
+---
+
 ## [0.65.0] — 2026-05-15
 
 ### Added — TASK 66: Payday Calendar + TASK 67: SWAN Stress Test
