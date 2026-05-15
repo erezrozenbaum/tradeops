@@ -10,6 +10,26 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.70.0] — 2026-05-15
+
+### Added — TASK 73: Admin AI API Cost Tracking
+
+**TASK 73 — Admin AI API Cost Tracking**
+- **`models/ai_usage_log.py`** (new): `AiUsageLog` table — id, user_id (nullable), investor_id (nullable), feature_name, model, input_tokens, output_tokens, cost_usd, called_at.
+- **`alembic/versions/0032_ai_usage_logs.py`**: migration adding `ai_usage_logs` table with indexes on user_id and called_at.
+- **`ai_usage/logger.py`** (new): `log_ai_call()` utility — computes cost from token counts using per-model rate table (Haiku $0.80/$4.00 per MTok in/out, Sonnet $3.00/$15.00), logs to DB. `compute_cost()` exposed for tests.
+- **`market_signals/worker.py`**: `_call_claude()` now returns `(dict, input_tokens, output_tokens)`; logs one `AiUsageLog` row per ticker signal written (feature: `"market_signals"`).
+- **`ai_analysis/analyzer.py`**: `generate_report()` now returns `(report_dict, input_tokens, output_tokens)`; exposes `_SONNET_MODEL` constant.
+- **`ai_analysis/service.py`**: captures token counts from `generate_report()`, logs usage (feature: `"ai_report"`) before commit.
+- **`admin/schemas.py`**: `AiUsageFeatureRow`, `AiUsageUserRow`, `AiUsageSummary` Pydantic schemas.
+- **`admin/router.py`** — `GET /api/v1/admin/ai-usage?days=30`: returns period totals (calls, input_tokens, output_tokens, cost_usd) aggregated by feature and by investor/user, sorted by cost descending. `days` param 1–365.
+- **`admin/page.tsx`**: new "AI Cost" section — 4 summary cards (total cost, calls, input tokens, output tokens), by-feature breakdown table, by-user expandable table (click row to see per-feature breakdown). Period selector: 7d / 30d / 90d. Empty state message when no logs yet.
+- **`tests/test_ai_analysis.py`**: updated `TestGenerateReport` tests to unpack tuple return; added `mock_response.usage` mock.
+
+**Tests:** 408 backend tests passing (+19 new). 0 TypeScript errors. DB migration: 0032.
+
+---
+
 ## [0.69.0] — 2026-05-15
 
 ### Added — TASK 72: Market Signal Monitor

@@ -45,8 +45,8 @@ def _call_claude(
     holding_days: int,
     currency: str,
     api_key: str,
-) -> dict | None:
-    """Single Claude Haiku call. Returns parsed JSON dict or None on failure."""
+) -> tuple[dict | None, int, int]:
+    """Single Claude Haiku call. Returns (parsed dict or None, input_tokens, output_tokens)."""
     try:
         import anthropic
         headlines_text = "\n".join(f"- {h}" for h in headlines)
@@ -76,11 +76,13 @@ def _call_claude(
             max_tokens=400,
             messages=[{"role": "user", "content": prompt}],
         )
+        input_tokens = msg.usage.input_tokens if msg.usage else 0
+        output_tokens = msg.usage.output_tokens if msg.usage else 0
         raw = msg.content[0].text.strip() if msg.content else ""
-        return json.loads(raw)
+        return json.loads(raw), input_tokens, output_tokens
     except Exception as exc:
         log.warning("[signal_worker] Claude call failed for %s: %s", ticker, exc)
-        return None
+        return None, 0, 0
 
 
 def run_daily_sentiment() -> None:
@@ -176,7 +178,7 @@ def run_daily_sentiment() -> None:
                     if not headlines:
                         continue
 
-                    result = _call_claude(
+                    result, in_tok, out_tok = _call_claude(
                         ticker=ticker,
                         headlines=headlines,
                         position_value=ctx["value"],
@@ -219,6 +221,16 @@ def run_daily_sentiment() -> None:
                         is_dismissed=False,
                     )
                     db.add(signal)
+
+                    from app.ai_usage.logger import log_ai_call
+                    log_ai_call(
+                        db=db,
+                        feature_name="market_signals",
+                        model=_HAIKU_MODEL,
+                        input_tokens=in_tok,
+                        output_tokens=out_tok,
+                        investor_id=investor_id,
+                    )
                     total_written += 1
 
                 db.commit()
