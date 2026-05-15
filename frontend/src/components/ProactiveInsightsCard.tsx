@@ -43,11 +43,11 @@ function EventBadge({ type }: { type: string }) {
     option_expiry: "Expiry",
     short_option_expiry: "Short Expiry",
   };
-  const variants: Record<string, "warning" | "destructive" | "muted"> = {
+  const variants: Record<string, "warning" | "danger" | "muted"> = {
     concentration: "warning",
     tier_drift: "warning",
     option_expiry: "warning",
-    short_option_expiry: "destructive",
+    short_option_expiry: "danger",
   };
   return (
     <Badge variant={variants[type] ?? "muted"} className="text-[10px]">
