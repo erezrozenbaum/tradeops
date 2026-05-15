@@ -159,6 +159,9 @@ def build_family_summary(
     )
 
 
+_HOUSEHOLD_SENTINEL = uuid.UUID("00000000-0000-0000-0000-000000000001")
+
+
 def compute_family_portfolio(
     db: Session,
     investor_id: uuid.UUID,
@@ -172,17 +175,57 @@ def compute_family_portfolio(
         return None
 
     family = families[0]
-    portfolio = get_portfolio(db, investor_id)
+
+    # Collect all linked investor IDs (primary + accepted members)
+    linked_investor_ids: list[uuid.UUID] = [family.primary_investor_id]
+    investor_to_member: dict[str, uuid.UUID] = {}
+    for member in family.members:
+        if member.investor_profile_id and member.invite_status == "accepted":
+            linked_investor_ids.append(member.investor_profile_id)
+            investor_to_member[str(member.investor_profile_id)] = member.id
+
+    # Build combined portfolio by fetching from each linked investor
+    # Use primary investor's portfolio as the base (it includes FX conversion to family currency)
+    portfolio = get_portfolio(db, family.primary_investor_id)
     if portfolio is None:
         return None
 
+    # For linked non-primary members, fetch their portfolios and merge accounts
+    if len(linked_investor_ids) > 1:
+        for linked_id in linked_investor_ids[1:]:
+            linked_portfolio = get_portfolio(db, linked_id)
+            if linked_portfolio:
+                portfolio.accounts.extend(linked_portfolio.accounts)
+                portfolio.total_current_value += linked_portfolio.total_current_value
+                portfolio.total_cost_basis += linked_portfolio.total_cost_basis
+                portfolio.unrealized_pnl += linked_portfolio.unrealized_pnl
+
+    # Build account → member mapping
     raw_accounts = (
         db.query(InvestmentAccount)
-        .filter(InvestmentAccount.investor_id == investor_id)
+        .filter(InvestmentAccount.investor_id.in_(linked_investor_ids))
         .all()
     )
-    acct_to_member: dict[str, uuid.UUID | None] = {
-        str(a.id): a.family_member_id for a in raw_accounts
-    }
 
-    return build_family_summary(family, portfolio, acct_to_member)
+    acct_to_member: dict[str, uuid.UUID | None] = {}
+    for a in raw_accounts:
+        if a.owner_type == "joint":
+            acct_to_member[str(a.id)] = _HOUSEHOLD_SENTINEL
+        elif a.family_member_id:
+            acct_to_member[str(a.id)] = a.family_member_id
+        else:
+            # Attribute by investor_id: primary stays None, linked members get their member_id
+            linked_mid = investor_to_member.get(str(a.investor_id))
+            acct_to_member[str(a.id)] = linked_mid
+
+    summary = build_family_summary(family, portfolio, acct_to_member)
+
+    # Rename the household sentinel member to "Household"
+    for m in summary.members:
+        if m.member_id == _HOUSEHOLD_SENTINEL:
+            m.member_name = "Household"
+            m.relationship_type = "joint"
+            m.generation = "household"
+            m.is_primary = False
+
+    return summary

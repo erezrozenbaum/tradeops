@@ -11,6 +11,26 @@ Converts all holding values to the investor's base currency and computes:
 from datetime import datetime, timezone
 from typing import Callable
 
+
+def _project_pension_balance(
+    current_balance: float,
+    annual_return_rate: float,   # gross %, e.g. 5.0
+    fee_balance_pct: float,      # annual fee on balance %, e.g. 0.5
+    fee_contribution_pct: float, # fee on each deposit %, e.g. 3.5
+    monthly_contribution: float, # net monthly deposit before contribution fee
+    months: float,               # months elapsed since balance was last recorded
+) -> float:
+    """Project a pension/savings fund balance forward using compound interest + regular deposits."""
+    if months < 0.1 or annual_return_rate <= 0:
+        return current_balance
+    net_annual = (annual_return_rate - fee_balance_pct) / 100.0
+    r = (1 + net_annual) ** (1 / 12) - 1
+    pmt = monthly_contribution * (1 - fee_contribution_pct / 100.0)
+    fv = current_balance * (1 + r) ** months
+    if r > 0 and pmt > 0:
+        fv += pmt * ((1 + r) ** months - 1) / r
+    return max(fv, current_balance)  # never project below starting balance
+
 from app.models.investment_account import InvestmentAccount, InvestmentHolding
 from app.portfolio_analysis.schemas import (
     AccountAnalysis,
@@ -67,15 +87,30 @@ def analyze(
             if is_pension:
                 cost_local = h.total_deposits if h.total_deposits is not None else 0.0
                 cost_base = convert(cost_local, h.currency, base_currency)
-                if h.current_balance is not None:
-                    value_local = h.current_balance
-                    price_source = "manual"
-                elif h.current_value is not None:
-                    value_local = h.current_value
-                    price_source = "manual"
+                balance = h.current_balance if h.current_balance is not None else (
+                    h.current_value if h.current_value is not None else cost_local
+                )
+                # Auto-project if return rate is configured and we know when balance was last set
+                ref_dt = getattr(h, "balance_updated_at", None)
+                if (
+                    ref_dt is not None
+                    and h.annual_return_rate
+                    and h.annual_return_rate > 0
+                    and balance > 0
+                ):
+                    months_elapsed = (datetime.now(timezone.utc) - ref_dt).total_seconds() / (30.44 * 86400)
+                    value_local = _project_pension_balance(
+                        current_balance=balance,
+                        annual_return_rate=h.annual_return_rate,
+                        fee_balance_pct=h.management_fee_balance_pct or 0.0,
+                        fee_contribution_pct=h.management_fee_contribution_pct or 0.0,
+                        monthly_contribution=h.monthly_contribution or 0.0,
+                        months=months_elapsed,
+                    )
+                    price_source = "projected"
                 else:
-                    value_local = cost_local
-                    price_source = "cost_basis"
+                    value_local = balance
+                    price_source = "manual" if h.current_balance is not None or h.current_value is not None else "cost_basis"
                 value_base = convert(value_local, h.currency, base_currency)
             else:
                 # Include brokerage fees in cost basis — fees are a real cost of acquisition

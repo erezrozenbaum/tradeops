@@ -10,6 +10,35 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.71.0] — 2026-05-15
+
+### Added — TASK A: Auto-Projected Pension/Fund Balances
+
+**TASK A — Auto-Projected Pension/Fund Balances**
+- **`portfolio_analysis/engine.py`**: Added `_project_pension_balance()` — compound-interest FV formula accounting for net annual return, fee %, and monthly contributions. Pension/savings fund holdings with `annual_return_rate > 0` and a `balance_updated_at` reference date now auto-project forward to today; `price_source = "projected"`.
+- **`holdings/service.py`**: Sets `balance_updated_at = now()` automatically when `current_balance` is provided on create or update — providing the projection reference timestamp.
+- **`models/investment_account.py`**: Added `balance_updated_at` (`DateTime`, nullable) to `InvestmentHolding`.
+- **`schemas/investment_account.py`**: Added `balance_updated_at: datetime | None` to `InvestmentHoldingOut`.
+
+### Added — TASK B: Multi-User Family System (Invite + Linked Portfolios + Household Bucket)
+
+**TASK B — Multi-User Family System**
+- **`alembic/versions/0033_family_multiuser_and_projected_balance.py`**: Adds `balance_updated_at` to `investment_holdings`, `owner_type` to `investment_accounts` (personal|joint), and invite fields to `family_members` (invite_email, invite_token, invite_status, invite_expires_at).
+- **`models/investment_account.py`**: Added `owner_type: str` (default: "personal") to `InvestmentAccount`; joint accounts appear in a household bucket in the family view.
+- **`models/family_profile.py`**: Added invite fields to `FamilyMember` ORM model.
+- **`schemas/family_profile.py`**: Added `InviteRequest`, `InviteOut`, `InviteInfo` schemas; `FamilyMemberOut` includes `invite_status`, `invite_email`.
+- **`schemas/investment_account.py`**: `owner_type` in create/update/out schemas.
+- **`family_profiles/service.py`**: Added `create_invite()` (64-char hex token, 7-day expiry), `get_invite_by_token()`, `accept_invite()` (links `investor_profile_id` to member).
+- **`family_profiles/router.py`**: Added `POST /{family_id}/members/{member_id}/invite` (returns invite URL), `GET /invite/{token}` (public, returns metadata), `POST /invite/{token}/accept` (requires JWT, links user's investor profile).
+- **`family_portfolio/engine.py`**: `compute_family_portfolio()` now aggregates all accepted linked investor portfolios; joint accounts (`owner_type = "joint"`) go to a `_HOUSEHOLD_SENTINEL` bucket displayed as "Household" in the family view.
+- **`frontend/src/app/(dashboard)/family/page.tsx`**: Full rewrite — per-member portfolio summaries, inline invite panel with email input + link generation + copy button, household generation bucket, `InviteBadge` (Linked/Invite sent).
+- **`frontend/src/app/(dashboard)/join/page.tsx`** (new): Token-based invite accept page — reads `?token`, shows invite details, redirects to login if unauthenticated, posts accept, redirects to `/family` on success.
+- **`frontend/src/components/ResilienceSimulatorCard.tsx`**: Added scenario presets (Job Loss, Sabbatical, Health Crisis), monthly stacked depletion bar chart (Recharts), collapsible depletion log table.
+
+**Tests:** 408 backend tests passing. 0 TypeScript errors. DB migration: 0033.
+
+---
+
 ## [0.70.0] — 2026-05-15
 
 ### Added — TASK 73: Admin AI API Cost Tracking

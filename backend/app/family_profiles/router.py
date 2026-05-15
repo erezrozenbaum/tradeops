@@ -1,10 +1,12 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
+from app.auth.dependencies import get_current_user
 from app.db.session import get_db
 from app.family_profiles import service
+from app.models.user import User
 from app.schemas.family_profile import (
     FamilyMemberCreate,
     FamilyMemberOut,
@@ -12,6 +14,9 @@ from app.schemas.family_profile import (
     FamilyProfileCreate,
     FamilyProfileOut,
     FamilyProfileUpdate,
+    InviteInfo,
+    InviteOut,
+    InviteRequest,
 )
 
 router = APIRouter()
@@ -93,3 +98,66 @@ def remove_member(
 ):
     if not service.remove_member(db, family_id, member_id):
         raise HTTPException(status_code=404, detail="Member not found")
+
+
+# ── Invites ───────────────────────────────────────────────────────────────────
+
+
+@router.post("/{family_id}/members/{member_id}/invite", response_model=InviteOut)
+def send_invite(
+    family_id: uuid.UUID,
+    member_id: uuid.UUID,
+    data: InviteRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Generate an invite link for a family member to link their own account."""
+    member = service.create_invite(db, family_id, member_id, data.email)
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found or is the primary member")
+    base = str(request.base_url).rstrip("/")
+    return InviteOut(
+        token=member.invite_token,
+        invite_url=f"{base}/join?token={member.invite_token}",
+        email=member.invite_email,
+        expires_at=member.invite_expires_at,
+    )
+
+
+@router.get("/invite/{token}", response_model=InviteInfo)
+def get_invite_info(token: str, db: Session = Depends(get_db)):
+    """Return invite metadata for the /join page (no auth required)."""
+    member = service.get_invite_by_token(db, token)
+    if not member:
+        raise HTTPException(status_code=404, detail="Invite not found")
+    from datetime import datetime, timezone
+    if member.invite_status == "pending" and member.invite_expires_at and member.invite_expires_at < datetime.now(timezone.utc):
+        member.invite_status = "expired"
+        db.commit()
+    return InviteInfo(
+        family_name=member.family.name,
+        member_name=member.name,
+        relationship_type=member.relationship_type,
+        status=member.invite_status,
+    )
+
+
+@router.post("/invite/{token}/accept", response_model=FamilyMemberOut)
+def accept_invite(
+    token: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Accept a family invite — links the authenticated user's investor profile to the member."""
+    from app.models.investor_profile import InvestorProfile
+    investor = (
+        db.query(InvestorProfile)
+        .filter(InvestorProfile.user_id == current_user.id)
+        .first()
+    )
+    if not investor:
+        raise HTTPException(status_code=404, detail="No investor profile found for this user")
+    member = service.accept_invite(db, token, investor.id)
+    if not member:
+        raise HTTPException(status_code=400, detail="Invite is invalid, expired, or already used")
+    return member

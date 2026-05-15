@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -130,6 +131,9 @@ def add_holding(
     except Exception:
         pass  # non-blocking — analysis will show "unavailable" for this holding
 
+    if holding_data.get("current_balance") is not None:
+        holding_data["balance_updated_at"] = datetime.now(timezone.utc)
+
     holding = InvestmentHolding(account_id=account_id, **holding_data)
     db.add(holding)
     db.flush()
@@ -157,7 +161,10 @@ def update_holding(
     holding = get_holding(db, account_id, holding_id)
     if not holding:
         return None
-    for field, value in data.model_dump(exclude_unset=True).items():
+    update_data = data.model_dump(exclude_unset=True)
+    if "current_balance" in update_data and update_data["current_balance"] is not None:
+        update_data["balance_updated_at"] = datetime.now(timezone.utc)
+    for field, value in update_data.items():
         setattr(holding, field, value)
     db.commit()
     db.refresh(holding)
