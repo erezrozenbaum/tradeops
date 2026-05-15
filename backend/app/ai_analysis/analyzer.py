@@ -214,12 +214,16 @@ def build_context(
     return ctx
 
 
-def generate_report(context: dict, api_key: str) -> dict:
+_SONNET_MODEL = "claude-sonnet-4-6"
+
+
+def generate_report(context: dict, api_key: str) -> tuple[dict, int, int]:
+    """Returns (report_dict, input_tokens, output_tokens)."""
     client = anthropic.Anthropic(api_key=api_key)
     context_json = json.dumps(context, indent=2, default=str)
 
     message = client.messages.create(
-        model="claude-sonnet-4-6",
+        model=_SONNET_MODEL,
         max_tokens=2048,
         system=_SYSTEM_PROMPT,
         messages=[
@@ -233,6 +237,9 @@ def generate_report(context: dict, api_key: str) -> dict:
         ],
     )
 
+    input_tokens = message.usage.input_tokens if message.usage else 0
+    output_tokens = message.usage.output_tokens if message.usage else 0
+
     raw = message.content[0].text.strip()
     if raw.startswith("```"):
         parts = raw.split("```", 2)
@@ -244,7 +251,7 @@ def generate_report(context: dict, api_key: str) -> dict:
             raw = raw[:-3].strip()
 
     try:
-        return json.loads(raw)
+        return json.loads(raw), input_tokens, output_tokens
     except json.JSONDecodeError:
         return {
             "summary": "Unable to generate report at this time. Please try again.",
@@ -256,4 +263,4 @@ def generate_report(context: dict, api_key: str) -> dict:
             "backtest_insights": "",
             "paper_trading_performance": "",
             "recommendations": "",
-        }
+        }, input_tokens, output_tokens
