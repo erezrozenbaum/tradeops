@@ -36,6 +36,7 @@ import {
   ArrowLeftRight,
   FileUp,
   Coins,
+  Flame,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +60,7 @@ const sections = [
       { label: "Strategies", href: "/strategies", icon: Lightbulb },
       { label: "Backtesting", href: "/backtesting", icon: BarChart2 },
       { label: "Paper Trading", href: "/paper-trading", icon: TrendingUp },
+      { label: "Live Trading", href: "/live-trading", icon: Flame },
     ],
   },
   {
