@@ -42,6 +42,7 @@ from app.resilience.router import router as resilience_router
 from app.market_signals.router import router as market_signals_router
 from app.action_feed.router import router as action_feed_router
 from app.pairs_trading.router import router as pairs_trading_router
+from app.pdf_import.router import router as pdf_import_router
 
 api_router = APIRouter()
 
@@ -87,3 +88,4 @@ api_router.include_router(resilience_router, prefix="/investors/{investor_id}/po
 api_router.include_router(market_signals_router, prefix="/investors/{investor_id}/market-signals", tags=["market-signals"])
 api_router.include_router(action_feed_router, prefix="/investors/{investor_id}/action-feed", tags=["action-feed"])
 api_router.include_router(pairs_trading_router, prefix="/investors/{investor_id}/pairs-trading", tags=["pairs-trading"])
+api_router.include_router(pdf_import_router, prefix="/investors/{investor_id}/pdf-import", tags=["pdf-import"])

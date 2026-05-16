@@ -34,6 +34,7 @@ import {
   X,
   ShieldCheck,
   ArrowLeftRight,
+  FileUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +69,7 @@ const sections = [
       { label: "Transactions", href: "/transactions", icon: ClipboardList },
       { label: "Watchlist", href: "/watchlist", icon: Eye },
       { label: "Debt Planner", href: "/debt-planner", icon: CreditCard },
+      { label: "PDF Import", href: "/pdf-import", icon: FileUp },
     ],
   },
   {
