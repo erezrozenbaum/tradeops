@@ -20,24 +20,24 @@ class HoldingInfo(TypedDict):
 _ASSET_TO_TIER: dict[str, str | None] = {
     "bond": "low_risk",
     "fund": "low_risk",
-    "pension_fund": "low_risk",
-    "study_fund": "low_risk",
+    "pension_fund": None,   # locked — excluded from rebalancing
+    "study_fund": None,     # locked — excluded from rebalancing
     "etf": "growth",
     "stock": "growth",
     "real_estate": "growth",
     "crypto": "high_risk",
-    "other": None,  # excluded from rebalancing
+    "other": None,          # excluded from rebalancing
 }
 
 _TIER_META = [
-    ("low_risk", "Low Risk", ["bond", "fund", "pension_fund", "study_fund"]),
+    ("low_risk", "Low Risk", ["bond", "fund"]),
     ("growth", "Growth", ["etf", "stock", "real_estate"]),
     ("high_risk", "High Risk", ["crypto"]),
 ]
 
 # Reverse mapping: tier → list of asset types (used for suggested trades)
 _ASSET_TO_TIER_REVERSE: dict[str, list[str]] = {
-    "low_risk": ["bond", "fund", "pension_fund", "study_fund"],
+    "low_risk": ["bond", "fund"],
     "growth": ["etf", "stock", "real_estate"],
     "high_risk": ["crypto"],
 }
@@ -118,19 +118,43 @@ def compute_rebalance(
 
     # Aggregate asset_allocation into risk tiers
     tier_actual: dict[str, float] = {"low_risk": 0.0, "growth": 0.0, "high_risk": 0.0}
-    other_pct = 0.0
+    locked_pct = 0.0   # pension_fund, study_fund, other — cannot be rebalanced
     for asset_type, pct in asset_allocation.items():
         tier = _ASSET_TO_TIER.get(asset_type)
         if tier is not None:
             tier_actual[tier] += pct
         else:
-            other_pct += pct
+            locked_pct += pct
 
-    if other_pct > 0.5:
+    # Normalize percentages to the tradeable portion only.
+    # Pension/study funds are locked and must not distort the gap calculations.
+    tradeable_pct = 100.0 - locked_pct
+    if tradeable_pct < 0.5:
         notes.append(
-            f"{other_pct:.1f}% of your portfolio is in unclassified assets (other) "
-            "and is excluded from rebalancing analysis."
+            "Your entire portfolio consists of locked assets (pension funds, study funds) "
+            "that cannot be rebalanced. Add tradeable holdings to see rebalancing guidance."
         )
+        return RebalanceResult(
+            investor_id=investor_id,
+            rebalance_needed=False,
+            tiers=[],
+            notes=notes,
+            computed_at=datetime.now(timezone.utc),
+        )
+
+    if locked_pct > 0.5:
+        locked_value_approx = round((total_value or 0) * locked_pct / 100, 0) if total_value else None
+        notes.append(
+            f"{locked_pct:.0f}% of your portfolio is in pension/study funds "
+            f"(≈{locked_value_approx:,.0f} {currency or 'ILS'}) which are locked "
+            f"and excluded from rebalancing. Analysis is based on the {tradeable_pct:.0f}% "
+            "that is tradeable."
+        )
+        # Re-normalize tier percentages to tradeable basis
+        for t in tier_actual:
+            tier_actual[t] = round(tier_actual[t] / tradeable_pct * 100, 1)
+
+    tradeable_value = round(total_value * tradeable_pct / 100, 2) if total_value else None
 
     target: dict[str, float] = {
         "low_risk": risk_model.low_risk_pct,
@@ -152,8 +176,8 @@ def compute_rebalance(
         else:
             action = "hold"
 
-        target_amount = round(total_value * tgt / 100, 2) if total_value else None
-        actual_amount = round(total_value * actual / 100, 2) if total_value else None
+        target_amount = round(tradeable_value * tgt / 100, 2) if tradeable_value else None
+        actual_amount = round(tradeable_value * actual / 100, 2) if tradeable_value else None
         gap_amount = (
             round(actual_amount - target_amount, 2)
             if target_amount is not None and actual_amount is not None
@@ -196,6 +220,6 @@ def compute_rebalance(
         tiers=tiers,
         notes=notes,
         computed_at=datetime.now(timezone.utc),
-        total_portfolio_value=round(total_value, 2) if total_value else None,
+        total_portfolio_value=round(tradeable_value, 2) if tradeable_value else None,
         currency=currency,
     )

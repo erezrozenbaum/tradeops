@@ -189,8 +189,10 @@ def generate(db: Session, investor_id: uuid.UUID) -> RiskModel | None:
 
     total_assets = manual_assets + investment_total
     total_net_worth = total_assets - total_liabilities
+    _LOCKED_TYPES = {"pension", "vehicle"}
     liquid_capital = fp.liquid_savings + sum(
-        a.current_value for a in fp.assets if a.is_liquid
+        a.current_value for a in fp.assets
+        if a.is_liquid and a.asset_type.value not in _LOCKED_TYPES
     )
     investable_capital = round(liquid_capital * fp.investable_capital_pct / 100, 2)
 

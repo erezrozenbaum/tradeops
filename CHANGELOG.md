@@ -10,6 +10,38 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.83.1] — 2026-05-16
+
+### Fixed — Rebalancing, Liquid Capital, Backtesting, Market Scan
+
+**Critical bugfix: Rebalancing used full portfolio value including locked pension/study funds**
+- `portfolio_analysis/rebalance_engine.py`: `pension_fund` and `study_fund` asset types are now
+  excluded from tier mapping (set to `None`). Previously they were counted as `low_risk`, causing
+  the engine to compute tier gaps against the full 5.5M ILS portfolio and recommend buying
+  hundreds of thousands of ILS of NVIDIA/Bitcoin to "rebalance".
+- After exclusion, tier percentages are re-normalized to the tradeable portion only (e.g., if 80%
+  is in pension funds, the remaining 20% becomes the 100% basis for rebalancing).
+- `gap_amount` now uses `tradeable_value` (not `total_value`) so suggested trade sizes are
+  proportional to what can actually be traded.
+- Added explanatory note when locked assets are detected.
+
+**Liquid capital no longer includes pension assets**
+- `dashboard/service.py` and `risk_modeling/service.py`: `pension` and `vehicle` asset types are
+  excluded from liquid capital even if `is_liquid=True`. This prevents pension funds from
+  inflating investable capital and causing downstream errors in risk model, paper trading,
+  and backtesting.
+
+**Backtesting: clear error instead of silent 0%**
+- `backtesting/router.py`: returns HTTP 422 with an actionable message when
+  `risk_model.investable_capital <= 0`, directing the user to fix their Financial profile
+  and regenerate the Risk Model. Previously ran with 0 capital and showed +0.00%.
+
+**Market scan: 401 now shows "Session expired" instead of generic error**
+- `market-scan/page.tsx`: detects 401 and shows the amber session-expired banner
+  (same as market research page).
+
+---
+
 ## [0.83.0] — 2026-05-16
 
 ### Added — Live Trading Execution (Gated) (TASK 91)
