@@ -35,6 +35,7 @@ import {
   ShieldCheck,
   ArrowLeftRight,
   FileUp,
+  Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -70,6 +71,7 @@ const sections = [
       { label: "Watchlist", href: "/watchlist", icon: Eye },
       { label: "Debt Planner", href: "/debt-planner", icon: CreditCard },
       { label: "PDF Import", href: "/pdf-import", icon: FileUp },
+      { label: "Crypto Staking", href: "/crypto-staking", icon: Coins },
     ],
   },
   {
