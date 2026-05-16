@@ -3,10 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { investorId: string } }
 ) {
   const url = `${BACKEND}/api/v1/investors/${params.investorId}/ai-report`;
+  const cookie = request.headers.get("cookie") ?? "";
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
@@ -14,6 +15,7 @@ export async function POST(
         method: "POST",
         signal: AbortSignal.timeout(90_000),
         cache: "no-store",
+        headers: { cookie },
       });
 
       if (!res.ok) {

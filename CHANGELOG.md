@@ -10,6 +10,48 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.83.3] — 2026-05-16
+
+### Fixed — Rebalance engine note TypeError + cookie forwarding in Next.js API routes
+
+**Rebalance engine: TypeError when total_value is None**
+- `portfolio_analysis/rebalance_engine.py`: `locked_value_approx` was set to `None`
+  when `total_value` is falsy, then used in an `:.0f` format string → `TypeError`.
+  Now always computed as a float (`(total_value or 0) * locked_pct / 100`).
+- Note text changed from "pension/study funds" to "locked or other unclassified assets"
+  to correctly cover all `None`-mapped asset types (pension_fund, study_fund, other).
+  Fixes `test_other_assets_noted` which expected "other"/"unclassified" in the note.
+
+**Next.js API routes: Cookie not forwarded to backend (401 on Market Research, Recommendations, Agent, AI Report)**
+- All four server-side API route handlers were ignoring the incoming `request` parameter
+  (`_request` prefix) and not forwarding the browser's `Cookie` header to backend fetch calls.
+  Backend received no `tradeops_token` cookie and returned 401.
+- Fixed in: `market-research/route.ts`, `recommendations/route.ts`, `agent/route.ts`,
+  `ai-report/route.ts` — each now reads `request.headers.get("cookie")` and passes it
+  as the `cookie` header in the outgoing fetch.
+
+---
+
+## [0.83.2] — 2026-05-16
+
+### Fixed — AI/Market Route Cookie Forwarding (401 on Market Research & Recommendations)
+
+All four Next.js API Route handlers (`market-research`, `recommendations`, `agent`, `ai-report`)
+were making server-side fetch calls to the backend **without forwarding the browser's `Cookie`
+header**. The `request` parameter was named `_request` (intentionally unused), so
+`tradeops_token` was never included → backend returned 401 on every request through these routes.
+
+- `frontend/src/app/api/v1/investors/[investorId]/market-research/route.ts`
+- `frontend/src/app/api/v1/investors/[investorId]/recommendations/route.ts`
+- `frontend/src/app/api/v1/investors/[investorId]/agent/route.ts`
+- `frontend/src/app/api/v1/investors/[investorId]/ai-report/route.ts`
+
+Each handler now reads `request.headers.get("cookie")` and passes it as the `cookie` header in
+the outgoing backend fetch. Requests through the Next.js fallback rewrite (e.g., market-scan)
+were unaffected — those are transparent browser-proxied requests.
+
+---
+
 ## [0.83.1] — 2026-05-16
 
 ### Fixed — Rebalancing, Liquid Capital, Backtesting, Market Scan
