@@ -9,6 +9,7 @@ from app.financial_profiles import service as fp_service
 from app.financial_scoring.engine import calculate_stability_score
 from app.financial_scoring.schemas import FinancialScoringInput, FinancialStabilityScore
 from app.investor_profiles import service
+from app.models.investment_account import InvestmentAccount, InvestmentHolding
 from app.models.user import User
 from app.schemas.investor_profile import (
     InvestorProfileCreate,
@@ -77,8 +78,13 @@ def delete_investor(
 
 
 @router.get("/{investor_id}/stability-score", response_model=FinancialStabilityScore)
-def get_stability_score(investor_id: uuid.UUID, db: Session = Depends(get_db)):
-    if not service.get(db, investor_id):
+def get_stability_score(
+    investor_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    profile = service.get(db, investor_id)
+    if not profile or profile.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Investor profile not found")
     fp = fp_service.get_by_investor(db, investor_id)
     if not fp:
@@ -86,10 +92,37 @@ def get_stability_score(investor_id: uuid.UUID, db: Session = Depends(get_db)):
             status_code=422,
             detail="No financial profile found. Add income, expenses, and financial data first.",
         )
+
+    # Compute effective emergency fund months — same logic as dashboard + risk model
+    effective_ef_months = fp.emergency_fund_months
+    if fp.monthly_expenses > 0:
+        ef_holdings = (
+            db.query(InvestmentHolding)
+            .join(InvestmentAccount, InvestmentHolding.account_id == InvestmentAccount.id)
+            .filter(
+                InvestmentAccount.investor_id == investor_id,
+                InvestmentHolding.is_emergency_fund.is_(True),
+            )
+            .all()
+        )
+        if not ef_holdings:
+            ef_accounts = (
+                db.query(InvestmentAccount)
+                .filter(
+                    InvestmentAccount.investor_id == investor_id,
+                    InvestmentAccount.is_emergency_fund.is_(True),
+                )
+                .all()
+            )
+            ef_holdings = [h for acc in ef_accounts for h in acc.holdings]
+        if ef_holdings:
+            ef_total = sum(h.current_balance or h.current_value or 0.0 for h in ef_holdings)
+            effective_ef_months = max(effective_ef_months, ef_total / fp.monthly_expenses)
+
     scoring_input = FinancialScoringInput(
         monthly_income=fp.monthly_income,
         monthly_expenses=fp.monthly_expenses,
-        emergency_fund_months=fp.emergency_fund_months,
+        emergency_fund_months=effective_ef_months,
         total_monthly_debt_payments=sum(l.monthly_payment for l in fp.liabilities),
         total_assets=sum(a.current_value for a in fp.assets),
         total_liabilities=sum(l.outstanding_balance for l in fp.liabilities),

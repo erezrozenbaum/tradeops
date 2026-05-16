@@ -11,6 +11,13 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DEBUG: bool = False
     WORKERS_ENABLED: bool = True
+    # Comma-separated list of allowed CORS origins.
+    # Example: ALLOWED_ORIGINS=http://localhost:3000,https://tradeops.example.com
+    ALLOWED_ORIGINS: str = "http://localhost:3000"
+
+    @property
+    def allowed_origins_list(self) -> list[str]:
+        return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
 
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
