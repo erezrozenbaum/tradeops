@@ -10,6 +10,30 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.77.0] — 2026-05-16
+
+### Added — Statistical Arbitrage Pairs Trading Engine (TASK 85)
+
+Paper-mode quant engine for market-neutral statistical arbitrage — no new dependencies (numpy already available via yfinance transitive dep).
+
+**Backend**
+- **`app/pairs_trading/engine.py`**: `analyze_pair(ticker1, ticker2, lookback_days)` — fetches Yahoo Finance 1y/2y daily close history via httpx, runs OLS hedge ratio (β = Cov(y,x)/Var(x)), computes zero-mean spread, Z-score, and ADF(0) cointegration test using numpy linear algebra. ADF(0) implements the first-difference OLS regression τ = β̂/SE(β̂) with MacKinnon (1994) 5% critical value of −2.87. No statsmodels/scipy required.
+- **Signal logic**: `LONG_SPREAD` (Z ≤ −2.0), `SHORT_SPREAD` (Z ≥ 2.0), `STOP_LOSS` (|Z| ≥ 3.5), `EXIT` (|Z| < 0.5), `NEUTRAL` otherwise.
+- **`app/pairs_trading/schemas.py`**: `PairAnalysis`, `PairSignalSave`, `PairSignalOut` — Pydantic v2 models.
+- **`app/pairs_trading/router.py`**:
+  - `GET /investors/{investor_id}/pairs-trading/analyze?ticker1=&ticker2=&lookback=` — pure compute, no DB writes.
+  - `POST /investors/{investor_id}/pairs-trading/signals` — runs analysis, saves to `market_signals` as `PAIRS_ZSCORE` type. `guard_status=APPROVED` if cointegrated, `REJECTED` if not. Writes audit event.
+- **`app/api/v1/router.py`**: registered pairs trading router.
+- **`tests/test_pairs_trading.py`**: 14 unit tests — OLS correctness, ADF sign for stationary vs non-stationary series, all 5 signal thresholds, schema validation.
+
+**Frontend**
+- **`app/(dashboard)/pairs-trading/page.tsx`**: Full-featured page with ticker inputs, lookback selector, Z-score needle gauge (colored zones for stop/signal/neutral), cointegration pass/fail badge (with ADF τ value), trade instructions card, and "Save as market signal" button (disabled if not cointegrated).
+- **`components/layout/sidebar.tsx`**: Added "Pairs Trading" link under Intelligence section with `ArrowLeftRight` icon.
+
+**Tests:** 14/14 pairs trading + 8/8 action feed tests passing. 0 TypeScript errors.
+
+---
+
 ## [0.76.0] — 2026-05-16
 
 ### Added — Daily Action Feed (TASK 84)

@@ -33,6 +33,7 @@ import {
   Menu,
   X,
   ShieldCheck,
+  ArrowLeftRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -78,6 +79,7 @@ const sections = [
       { label: "Market Scan", href: "/market-scan", icon: ScanSearch },
       { label: "AI Report", href: "/reports", icon: Sparkles },
       { label: "News Feed", href: "/news", icon: Newspaper },
+      { label: "Pairs Trading", href: "/pairs-trading", icon: ArrowLeftRight },
     ],
   },
   {
