@@ -1,0 +1,59 @@
+{{- if .Values.networkPolicy.enabled -}}
+---
+# Backend NetworkPolicy: only allow ingress from:
+#  1. ingress-nginx namespace (inbound HTTP from internet)
+#  2. frontend pod (server-side fetches from Next.js)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "tradeops.fullname" . }}-backend
+  labels:
+    {{- include "tradeops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "tradeops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.port }}
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "tradeops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: frontend
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.port }}
+---
+# PostgreSQL NetworkPolicy: only allow ingress from backend pod
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "tradeops.fullname" . }}-postgres
+  labels:
+    {{- include "tradeops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "tradeops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "tradeops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: backend
+      ports:
+        - protocol: TCP
+          port: {{ .Values.postgresql.port }}
+{{- end }}

@@ -10,6 +10,39 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.81.0] — 2026-05-16
+
+### Hardened — Kubernetes + Helm Production Readiness (TASK 89)
+
+Security, network isolation, and operational hardening of the Helm chart. All changes are backwards-compatible — new flags default to `false`.
+
+**`helm/tradeops/values.yaml`**
+- Added `securityContext` block: `runAsNonRoot: true`, `runAsUser: 1000`, `allowPrivilegeEscalation: false`, `capabilities.drop: [ALL]` — applied to all containers.
+- Added `secret.jwtSecretKey` and `secret.alphaVantageApiKey` — surfaced in the chart for proper secret management.
+- Added `networkPolicy.enabled` flag (default `false`) — enables NetworkPolicy when set to `true`.
+- Added `podDisruptionBudget.enabled` flag (default `false`) + `minAvailable: 1`.
+- Added `podAntiAffinity.enabled` flag (default `false`) — prefer different nodes for backend replicas.
+
+**`templates/backend-deployment.yaml`**
+- `securityContext` added to all containers (backend + initContainer).
+- New env vars: `JWT_SECRET_KEY` and `ALPHA_VANTAGE_API_KEY` (both `optional: true` — won't break existing deployments).
+- `podAntiAffinity` block: `preferredDuringSchedulingIgnoredDuringExecution` on `kubernetes.io/hostname`.
+
+**`templates/frontend-deployment.yaml`** — `securityContext` added.
+
+**`templates/secret.yaml`** — `JWT_SECRET_KEY` and `ALPHA_VANTAGE_API_KEY` added.
+
+**`templates/network-policy.yaml`** (new)
+- Backend policy: allow ingress only from `ingress-nginx` namespace and frontend pods on backend port.
+- PostgreSQL policy: allow ingress only from backend pods on port 5432.
+
+**`templates/pod-disruption-budget.yaml`** (new)
+- `policy/v1 PodDisruptionBudget` for backend with configurable `minAvailable`.
+
+**`templates/NOTES.txt`** — Production security checklist: warns on unset `ANTHROPIC_API_KEY`, `JWT_SECRET_KEY`, insecure default postgres password, disabled TLS, missing NetworkPolicy, and PDB when replicas > 1.
+
+---
+
 ## [0.80.0] — 2026-05-16
 
 ### Added — IBKR REST API Sync (TASK 88)
