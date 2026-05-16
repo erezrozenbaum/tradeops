@@ -10,6 +10,30 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.78.0] — 2026-05-16
+
+### Added — PDF Statement Import (TASK 86)
+
+Upload any broker PDF statement and let Claude AI extract holdings automatically — no regex patterns, works with any broker format.
+
+**Backend**
+- **`requirements.txt`**: Added `pypdf>=4.0.0` for PDF text extraction.
+- **`app/pdf_import/extractor.py`**: Two-stage pipeline — (1) `pypdf` extracts raw text from all pages; (2) Claude Haiku parses the unstructured text into a structured holdings JSON. Long PDFs are smart-truncated (first 60% + last 40% of char budget) to preserve headers and holdings table. Handles empty/scanned PDFs and malformed AI responses gracefully.
+- **`app/pdf_import/schemas.py`**: `ParsedHolding`, `PDFImportResult`, `PDFImportRequest` — Pydantic v2 models.
+- **`app/pdf_import/router.py`**:
+  - `POST /investors/{investor_id}/pdf-import/parse` — parse-only, no DB writes, returns structured preview.
+  - `POST /investors/{investor_id}/pdf-import/import` — parse + write to target account. Maps AI asset types (cash/option → other) to the `HoldingAssetType` enum. Skips malformed rows, counts imported vs skipped.
+- **`app/api/v1/router.py`**: registered pdf-import router.
+- **`tests/test_pdf_import.py`**: 12 unit tests — truncation logic, schema validation, mocked Claude responses (success, empty PDF, malformed JSON, malformed holdings).
+
+**Frontend**
+- **`app/(dashboard)/pdf-import/page.tsx`**: Drag-and-drop PDF upload with visual drop zone, "Extract Holdings" → AI parse preview table (name, type badge, qty, avg price, market value), then account selector + "Import N holdings" button. Shows parse warnings from AI, import result summary.
+- **`components/layout/sidebar.tsx`**: Added "PDF Import" link under Portfolio section with `FileUp` icon.
+
+**Tests:** 12/12 PDF import + 14/14 pairs + 8/8 action feed. 0 TypeScript errors.
+
+---
+
 ## [0.77.0] — 2026-05-16
 
 ### Added — Statistical Arbitrage Pairs Trading Engine (TASK 85)
