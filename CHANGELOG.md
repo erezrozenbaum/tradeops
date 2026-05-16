@@ -10,6 +10,33 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.76.0] — 2026-05-16
+
+### Added — Daily Action Feed (TASK 84)
+
+Deterministic, real-time morning briefing that aggregates all existing signal sources into a prioritised action list telling the investor exactly what to do and why — no AI required, always fresh.
+
+**Backend**
+- **`app/action_feed/schemas.py`**: `ActionItem` (id, priority, category, action_type, title, reasoning, ticker, amount, units, unit_price, currency, source) and `DailyActionFeed` (investor_id, generated_at, summary, currency, urgent/high/medium counts, items list).
+- **`app/action_feed/engine.py`**: `build_action_feed()` aggregates 5 signal sources:
+  - **Rebalancing**: BUY/SELL/REDUCE/ACCUMULATE actions from `compute_rebalance()` — priority 2 if gap ≥10%, priority 3 if 5–10%.
+  - **Proactive drift**: concentration, tier drift, option expiry events from `detect_drift()` — priority 1 for danger/short-option, priority 2 otherwise.
+  - **Triggered price alerts**: all `PriceAlert` records with `triggered_at IS NOT NULL` — always priority 1 (ALERT).
+  - **At-risk goals**: goals with status `at_risk` or `no_date` from `goals_service.get_analysis()` — priority 3 (CONTRIBUTE).
+  - **Market signals**: `MarketSignal` approved & undismissed, last 3 days — score ≥70 → ACCUMULATE (priority 3), score ≤30 → WATCH (priority 2).
+  - Results are deduplicated by deterministic id, sorted by `(priority, id)`, and capped at 12 items.
+- **`app/action_feed/router.py`**: `GET /investors/{investor_id}/action-feed` — no auth overhead, sub-millisecond DB queries.
+- **`app/api/v1/router.py`**: registered action feed router.
+- **`tests/test_action_feed.py`**: 8 unit tests covering sorting, deduplication, cap, summary generation, schema validation, optional fields.
+
+**Frontend**
+- **`components/DailyActionFeedCard.tsx`**: Collapsible card with priority dots (red/amber/blue), 9 colour-coded action badges (BUY, SELL, REDUCE, ACCUMULATE, WATCH, CONTRIBUTE, URGENT, ALERT, REVIEW), inline amounts/units, urgent/high count badges in the card header, refresh button, loading skeleton, and empty/healthy state.
+- **`app/(dashboard)/dashboard/page.tsx`**: `DailyActionFeedCard` mounted directly under the stat cards — the first thing the investor sees after the status overview.
+
+**Tests:** 8/8 action feed tests passing. 0 TypeScript errors.
+
+---
+
 ## [0.75.0] — 2026-05-16
 
 ### Security — JWT httpOnly Cookie Migration (TASK 83)

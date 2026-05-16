@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { AlertCircle, TrendingUp, TrendingDown, Minus, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, AlertTriangle, CheckCircle2, Circle, Zap, Clock, CalendarClock, PiggyBank, Bot, Calendar, Newspaper, ExternalLink, Target } from "lucide-react";
 import Link from "next/link";
+import { DailyActionFeedCard } from "@/components/DailyActionFeedCard";
 
 interface EarningsEvent {
   ticker: string;
@@ -357,6 +358,9 @@ export default function DashboardPage() {
           sub={cash_flow ? (cash_flow.emergency_fund_months >= 3 ? "Adequate buffer" : "Build savings first") : "No data"}
         />
       </div>
+
+      {/* Daily Action Feed */}
+      <DailyActionFeedCard investorId={investorId!} />
 
       {/* Action for today */}
       <ActionPlanCard
