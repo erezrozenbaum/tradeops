@@ -10,6 +10,39 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.83.0] — 2026-05-16
+
+### Added — Live Trading Execution (Gated) (TASK 91)
+
+Real-money order execution through IBKR Client Portal Gateway, locked behind 5 hard safety gates.
+
+**Backend (`app/live_trading/`)**
+- Alembic migration `0035_live_trading.py` — adds `live_trading_sessions` and `live_orders` tables.
+- `engine.py` — 5-gate readiness checker:
+  1. Paper trading ≥30 calendar days old, ≥3 ticks, annualized Sharpe > 0.5
+  2. Explicit risk acknowledgment (`confirmed = "I UNDERSTAND"`, stored in DB)
+  3. Admin has enabled `risk_model.live_trading_allowed = True`
+  4. Order risk validation: `estimated_value / investable_capital <= max_trade_size_pct %` AND open orders < `max_open_positions`
+  5. IBKR Client Portal Gateway reachable and authenticated
+- `ibkr.py` — IBKR REST client: `lookup_conid`, `submit_order`, `cancel_order`
+- `service.py` — session lifecycle: `acknowledge_risk`, `activate_session`, `halt` (kill switch with order cancellation), `submit_order` (full pipeline), `list_orders`
+- `router.py` — 6 endpoints: `GET /status`, `POST /acknowledge`, `POST /session`, `POST /halt`, `POST /orders`, `GET /orders`
+- All significant actions logged to `audit_events`
+- 17 unit tests covering Sharpe ratio, schema validation, order risk gates, and IBKR connection gate
+
+**Frontend (`app/(dashboard)/live-trading/page.tsx`)**
+- Gated readiness dashboard with live gate checklist
+- Risk acknowledgment modal (must type "I UNDERSTAND" exactly)
+- Session activation with gateway URL + IBKR account ID config
+- Order form: ticker, market/limit, buy/sell, quantity, optional limit price
+- Order history table with status, IBKR order ID, rejection reason
+- Kill switch with confirmation dialog
+
+**Sidebar**
+- Added "Live Trading" link under the Strategy section
+
+---
+
 ## [0.82.0] — 2026-05-16
 
 ### Added — Real-time SSE Price Streaming (TASK 90)

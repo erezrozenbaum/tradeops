@@ -21,6 +21,7 @@ from app.models.currency_rate import CurrencyRate
 from app.models.price_snapshot import PriceSnapshot
 from app.models.portfolio_snapshot import PortfolioSnapshot
 from app.models.user import User
+from app.models.live_trading import LiveTradingSession, LiveOrder
 
 __all__ = [
     "InvestorProfile",
@@ -56,4 +57,6 @@ __all__ = [
     "PriceSnapshot",
     "PortfolioSnapshot",
     "User",
+    "LiveTradingSession",
+    "LiveOrder",
 ]
