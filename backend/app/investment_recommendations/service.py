@@ -1,7 +1,10 @@
+import logging
 import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from app.core.config import settings
 from app.financial_profiles import service as fp_service
@@ -64,6 +67,7 @@ def get_recommendations(db: Session, investor_id: uuid.UUID) -> RecommendationRe
             max_signals=20,
         )
     except Exception:
+        logger.warning("Live market signals unavailable", exc_info=True)
         live_signals = []
 
     tax_context = get_tax_context_for_investor(investor)
@@ -107,6 +111,7 @@ def get_recommendations(db: Session, investor_id: uuid.UUID) -> RecommendationRe
                 monthly_plan=monthly_plan,
             )
         except Exception:
+            logger.warning("Failed to parse investment roadmap from AI response", exc_info=True)
             investment_roadmap = None
 
     return RecommendationReport(

@@ -10,6 +10,54 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.84.0] — 2026-05-16
+
+### Security & Quality — Multi-issue batch fix
+
+**IDOR: Investor ownership enforced on all 37 investor-scoped routers**
+- Added `backend/app/auth/investor_access.py` — `verify_investor_access` FastAPI
+  dependency that fetches the InvestorProfile by `investor_id` and raises HTTP 404
+  if it does not belong to `current_user`. Returns nothing; exists only for the
+  guard side-effect.
+- Applied via `dependencies=[Depends(verify_investor_access)]` at `include_router`
+  level in `api/v1/router.py` for every investor-scoped router. Zero changes to
+  individual endpoint handlers — one enforcement point, 37 routers protected.
+- Routers not affected (handle their own auth or have no investor_id):
+  `investor_router`, `admin_router`, `strategy_library_router`,
+  `family_profile_router`, `market_data_router`.
+
+**`/stability-score` endpoint: ownership + EF consistency**
+- `investor_profiles/router.py`: stability-score endpoint was missing both an
+  ownership check (any authenticated user could call it for any investor) and was
+  using raw `fp.emergency_fund_months` instead of the effective value derived from
+  flagged holdings/accounts. Now consistent with `dashboard/service.py` and
+  `risk_modeling/service.py`.
+
+**CORS: configurable via environment variable**
+- `core/config.py`: added `ALLOWED_ORIGINS: str` setting (default `http://localhost:3000`).
+  Set `ALLOWED_ORIGINS=https://tradeops.example.com,http://localhost:3000` in env for
+  production. `allowed_origins_list` property parses comma-separated values.
+- `main.py`: CORS middleware now reads `settings.allowed_origins_list` instead of
+  the hardcoded localhost string.
+
+**`decode_token`: catch `JWTError` instead of bare `Exception`**
+- `auth/service.py`: was `except Exception: return None` — swallowed all errors
+  including programming bugs. Now `except JWTError` — only JWT-specific errors
+  (expired, invalid signature, malformed) return `None`; other exceptions propagate.
+
+**Admin: eliminated N+1 queries in `list_users` and `list_profiles`**
+- `admin/router.py` `list_users`: replaced N per-user `COUNT` queries with a single
+  `GROUP BY user_id` aggregate.
+- `admin/router.py` `list_profiles`: replaced N `db.get(User, ...)` calls with a
+  single `WHERE id IN (...)` batch fetch.
+
+**Silent exception swallows: add logging**
+- `investment_recommendations/service.py`: two bare `except Exception: ... = None/[]`
+  blocks now log `WARNING` with `exc_info=True` so failures appear in application
+  logs rather than disappearing silently.
+
+---
+
 ## [0.83.3] — 2026-05-16
 
 ### Fixed — Rebalance engine note TypeError + cookie forwarding in Next.js API routes

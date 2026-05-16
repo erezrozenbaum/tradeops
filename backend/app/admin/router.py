@@ -3,6 +3,7 @@ from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.admin.dependencies import require_admin
@@ -29,13 +30,16 @@ def get_stats(db: Session = Depends(get_db), _=Depends(require_admin)):
 @router.get("/users", response_model=list[AdminUserOut])
 def list_users(db: Session = Depends(get_db), _=Depends(require_admin)):
     users = db.query(User).order_by(User.created_at).all()
-    result = []
-    for u in users:
-        count = db.query(InvestorProfile).filter(InvestorProfile.user_id == u.id).count()
-        result.append(AdminUserOut(
-            id=u.id, email=u.email, role=u.role, created_at=u.created_at, profile_count=count
-        ))
-    return result
+    counts = dict(
+        db.query(InvestorProfile.user_id, func.count(InvestorProfile.id))
+        .filter(InvestorProfile.user_id.isnot(None))
+        .group_by(InvestorProfile.user_id)
+        .all()
+    )
+    return [
+        AdminUserOut(id=u.id, email=u.email, role=u.role, created_at=u.created_at, profile_count=counts.get(u.id, 0))
+        for u in users
+    ]
 
 
 @router.patch("/users/{user_id}/role", response_model=AdminUserOut)
@@ -64,18 +68,17 @@ def delete_user(user_id: uuid.UUID, db: Session = Depends(get_db), _=Depends(req
 @router.get("/profiles", response_model=list[AdminProfileOut])
 def list_profiles(db: Session = Depends(get_db), _=Depends(require_admin)):
     profiles = db.query(InvestorProfile).order_by(InvestorProfile.created_at).all()
-    result = []
-    for p in profiles:
-        email = None
-        if p.user_id:
-            u = db.get(User, p.user_id)
-            email = u.email if u else None
-        result.append(AdminProfileOut(
+    user_ids = {p.user_id for p in profiles if p.user_id}
+    users = {u.id: u for u in db.query(User).filter(User.id.in_(user_ids)).all()} if user_ids else {}
+    return [
+        AdminProfileOut(
             id=p.id, full_name=p.full_name, country=p.country,
             base_currency=p.base_currency, user_id=p.user_id,
-            user_email=email, created_at=p.created_at,
-        ))
-    return result
+            user_email=users[p.user_id].email if p.user_id and p.user_id in users else None,
+            created_at=p.created_at,
+        )
+        for p in profiles
+    ]
 
 
 @router.patch("/profiles/{profile_id}/assign", response_model=AdminProfileOut)
