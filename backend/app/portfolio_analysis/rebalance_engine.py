@@ -143,11 +143,11 @@ def compute_rebalance(
         )
 
     if locked_pct > 0.5:
-        locked_value_approx = round((total_value or 0) * locked_pct / 100, 0) if total_value else None
+        locked_value_approx = round((total_value or 0) * locked_pct / 100, 0)
         notes.append(
-            f"{locked_pct:.0f}% of your portfolio is in pension/study funds "
-            f"(≈{locked_value_approx:,.0f} {currency or 'ILS'}) which are locked "
-            f"and excluded from rebalancing. Analysis is based on the {tradeable_pct:.0f}% "
+            f"{locked_pct:.0f}% of your portfolio is in locked or other unclassified assets "
+            f"(pension/study funds, 'other' type — ≈{locked_value_approx:,.0f} {currency or 'ILS'}) "
+            f"which are excluded from rebalancing. Analysis is based on the {tradeable_pct:.0f}% "
             "that is tradeable."
         )
         # Re-normalize tier percentages to tradeable basis
