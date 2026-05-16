@@ -35,8 +35,11 @@ def get_dashboard(db: Session, investor_id: uuid.UUID) -> DashboardOut | None:
         total_assets = sum(a.current_value for a in fp.assets)
         total_liabilities = sum(l.outstanding_balance for l in fp.liabilities)
         net_worth = total_assets - total_liabilities
+        # Pension assets are locked regardless of the is_liquid flag
+        _LOCKED_TYPES = {"pension", "vehicle"}
         liquid_capital = fp.liquid_savings + sum(
-            a.current_value for a in fp.assets if a.is_liquid
+            a.current_value for a in fp.assets
+            if a.is_liquid and a.asset_type.value not in _LOCKED_TYPES
         )
 
         net_worth_section = DashboardNetWorth(
