@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.backtesting import service
 from app.db.session import get_db
+from app.risk_modeling import service as rm_service
 from app.schemas.backtest import BacktestRequest, BacktestRunOut, BacktestRunSummaryOut
 
 router = APIRouter()
@@ -16,6 +17,17 @@ def create_backtest(
     body: BacktestRequest,
     db: Session = Depends(get_db),
 ):
+    risk_model = rm_service.get_latest(db, investor_id)
+    if risk_model and risk_model.investable_capital <= 0:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Investable capital is ₪0 — cannot run backtest. "
+                "Go to Financial → set your savings and investable %, "
+                "then regenerate your Risk Model."
+            ),
+        )
+
     run = service.create(
         db,
         investor_id=investor_id,

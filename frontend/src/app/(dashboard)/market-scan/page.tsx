@@ -125,7 +125,11 @@ export default function MarketScanPage() {
     setError(null);
     try {
       const res = await fetch(`/api/v1/investors/${investorId}/market-scan`);
-      if (!res.ok) throw new Error("Failed to load market scan");
+      if (!res.ok) {
+        if (res.status === 401) throw new Error("SESSION_EXPIRED");
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail ?? `Failed to load market scan (${res.status})`);
+      }
       setResult(await res.json());
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Unknown error");
@@ -185,8 +189,15 @@ export default function MarketScanPage() {
 
   if (error) {
     return (
-      <div className="p-8">
-        <p className="text-sm text-destructive">{error}</p>
+      <div className="p-8 space-y-3">
+        {error === "SESSION_EXPIRED" ? (
+          <div className="flex items-center gap-3 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+            <span className="flex-1">Your session has expired. Please sign in again to load market scan.</span>
+            <a href="/login" className="font-medium underline underline-offset-2 shrink-0">Sign in</a>
+          </div>
+        ) : (
+          <p className="text-sm text-destructive">{error}</p>
+        )}
       </div>
     );
   }
