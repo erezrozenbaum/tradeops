@@ -10,6 +10,32 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.79.0] — 2026-05-16
+
+### Added — Crypto Staking & Yield Tracker (TASK 87)
+
+Track staking APY and estimated annual rewards with correct income tax treatment — no schema migration (uses existing `fund_status` and `annual_return_rate` fields on `InvestmentHolding`).
+
+**Design:** Crypto holdings are marked as staked by setting `fund_status="staking"` and `annual_return_rate=<APY%>`. No new DB columns needed.
+
+**Backend**
+- **`app/crypto_staking/service.py`**: `build_staking_report()` queries all investor accounts for holdings with `fund_status="staking"`, computes estimated annual rewards (native = quantity × APY/100; base currency = native × live price from `price_snapshots`). Includes jurisdiction-aware tax treatment notes (Israel vs other).
+- **`app/crypto_staking/schemas.py`**: `StakingPosition`, `StakingReport`, `EnableStakingRequest`, `StakingToggleOut`.
+- **`app/crypto_staking/router.py`**:
+  - `GET /investors/{investor_id}/crypto-staking` — full staking report with totals.
+  - `POST /investors/{investor_id}/crypto-staking/{holding_id}` — enable staking + set APY on a crypto holding.
+  - `DELETE /investors/{investor_id}/crypto-staking/{holding_id}` — disable staking.
+- **`app/api/v1/router.py`**: registered crypto-staking router.
+- **`tests/test_crypto_staking.py`**: 12 unit tests — tax note content, schema validation, APY bounds, rewards math formulas.
+
+**Frontend**
+- **`app/(dashboard)/crypto-staking/page.tsx`**: Shows total estimated annual staking income, per-position cards (APY badge, annual rewards in native + base currency, live price and total staked value), and a tax treatment reminder card explaining income vs capital gains distinction.
+- **`components/layout/sidebar.tsx`**: Added "Crypto Staking" under Portfolio section with `Coins` icon.
+
+**Tests:** 12/12 crypto staking + 12/12 PDF + 14/14 pairs + 8/8 action feed. 0 TypeScript errors.
+
+---
+
 ## [0.78.0] — 2026-05-16
 
 ### Added — PDF Statement Import (TASK 86)
