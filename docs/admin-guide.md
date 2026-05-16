@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.70.0  
-**Last updated:** 2026-05-15
+**Version:** 0.82.0  
+**Last updated:** 2026-05-16
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
@@ -604,6 +604,13 @@ kubectl describe ingress tradeops
 | Resilience Stress-Test | `resilience/` + `POST /portfolio/resilience` | Life-event simulation (job loss, expense spike). Drains cash reserve (liquid_savings) → Tier 1 → Tier 2 in cost-efficiency order. Survival Score (0–100): 100 = Tier 3 never touched; <100 = Tier 3 breach required. Verdicts: Safe (≥80), At Risk (50–79), Critical (<50). Optional Claude Haiku AI recommendation (skipped if no API key). Depletion path shows month-by-month which assets are liquidated. Added to /stress-test page as ResilienceSimulatorCard. No DB migration. |
 | Market Signal Monitor | `market_signals/` + migration 0030 + `GET /market-signals` + `POST /market-signals/{id}/dismiss` | Daily APScheduler job (20:15 UTC) fetches yfinance news for all held tickers, calls Claude Haiku for sentiment (−1.0 to +1.0), whale mention detection, and personalized rationale. Personal Signal Guard mutes signals with composite_score < 50 (stability) or ticker > 15% of portfolio (concentration). 7-day rolling trend (improving/deteriorating/stable). Connected insights: tax-loss harvest, rebalancing, accumulation. Idempotent via unique index on (investor_id, ticker, signal_date). MarketSignalCard on /investments page. DB migration: 0030. |
 | Admin AI Cost Tracking | `ai_usage/logger.py` + `models/ai_usage_log.py` + migration 0032 + `GET /admin/ai-usage` | Logs every Claude API call (market signals + AI reports) to `ai_usage_logs` table with token counts and computed USD cost. Admin panel `/admin` shows: 4 summary cards (total cost, calls, input tokens, output tokens), per-feature table, per-user expandable rows. Period selector: 7/30/90 days. Cost rates: Haiku $0.80/$4.00 per MTok in/out; Sonnet $3.00/$15.00. |
+| Daily Action Feed | `action_feed/` + `GET /investors/{id}/action-feed` | Aggregates 5 signal sources into a prioritised morning briefing (max 12 items). Priority 1 = triggered alerts / option expiry ≤7d. Priority 2 = drift ≥10% / negative signal on large position. Priority 3 = moderate drift / at-risk goal. DailyActionFeedCard on dashboard. No DB migration. |
+| Pairs Trading | `pairs_trading/` + `GET /analyze` + `POST /signals` | OLS hedge ratio, ADF(0) cointegration (MacKinnon −2.87 threshold), Z-score signals (±2.0 entry, ±3.5 stop). Saves to market_signals (PAIRS_ZSCORE). `/pairs-trading` page with Z-score gauge and trade instructions. No new deps (pure numpy). |
+| PDF Statement Import | `pdf_import/` + `POST /investors/{id}/pdf-import/parse|import` | pypdf text extraction + Claude Haiku parsing. Any broker PDF format. Smart truncation for large PDFs. `parse` = dry-run preview; `import` = write holdings. Dep: `pypdf>=4.0.0`. |
+| Crypto Staking | `crypto_staking/` + `GET/POST/DELETE /investors/{id}/crypto-staking` | APY tracking via existing `fund_status` + `annual_return_rate` columns. No migration. Annual rewards = quantity × APY/100. Tax = income. `/crypto-staking` page. |
+| IBKR REST Sync | `broker_sync/ibkr_rest.py` + `POST .../broker-sync/ibkr-rest` | Live sync from IBKR Client Portal Gateway. Asset mapping: STK/ETF/CRYPTO/BOND/OPT. `verify_ssl=false` default. Read-only. |
+| K8s Hardening | `helm/tradeops/` | Non-root securityContext, NetworkPolicy (backend ← ingress+frontend; postgres ← backend only), PodDisruptionBudget, podAntiAffinity, JWT_SECRET_KEY + ALPHA_VANTAGE_API_KEY as Helm secrets. All flags default false. |
+| SSE Price Streaming | `market_data/router.py` `GET /market/stream?tickers=...&interval=30` | text/event-stream. Max 20 tickers. Fresh SessionLocal per tick. nginx pass-through via X-Accel-Buffering. Frontend: pulsing LIVE dot + streaming price per holding row. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.

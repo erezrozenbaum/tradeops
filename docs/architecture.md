@@ -1,7 +1,7 @@
 # TradeOps AI — Architecture
 
-**Version:** 0.63.0  
-**Last updated:** 2026-05-15
+**Version:** 0.82.0  
+**Last updated:** 2026-05-16
 
 ---
 
@@ -84,7 +84,8 @@ backend/app/
 ├── market_data/
 │   ├── fetcher.py              # Alpha Vantage GLOBAL_QUOTE HTTP call
 │   ├── service.py              # get_cached_price / fetch_and_cache / refresh_tickers with 24h TTL
-│   └── router.py               # GET /market/quote/{ticker}
+│   ├── router.py               # GET /market/quote/{ticker}
+│   │                           # GET /market/stream?tickers=...&interval=30 (SSE, TASK 90)
 │
 ├── portfolio_analysis/
 │   ├── engine.py               # Pure analysis function (P&L, allocation, exposure, after-tax P&L, FX rates)
@@ -109,13 +110,70 @@ backend/app/
 │
 ├── investment_recommendations/
 │   ├── analyzer.py             # Claude API call — personalised recommendations from catalog
-│   ├── service.py              # Data assembly (portfolio, gaps, goals, holdings) + engine call
+│   ├── service.py              # Data assembly + engine call
 │   ├── schemas.py              # InstrumentRecommendation, PortfolioAction, RecommendationReport
 │   └── router.py               # GET /investors/{id}/recommendations
 │
+├── market_research/            # Deep fundamental analysis + AI investment brief (TASK 57)
+│   ├── screener.py             # 63-instrument universe, scoring
+│   ├── analyzer.py             # Claude Sonnet AI thesis generation
+│   ├── service.py              # Cache + orchestration
+│   └── router.py               # GET /investors/{id}/market-research
+│
+├── broker_sync/                # Multi-broker import + scheduled auto-sync (TASK 53-56)
+│   ├── parsers/                # IBKR Flex XML, eToro CSV, Altshuler Shaham, ALTrade
+│   ├── ibkr_rest.py            # IBKR Client Portal Gateway REST sync (TASK 88)
+│   ├── service.py              # Upsert logic (match by ISIN → ticker → name)
+│   └── router.py               # POST /investors/{id}/accounts/{id}/broker-sync
+│
+├── pdf_import/                 # AI-powered PDF statement parsing (TASK 86)
+│   ├── extractor.py            # pypdf text extraction + Claude Haiku parsing
+│   └── router.py               # POST /investors/{id}/pdf-import/parse|import
+│
+├── crypto_staking/             # Staking APY tracking as income (TASK 87)
+│   ├── service.py              # build_staking_report, enable/disable staking
+│   └── router.py               # GET/POST/DELETE /investors/{id}/crypto-staking
+│
+├── action_feed/                # Daily action feed — morning briefing (TASK 84)
+│   ├── engine.py               # Aggregates 5 signal sources; priority 1/2/3; dedup; cap 12
+│   ├── schemas.py              # ActionItem, DailyActionFeed
+│   └── router.py               # GET /investors/{id}/action-feed
+│
+├── pairs_trading/              # Statistical arbitrage (TASK 85)
+│   ├── engine.py               # OLS hedge ratio, ADF(0) cointegration, Z-score signals
+│   ├── schemas.py              # PairAnalysis, PairSignalSave, PairSignalOut
+│   └── router.py               # GET /analyze, POST /signals
+│
+├── market_signals/             # Daily news sentiment + whale mention monitor (Phase 11)
+│   └── router.py               # GET /investors/{id}/market-signals
+│
+├── pension_simulation/         # Standalone pension projector
+├── debt_planner/               # Debt payoff planner (avalanche/snowball)
+├── watchlist/                  # Per-investor ticker watchlist
+├── notifications/              # In-app notification store
+├── investment_agent/           # Free-form AI financial assistant
+├── transactions/               # Immutable holding transaction log
+├── price_alerts/               # User-defined price triggers
+├── economic_calendar/          # Earnings dates for held + watched tickers
+├── portfolio_correlation/      # 90-day Pearson correlation matrix
+├── holdings_news/              # Latest news articles per held ticker
+├── reports/                    # PDF report export (monthly/quarterly)
+├── retirement_readiness/       # 0–100 readiness score (MC P50 + 4% SWR)
+├── portfolio_chat/             # Natural language Q&A with 5-turn context
+├── family_portfolio/           # Household consolidated view
+├── liquidity_runway/           # Tiered liquidation model
+├── resilience/                 # Life-event survival simulator
+│
 ├── audit/                      # Event log for all significant actions
 ├── dashboard/                  # Aggregated summary endpoint
-└── workers/                    # Reserved for background jobs (not yet implemented)
+├── admin/                      # Multi-tenant admin panel + AI cost tracking
+└── workers/                    # APScheduler background jobs
+    ├── scheduler.py            # Job registry + start/stop
+    └── jobs/
+        ├── market_signals_job.py   # 20:15 UTC daily — sentiment per holding
+        ├── broker_auto_sync.py     # 09:00 UTC daily — auto-sync enabled accounts
+        ├── weekly_digest.py        # 18:00 UTC Friday — email digest
+        └── research_prewarm.py     # Scheduled market research refresh
 ```
 
 ### API routing
@@ -139,11 +197,36 @@ All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`:
 | `/investors/{id}/portfolio/history` | portfolio_analysis | portfolio |
 | `/investors/{id}/market-scan` | market_scanner | market-scan |
 | `/investors/{id}/recommendations` | investment_recommendations | recommendations |
-| `/market` | market_data | market-data |
+| `/investors/{id}/market-research` | market_research | market-research |
+| `/investors/{id}/accounts/{id}/broker-sync` | broker_sync | broker-sync |
+| `/investors/{id}/accounts/{id}/broker-sync/ibkr-rest` | broker_sync | broker-sync |
+| `/investors/{id}/pdf-import` | pdf_import | pdf-import |
+| `/investors/{id}/crypto-staking` | crypto_staking | crypto-staking |
+| `/investors/{id}/action-feed` | action_feed | action-feed |
+| `/investors/{id}/pairs-trading` | pairs_trading | pairs-trading |
+| `/investors/{id}/market-signals` | market_signals | market-signals |
+| `/investors/{id}/pension-simulation` | pension_simulation | pension-simulation |
+| `/investors/{id}/debt-planner` | debt_planner | debt-planner |
+| `/investors/{id}/watchlist` | watchlist | watchlist |
+| `/investors/{id}/notifications` | notifications | notifications |
+| `/investors/{id}/agent` | investment_agent | investment-agent |
+| `/investors/{id}/transactions` | transactions | transactions |
+| `/investors/{id}/alerts` | price_alerts | price-alerts |
+| `/investors/{id}/calendar` | economic_calendar | economic-calendar |
+| `/investors/{id}/portfolio/correlation` | portfolio_correlation | portfolio-correlation |
+| `/investors/{id}/news` | holdings_news | holdings-news |
+| `/investors/{id}/reports` | reports | reports |
+| `/investors/{id}/retirement-readiness` | retirement_readiness | retirement-readiness |
+| `/investors/{id}/chat` | portfolio_chat | chat |
+| `/investors/{id}/family-portfolio` | family_portfolio | family-portfolio |
+| `/investors/{id}/portfolio/liquidity-runway` | liquidity_runway | liquidity-runway |
+| `/investors/{id}/portfolio/resilience` | resilience | resilience |
+| `/market` | market_data | market-data (REST + SSE) |
 | `/investors/{id}/accounts` | holdings | holdings |
 | `/investors/{id}/accounts/{id}/holdings` | holdings | holdings |
 | `/family-profiles` | family_profiles | family-profiles |
 | `/strategies/templates` | strategy_library | strategy-templates |
+| `/admin` | admin | admin |
 
 Interactive docs: `http://localhost:8000/docs`
 
@@ -155,16 +238,40 @@ Managed by Alembic. Migrations in `backend/alembic/versions/`.
 
 | Migration | Description |
 |-----------|-------------|
-| `0001_initial.py` | All core tables |
-| `0002_strategy_tables.py` | Strategy templates + seed data (6 templates) |
-| `0003_paper_trading.py` | Paper portfolio and tick tables |
-| `0004_audit_events.py` | Audit event table |
-| `0005_investor_profile_extended.py` | Added `investment_goal`, `risk_tolerance`, `time_horizon`, `preferred_assets`, `trading_frequency`, `guardian_required` to investor_profiles |
-| `0006_risk_model_enforcement_fields.py` | Added `age_tier`, `allowed_strategy_families`, `blocked_strategy_families`, `live_trading_allowed`, `requires_paper_trading`, `max_trade_size_pct`, `max_open_positions` to risk_models |
-| `0007_holdings.py` | `investment_accounts` and `investment_holdings` tables |
-| `0008_currency_rates.py` | `currency_rates` cache table |
-| `0009_price_snapshots.py` | `price_snapshots` market data cache table |
-| `0010_portfolio_snapshots.py` | `portfolio_snapshots` value history table |
+| `0001` | Core tables (investor_profiles, financial_*, family_*, goals, risk_models) |
+| `0002` | Strategy templates + seed data (6 templates) |
+| `0003` | Backtest tables (backtest_runs, backtest_periods) |
+| `0004` | Paper trading tables (paper_portfolios, paper_ticks) |
+| `0005` | investor_profiles extended (investment_goal, risk_tolerance, time_horizon, preferred_assets) |
+| `0006` | risk_models enforcement fields (age_tier, allowed/blocked families, live_trading_allowed, max_trade_size_pct) |
+| `0007` | Holdings tables (investment_accounts, investment_holdings) |
+| `0008` | currency_rates cache table |
+| `0009` | price_snapshots market data cache |
+| `0010` | portfolio_snapshots value history |
+| `0011` | goal tracking modes (target_amount_mode, linked_account_id) |
+| `0012` | pension_fund fields (monthly_contribution, monthly_contribution_employee/employer, fund_status, annual_return_rate) |
+| `0013` | study_fund fields (total_deposits, current_balance, purchase_date) |
+| `0014` | vehicle asset_type |
+| `0015` | price_alerts email field |
+| `0016` | widen nationality columns |
+| `0017` | watchlist_items table |
+| `0018` | family financial model (financial_goals family FK, family_members) |
+| `0019` | holding_transactions table |
+| `0020` | price_alerts table |
+| `0021` | emergency_fund flag on financial_profiles |
+| `0022` | is_emergency_fund flag on investment_holdings |
+| `0023` | goal linked_account_id FK |
+| `0024` | users table + JWT auth |
+| `0025` | account auto-sync fields (auto_sync_enabled, last_synced_at) |
+| `0026` | holding management fees (management_fee_balance_pct, management_fee_contribution_pct) |
+| `0027` | options holdings (strike_price, expiry_date, option_type, underlying_ticker, contract_multiplier, position_type) |
+| `0028` | investor weekly digest flag |
+| `0029` | holding purchase_fx_rate |
+| `0030` | market_signals table (NEWS_SENTIMENT, WHALE_MENTION, PAIRS_ZSCORE; composite_score 0–100) |
+| `0031` | investment_holdings makdam column (Israeli pension coefficient) |
+| `0032` | ai_usage_logs table (token counts, cost_usd per Claude API call) |
+| `0033` | family multi-user invite fields; investment_accounts owner_type; holding balance_updated_at |
+| `0034` | CHECK constraints on enum-like VARCHAR columns (owner_type, invite_status, asset_type, etc.) |
 
 ### Core tables
 
@@ -209,20 +316,31 @@ frontend/src/
 │   ├── (auth)/
 │   │   └── login/page.tsx          # Login + investor profile creation
 │   ├── (dashboard)/
-│   │   ├── layout.tsx              # Sidebar navigation shell
-│   │   ├── dashboard/page.tsx      # Dashboard overview + Investment Readiness + Portfolio widget
-│   ├── investments/page.tsx    # Investment accounts + holdings tracking + portfolio summary
+│   │   ├── layout.tsx              # Sidebar navigation shell (mobile hamburger + desktop fixed)
+│   │   ├── dashboard/page.tsx      # Dashboard: stat cards, Daily Action Feed, portfolio widget
+│   │   ├── investments/page.tsx    # Accounts, holdings, SSE live prices, broker import
+│   │   ├── performance/page.tsx    # TWR, MWR, attribution, alpha, complexity premium
+│   │   ├── stress-test/page.tsx    # Historical scenarios, Monte Carlo, resilience simulator
+│   │   ├── transactions/page.tsx   # Holding transaction log
+│   │   ├── watchlist/page.tsx      # Ticker watchlist
+│   │   ├── debt-planner/page.tsx   # Debt payoff planner
 │   │   ├── financial/page.tsx      # Financial profile CRUD + assets/liabilities
 │   │   ├── goals/page.tsx          # Financial goals
-│   │   ├── family/page.tsx         # Family profile
-│   │   ├── profile/page.tsx        # Investor profile view + edit (incl. investment preferences)
+│   │   ├── family/page.tsx         # Family profile + household portfolio
+│   │   ├── profile/page.tsx        # Investor profile view + edit
 │   │   ├── risk/page.tsx           # Risk model view and generation
 │   │   ├── strategies/page.tsx     # Strategy recommendations
 │   │   ├── backtesting/page.tsx    # Run and view backtests
-│   │   ├── paper-trading/page.tsx  # Paper portfolio simulation
-│   │   ├── market-scan/page.tsx    # Market scanner — curated instrument suggestions
-│   ├── reports/page.tsx        # AI financial report
+│   │   ├── paper-trading/page.tsx  # Paper portfolio tick simulation
+│   │   ├── market-scan/page.tsx    # Market scanner
+│   │   ├── pairs-trading/page.tsx  # Pairs trading: Z-score gauge, cointegration (TASK 85)
+│   │   ├── pdf-import/page.tsx     # PDF statement import (TASK 86)
+│   │   ├── crypto-staking/page.tsx # Crypto staking rewards + APY (TASK 87)
+│   │   ├── market-research/page.tsx # Deep market research + 3-tier picks
+│   │   ├── ai-agent/page.tsx       # Free-form AI financial assistant
+│   │   ├── recommendations/page.tsx # Tailored recommendations
 │   │   ├── audit/page.tsx          # Audit event log
+│   │   ├── admin/page.tsx          # Admin panel (admin role required)
 │   │   └── settings/page.tsx       # Account and platform info
 │   └── page.tsx                    # Root redirect → /dashboard
 ├── components/ui/                  # Shared UI primitives (Card, Badge, Button, etc.)
@@ -235,7 +353,9 @@ frontend/src/
 
 ### Session management
 
-No authentication in MVP. The active investor is identified by a UUID stored in `localStorage` under the key `tradeops_investor_id`. The `useInvestorId` hook reads this value on mount and redirects to `/login` if absent.
+JWT authentication (HS256, 7-day expiry). Token stored in an httpOnly cookie (`tradeops_token`). All `/api/v1` routes require a valid token via `get_current_user` dependency (reads cookie, falls back to `Authorization: Bearer`).
+
+The active investor UUID is stored in `localStorage` under `tradeops_investor_id`. The `useInvestorId` hook reads this and redirects to `/login` if absent.
 
 ---
 
