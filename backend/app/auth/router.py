@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.auth import service
 from app.auth.dependencies import get_current_user
-from app.auth.schemas import Token, UserCreate, UserLogin, UserOut
+from app.auth.schemas import UserCreate, UserLogin, UserOut
 from app.db.session import get_db
 from app.models.user import User
 
@@ -17,12 +17,26 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
     return service.register_user(db, data.email, data.password)
 
 
-@router.post("/login", response_model=Token)
-def login(data: UserLogin, db: Session = Depends(get_db)):
+@router.post("/login")
+def login(data: UserLogin, response: Response, db: Session = Depends(get_db)):
     user = service.get_user_by_email(db, data.email)
     if not user or not service.verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    return Token(access_token=service.create_access_token(user.id))
+    token = service.create_access_token(user.id)
+    response.set_cookie(
+        key="tradeops_token",
+        value=token,
+        httponly=True,
+        samesite="lax",
+        max_age=7 * 24 * 3600,
+        path="/",
+    )
+    return {"message": "Login successful"}
+
+
+@router.post("/logout", status_code=204)
+def logout(response: Response):
+    response.delete_cookie("tradeops_token", path="/")
 
 
 @router.get("/me", response_model=UserOut)

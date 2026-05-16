@@ -74,7 +74,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
-  const [token, setToken] = useState<string | null>(null);
 
   const [investors, setInvestors] = useState<Investor[]>([]);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -84,30 +83,31 @@ export default function LoginPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
-  // If already authenticated, skip straight to profile step
+  // Check if already authenticated via cookie
   useEffect(() => {
-    const existingToken = localStorage.getItem("tradeops_token");
-    const existingId = localStorage.getItem("tradeops_investor_id");
-    if (existingToken && existingId) {
-      router.push("/dashboard");
-      return;
-    }
-    if (existingToken) {
-      setToken(existingToken);
-      setStep("profile");
-      loadProfiles(existingToken);
-    }
-  }, [router]);
+    fetch("/api/v1/auth/me")
+      .then(async r => {
+        if (!r.ok) {
+          localStorage.removeItem("tradeops_investor_id");
+          return;
+        }
+        const existingId = localStorage.getItem("tradeops_investor_id");
+        if (existingId) {
+          router.push("/dashboard");
+          return;
+        }
+        setStep("profile");
+        loadProfiles();
+      })
+      .catch(() => {});
+  }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function loadProfiles(t: string) {
+  async function loadProfiles() {
     setProfileLoading(true);
     try {
-      const r = await fetch("/api/v1/investors", {
-        headers: { Authorization: `Bearer ${t}` },
-      });
+      const r = await fetch("/api/v1/investors");
       if (!r.ok) {
         setError("Session expired. Please sign in again.");
-        localStorage.removeItem("tradeops_token");
         setStep("auth");
         return;
       }
@@ -144,11 +144,9 @@ export default function LoginPage() {
         setPassword("");
         return;
       }
-      const t: string = data.access_token;
-      localStorage.setItem("tradeops_token", t);
-      setToken(t);
+      // Login successful — cookie is now set by the server
       setStep("profile");
-      loadProfiles(t);
+      loadProfiles();
     } catch {
       setAuthError("Network error — please try again");
     } finally {
@@ -186,10 +184,7 @@ export default function LoginPage() {
       };
       const res = await fetch("/api/v1/investors", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {

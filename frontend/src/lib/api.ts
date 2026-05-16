@@ -1,21 +1,13 @@
-function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("tradeops_token");
-}
-
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = getToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(init?.headers as Record<string, string>),
   };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const res = await fetch(path, { ...init, headers });
 
   if (res.status === 401) {
     if (typeof window !== "undefined") {
-      localStorage.removeItem("tradeops_token");
       localStorage.removeItem("tradeops_investor_id");
       window.location.href = "/login";
     }
