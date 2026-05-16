@@ -10,6 +10,26 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.80.0] — 2026-05-16
+
+### Added — IBKR REST API Sync (TASK 88)
+
+Live position sync from IBKR Client Portal Gateway — no file export needed. Read-only, data sync only (no trade execution).
+
+**Backend**
+- **`app/broker_sync/ibkr_rest.py`**: `fetch_positions(gateway_url, ibkr_account_id)` — calls `GET /v1/api/portfolio/{accountId}/positions/0` on the local gateway. Maps IBKR `assetClass` (STK/ETF/CRYPTO/BOND/OPT) to internal `HoldingAssetType`. Handles connection errors, 401 session expiry, unexpected response formats, and zero-quantity positions gracefully. Returns `(rows, errors)` — same contract as file-based parsers, reuses `sync_holdings()`.
+- **`app/broker_sync/router.py`**: Added `POST /investors/{investor_id}/accounts/{account_id}/broker-sync/ibkr-rest` endpoint accepting `{ gateway_url, ibkr_account_id, verify_ssl }` JSON body.
+- **`tests/test_ibkr_rest.py`**: 9 unit tests — asset type mapping, successful parse, zero-qty skip, ConnectError, 401 handling, unexpected format, multi-asset-type parsing (all mocked, no real HTTP).
+
+**Frontend (`app/(dashboard)/investments/page.tsx`)**
+- Added `ibkr_rest` option to broker selector dropdown ("IBKR — REST API (live sync via gateway)").
+- When selected, shows inline form with Gateway URL (default: `https://localhost:5000`) and Account ID fields instead of file upload.
+- "Sync positions from gateway" button calls the new endpoint; result display reuses existing imported/updated/skipped/errors UI.
+
+**Tests:** 9/9 IBKR REST + 12/12 staking + 12/12 PDF + 14/14 pairs + 8/8 action feed. 0 TypeScript errors.
+
+---
+
 ## [0.79.0] — 2026-05-16
 
 ### Added — Crypto Staking & Yield Tracker (TASK 87)

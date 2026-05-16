@@ -348,6 +348,8 @@ export default function InvestmentsPage() {
   const [brokerType, setBrokerType] = useState("ibkr");
   const [brokerImporting, setBrokerImporting] = useState(false);
   const [brokerResult, setBrokerResult] = useState<{ imported: number; updated: number; skipped: number; errors: string[] } | null>(null);
+  const [ibkrGatewayUrl, setIbkrGatewayUrl] = useState("https://localhost:5000");
+  const [ibkrAccountId, setIbkrAccountId] = useState("");
 
   // Earnings calendar
   const [earningsMap, setEarningsMap] = useState<Record<string, string>>({});
@@ -720,6 +722,33 @@ export default function InvestmentsPage() {
     const data = await res.json();
     setCsvImportResult({ accountId, imported: data.imported, errors: data.errors ?? [] });
     if (data.imported > 0) loadAll();
+  }
+
+  async function importIBKRRest(accountId: string) {
+    if (!investorId || !ibkrAccountId.trim()) return;
+    setBrokerImporting(true);
+    setBrokerResult(null);
+    try {
+      const res = await fetch(
+        `/api/v1/investors/${investorId}/accounts/${accountId}/broker-sync/ibkr-rest`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ gateway_url: ibkrGatewayUrl, ibkr_account_id: ibkrAccountId.trim(), verify_ssl: false }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        const msg = data?.detail?.message ?? data?.detail ?? "IBKR sync failed";
+        const errs: string[] = data?.detail?.errors ?? [];
+        setBrokerResult({ imported: 0, updated: 0, skipped: 0, errors: [msg, ...errs] });
+      } else {
+        setBrokerResult({ imported: data.imported, updated: data.updated, skipped: data.skipped, errors: data.errors ?? [] });
+        if (data.imported > 0 || data.updated > 0) loadAll();
+      }
+    } finally {
+      setBrokerImporting(false);
+    }
   }
 
   async function importBrokerFile(accountId: string, file: File) {
@@ -2316,7 +2345,8 @@ export default function InvestmentsPage() {
               value={brokerType}
               onChange={e => setBrokerType(e.target.value)}
             >
-              <option value="ibkr">IBKR — Interactive Brokers (Flex Query XML)</option>
+              <option value="ibkr">IBKR — Flex Query XML (file upload)</option>
+              <option value="ibkr_rest">IBKR — REST API (live sync via gateway)</option>
               <option value="etoro">eToro (portfolio CSV)</option>
               <option value="altshuler_shaham">Altshuler Shaham Trade (CSV / Excel)</option>
               <option value="altrade">ALTrade (CSV / Excel)</option>
@@ -2328,6 +2358,33 @@ export default function InvestmentsPage() {
               In IBKR Account Management: Reports → Flex Queries → Create query with <strong>Open Positions</strong> section → Run → Download XML.
             </p>
           )}
+          {brokerType === "ibkr_rest" && (
+            <div className="space-y-3 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20 p-3">
+              <p className="text-xs text-blue-700 dark:text-blue-400">
+                Requires the <strong>IBKR Client Portal Gateway</strong> running locally. Authenticate at <code>https://localhost:5000</code> in your browser first.
+              </p>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">Gateway URL</label>
+                  <input
+                    className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-ring"
+                    value={ibkrGatewayUrl}
+                    onChange={e => setIbkrGatewayUrl(e.target.value)}
+                    placeholder="https://localhost:5000"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">IBKR Account ID</label>
+                  <input
+                    className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-ring"
+                    value={ibkrAccountId}
+                    onChange={e => setIbkrAccountId(e.target.value)}
+                    placeholder="U1234567"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
           {(brokerType === "altshuler_shaham" || brokerType === "altrade") && (
             <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
               Export your portfolio from the broker's web portal as CSV or Excel (.xlsx). Both Hebrew and English column names are supported.
@@ -2335,6 +2392,15 @@ export default function InvestmentsPage() {
           )}
 
           {!brokerResult ? (
+            brokerType === "ibkr_rest" ? (
+              <Button
+                className="w-full"
+                onClick={() => importIBKRRest(brokerModal.accountId)}
+                disabled={brokerImporting || !ibkrAccountId.trim()}
+              >
+                {brokerImporting ? "Syncing…" : "Sync positions from gateway"}
+              </Button>
+            ) : (
             <label className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-8 cursor-pointer transition-colors ${brokerImporting ? "opacity-50 pointer-events-none" : "hover:border-primary/50 hover:bg-muted/30"}`}>
               <input
                 type="file"
@@ -2356,6 +2422,7 @@ export default function InvestmentsPage() {
                 </>
               )}
             </label>
+            )
           ) : (
             <div className={`rounded-lg border px-4 py-3 text-sm space-y-1 ${brokerResult.errors.length > 0 && brokerResult.imported === 0 && brokerResult.updated === 0 ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400" : "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400"}`}>
               <p className="font-medium">
