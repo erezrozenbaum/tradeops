@@ -1,0 +1,14 @@
+{{- if .Values.podDisruptionBudget.enabled -}}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "tradeops.fullname" . }}-backend
+  labels:
+    {{- include "tradeops.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "tradeops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+{{- end }}

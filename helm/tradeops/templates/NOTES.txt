@@ -19,9 +19,42 @@ TradeOps AI has been deployed!
 3. Check pod status:
   kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }}
 
+─────────────────────────────────────────────────────────────
+PRODUCTION SECURITY CHECKLIST
+─────────────────────────────────────────────────────────────
 {{- if not .Values.secret.anthropicApiKey }}
 
-WARNING: ANTHROPIC_API_KEY is not set. AI features (Market Research, AI Report,
-Recommendations, AI Agent) will return errors. Set it in your values:
-  helm upgrade {{ .Release.Name }} ./helm/tradeops --set secret.anthropicApiKey=sk-ant-...
+⚠ WARNING: ANTHROPIC_API_KEY is not set. AI features will fail.
+  Set: --set secret.anthropicApiKey=sk-ant-...
 {{- end }}
+{{- if not .Values.secret.jwtSecretKey }}
+
+⚠ WARNING: JWT_SECRET_KEY is not set. Auth tokens may use an insecure default.
+  Set: --set secret.jwtSecretKey="$(openssl rand -hex 32)"
+{{- end }}
+{{- if eq .Values.secret.postgresPassword "tradeops" }}
+
+⚠ WARNING: PostgreSQL password is using the insecure default "tradeops".
+  Change it: --set secret.postgresPassword="$(openssl rand -hex 16)"
+{{- end }}
+{{- if not .Values.ingress.tls }}
+
+⚠ WARNING: TLS is disabled. Enable it for production:
+  --set ingress.tls=true --set ingress.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-prod
+{{- end }}
+{{- if not .Values.networkPolicy.enabled }}
+
+ℹ  Network policies are disabled (networkPolicy.enabled=false).
+   Enable for production: --set networkPolicy.enabled=true
+{{- end }}
+{{- if and (gt (int .Values.backend.replicas) 1) (not .Values.podDisruptionBudget.enabled) }}
+
+ℹ  You are running {{ .Values.backend.replicas }} replicas but PodDisruptionBudget is disabled.
+   Enable: --set podDisruptionBudget.enabled=true
+{{- end }}
+
+Best practices:
+  • Use cert-manager for automatic TLS (https://cert-manager.io)
+  • Use ExternalSecrets or SealedSecrets for secret management
+  • Enable HPA: --set autoscaling.enabled=true
+  • Enable pod anti-affinity for HA: --set podAntiAffinity.enabled=true

@@ -57,12 +57,17 @@ postgresql:
     size: 10Gi
     storageClass: ""   # "" = use cluster default
 
-# ── Secrets (base64-encoded or plain — use SealedSecrets/ESO in prod) ──
+# ── Secrets (use SealedSecrets, ESO, or Vault in production — never commit real values) ──
 secret:
   # PostgreSQL password (also used to build DATABASE_URL when postgresql.enabled=true)
+  # MUST be changed from the default for any non-dev deployment
   postgresPassword: "tradeops"
   # Anthropic API key — required for AI features
   anthropicApiKey: ""
+  # JWT signing secret — MUST be a strong random string in production (≥32 chars)
+  jwtSecretKey: ""
+  # Alpha Vantage API key — optional fallback price provider
+  alphaVantageApiKey: ""
   # Supply a full DATABASE_URL to use an external database
   # Leave empty when postgresql.enabled=true (auto-composed from above)
   databaseUrl: ""
@@ -89,3 +94,31 @@ autoscaling:
 serviceAccount:
   create: true
   name: ""
+
+# ── Pod security context (applies to all app containers) ─────
+# Runs all containers as non-root user 1000 with dropped capabilities.
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+# ── Network Policy ───────────────────────────────────────────
+# Restricts pod-to-pod traffic: backend ← ingress-nginx + frontend only;
+# postgres ← backend only. Requires a CNI plugin that supports NetworkPolicy.
+networkPolicy:
+  enabled: false
+
+# ── Pod Disruption Budget ─────────────────────────────────────
+# Ensures at least 1 backend replica is available during voluntary disruptions.
+# Set enabled: true when backend.replicas >= 2.
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# ── Pod Anti-Affinity ─────────────────────────────────────────
+# Prefer scheduling backend pods on different nodes for HA.
+podAntiAffinity:
+  enabled: false
