@@ -1,354 +1,159 @@
 # TradeOps AI
 
-Personal Financial Intelligence Platform — AI-assisted financial analysis, strategy recommendation, backtesting, and paper trading.
+**Personal Financial Intelligence Platform** — not a trading bot.
 
-> **MVP status.** Live trading is intentionally disabled. The system is designed for financial education, analysis, and validated simulation only.
+TradeOps AI helps you understand your financial position, model risk accurately, select validated investment strategies, and simulate outcomes before committing real capital.
 
----
-
-## What it does
-
-```
-Investor Profile → Financial Context → Risk Model → Portfolio Tracking → Strategy → Backtest → Paper Trade → AI Report
-```
-
-1. **Investor & financial profiling** — personal data, income/expenses, assets, debts, goals, investment preferences
-2. **Financial stability scoring** — deterministic engine assessing readiness to invest
-3. **Risk allocation model** — percentage-based capital allocation with age-based safety rules and enforcement fields
-4. **Investment decision engine** — deterministic readiness assessment: ready / ready with limits / not ready / education only
-5. **Portfolio tracking** — manually add existing investment accounts and holdings; track P&L, asset allocation, and currency exposure across all accounts
-6. **Multi-currency support** — FX rates cached from open.er-api.com; all values normalised to investor's base currency
-7. **Market data** — live prices via yfinance (24h cache); "Refresh prices" updates all tickered holdings; price source shown per holding (`live` / `manual` / `cost_basis`)
-8. **Strategy recommendations** — ranked list from a curated template library
-9. **Backtesting** — deterministic simulation of strategy performance over configurable periods
-10. **Paper trading** — month-by-month portfolio simulation without real capital
-11. **AI financial report** — Claude-powered 7-section narrative analysis
-12. **Performance attribution** — holding-level contribution to return, rolling returns (1M/3M/6M/1Y), alpha vs TA-35 / S&P 500 benchmark (currency-aware)
-13. **Scenario analysis & stress testing** — 5 historical crash scenarios applied to portfolio tiers + Monte Carlo P10/P50/P90 fan chart to retirement
-14. **Dividend & income calendar** — forward annual dividend income per holding, yield-on-value/cost, upcoming ex-dividend dates (90-day window)
-15. **Tax-loss harvesting alerts** — identifies holdings with unrealized losses >5% that can offset gains; estimates tax saving; flags short-term vs long-term holdings and wash-sale risk
-16. **Professional PDF report** — multi-page client-grade PDF export (cover page, portfolio overview, performance analytics, stress test, tax summary); monthly or quarterly; generated on demand via `reportlab`
-17. **Beta vs benchmark** — portfolio market sensitivity (Cov/Var regression); displayed alongside Sharpe/Sortino on the Performance page
-18. **Per-holding CAGR** — annualised return since purchase date shown for each contributor and detractor in attribution
-19. **Price staleness warning** — amber banner when any tickered holding falls back to cost basis (no live market price available)
-20. **Fee-inclusive cost basis** — brokerage fees are now included in cost basis for correct P&L calculation
-21. **Pension fund tax correction** — pension and study funds exempt from flat 25% CGT; taxed as income at withdrawal
-22. **Single-stock concentration flag** — correlation engine warns when any single ticker > 15% of portfolio value
-23. **Family Consolidated View** — household AUM aggregated across all family members grouped by generation; cross-member ticker overlap detection; education-mode badges for minors (age < 18)
-24. **Liquidity Runway Engine** — tiers every holding by settlement speed (T+2 / 1wk / Locked); net-to-pocket = gross − estimated CGT − market impact; Emergency Lever greedily selects cheapest holdings to sell to meet a cash target
-25. **Resilience Stress-Test** — simulates a life-event scenario (job loss, expense spike) by draining cash reserve → Tier 1 → Tier 2 in cost-efficiency order; produces a Survival Score (0–100), depletion timeline, and optional Claude-generated recommendation
-26. **Market Signal Monitor** — daily yfinance news sentiment per held ticker (Claude Haiku); Personal Signal Guard mutes unstable or over-concentrated signals; 7-day rolling trend; whale (institutional) mention detection; connected insights (tax-loss harvest, rebalancing, accumulation)
-27. **Admin AI Cost Tracking** — logs every Claude API call (market signals + AI reports) with token counts and USD cost; admin panel shows totals, per-feature breakdown, and per-user expandable table with 7/30/90-day period selector
+**Version:** 0.82.0 · **Stack:** FastAPI · PostgreSQL · Next.js 14 · Docker · Helm/K8s
 
 ---
 
-## Tech stack
+## Philosophy
 
-| Layer      | Technology                              |
-|------------|-----------------------------------------|
-| Backend    | Python 3.11, FastAPI, SQLAlchemy, Alembic |
-| Database   | PostgreSQL 16                           |
-| Frontend   | Next.js 14 (App Router), Tailwind CSS, Recharts |
-| AI         | Anthropic Claude API                    |
-| Container  | Docker, Docker Compose                  |
-| CI         | GitHub Actions                          |
+```
+Financial safety → clarity → education → validation → automation
+```
+
+The system recommends the right things before investing: build an emergency fund, reduce high-interest debt, and establish a realistic risk model based on your actual financial situation — not just a vague "high risk" preference.
 
 ---
 
-## Quick start (Docker Compose)
+## Features
 
-### Prerequisites
-- Docker Desktop
-- Anthropic API key (for AI report generation)
+### Core Platform
+- **Investor & Family profiles** — household financial modeling, dependents, education mode for minors
+- **Financial profile** — income, expenses, savings rate, debts, assets, liabilities
+- **Financial Stability Score** — deterministic 0–100 score; restricts aggressive strategies when fragile
+- **Risk Allocation Model** — percentage-based investable capital (not vague low/medium/high)
+- **Goals engine** — linked accounts, progress tracking, monthly contribution gap analysis
 
-### 1. Clone
+### Portfolio Intelligence
+- **Investment accounts & holdings** — multi-account, multi-currency, all asset types
+- **Live price refresh** — Alpha Vantage / yfinance with 24h cache
+- **Real-time SSE streaming** — live price updates via Server-Sent Events (30s interval)
+- **Portfolio analysis** — P&L, unrealized/realized gains, after-tax P&L, FX exposure
+- **Performance attribution** — TWR, MWR (IRR), alpha vs benchmark, per-holding CAGR
+- **Rebalancing engine** — actionable BUY/SELL suggestions per allocation tier
+- **Correlation matrix** — 90-day Pearson correlation, concentration risk flags
+- **Stress testing** — 5 historical crash scenarios + Monte Carlo P10/P50/P90
+- **Income projection** — dividends, staking rewards, pension/study fund contributions
+- **Tax-loss harvesting** — candidates sorted by estimated saving, wash-sale warnings
+- **Liquidity runway** — T+2 / 1-week / locked tier breakdown, emergency liquidation path
+- **Resilience simulator** — job loss / expense shock survival score with depletion path
 
-```bash
-git clone https://github.com/erezrozenbaum/tradeops.git
-cd tradeops
-```
+### Strategy & Simulation
+- **Strategy library** — curated templates matched to risk model and suitability
+- **Backtesting** — deterministic seeded simulation engine
+- **Paper trading** — monthly tick simulation using investable capital from risk model
+- **Pairs trading** — statistical arbitrage: OLS hedge ratio, ADF cointegration, Z-score signals
 
-### 2. Configure environment
+### AI Intelligence (requires `ANTHROPIC_API_KEY`)
+- **AI Report** — full portfolio analysis generated by Claude
+- **Recommendations** — tailored picks matched to risk model, goals, and holdings
+- **Deep Market Research** — screens 63 instruments; AI investment theses, 3-tier portfolio
+- **AI Agent** — free-form financial assistant grounded in real portfolio data
+- **AI Portfolio Chat** — natural language Q&A, 5-turn context window
+- **Market Signal Monitor** — daily news sentiment + whale mention detection per holding
+- **Daily Action Feed** — aggregated morning briefing: what to do today, prioritised
+- **AI Weekly Digest** — Friday email with portfolio performance and 1–3 suggestions
 
-```bash
-cp backend/.env.example backend/.env
-```
+### Data Import
+- **Broker Import** — IBKR Flex XML, eToro CSV, Altshuler Shaham, ALTrade (XLSX/CSV)
+- **IBKR REST Sync** — live position sync from IBKR Client Portal Gateway (no file export)
+- **PDF Statement Import** — AI-powered parsing of any broker PDF format
+- **Broker Auto-Sync** — daily scheduled sync for connected accounts
+- **Crypto Staking Tracking** — APY-based staking rewards as income
+- **Options tracking** — call/put with strike/expiry/multiplier; long/short P&L
 
-Edit `backend/.env`:
-
-```env
-DATABASE_URL=postgresql://tradeops:tradeops@db:5432/tradeops
-ANTHROPIC_API_KEY=sk-ant-...
-SECRET_KEY=change-me-in-production
-```
-
-### 3. Start
-
-```bash
-cd infra
-docker compose up
-```
-
-This will:
-- Start PostgreSQL
-- Run `alembic upgrade head` (schema migrations + strategy template seed)
-- Start the FastAPI backend on `http://localhost:8000`
-- Start the Next.js dev server on `http://localhost:3000`
-
-### 4. Open the app
-
-Go to [http://localhost:3000](http://localhost:3000).  
-On first run, the login page will open the profile creation form automatically — fill in your details and you'll be taken straight to the dashboard.
-
----
-
-## Development (local, without Docker)
-
-### Backend
-
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-# set DATABASE_URL in backend/.env pointing to a local or Docker PostgreSQL
-alembic upgrade head
-uvicorn app.main:app --reload
-```
-
-API docs available at [http://localhost:8000/docs](http://localhost:8000/docs).
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-App available at [http://localhost:3000](http://localhost:3000).
-
----
-
-## Project structure
-
-```
-tradeops/
-├── backend/
-│   ├── app/
-│   │   ├── api/v1/router.py        # Route assembly
-│   │   ├── models/                  # SQLAlchemy ORM models
-│   │   ├── schemas/                 # Pydantic request/response schemas
-│   │   ├── investor_profiles/
-│   │   ├── financial_profiles/
-│   │   ├── family_profiles/
-│   │   ├── goals/
-│   │   ├── financial_scoring/       # Stability score engine
-│   │   ├── risk_modeling/
-│   │   ├── strategy_library/
-│   │   ├── strategy_selection/
-│   │   ├── backtesting/             # Simulation engine
-│   │   ├── paper_trading/
-│   │   ├── financial_decision/      # Investment readiness engine
-│   │   ├── holdings/                # Investment accounts + holdings CRUD
-│   │   ├── currency_engine/         # FX rate fetch + conversion
-│   │   ├── portfolio_analysis/      # P&L, allocation, currency exposure
-│   │   ├── performance_analytics/   # Sharpe, Sortino, drawdown, attribution
-│   │   ├── scenario_analysis/       # Historical crash scenarios + Monte Carlo
-│   │   ├── income_projection/       # Dividend income per holding + ex-date calendar
-│   │   ├── tax_harvesting/          # Tax-loss harvesting opportunity detection
-│   │   ├── tax_rules/               # Country-specific CGT rules for AI context
-│   │   ├── family_portfolio/        # Household portfolio aggregation by family member + generation
-│   │   ├── liquidity_runway/        # Liquidity tiering + net-to-pocket + emergency lever
-│   │   ├── resilience/              # Life-event depletion simulation + survival score
-│   │   ├── market_signals/          # Daily sentiment + Personal Signal Guard + trend + whale detection
-│   │   ├── reports/                 # PDF report generation (reportlab)
-│   │   ├── ai_analysis/             # Claude integration
-│   │   ├── audit/
-│   │   └── dashboard/
-│   ├── alembic/versions/            # DB migrations
-│   └── tests/
-├── frontend/
-│   └── src/app/
-│       ├── (auth)/login/            # Login + profile creation
-│       └── (dashboard)/
-│           ├── dashboard/           # Overview + Investment Readiness + Portfolio widget
-│           ├── investments/         # Account + holdings tracking, portfolio summary, dividend income
-│           ├── performance/         # Equity curve, risk metrics, attribution, tax opportunities
-│           ├── stress-test/         # Scenario analysis + Monte Carlo fan chart
-│           ├── financial/           # Financial profile + assets/liabilities
-│           ├── goals/
-│           ├── family/
-│           ├── profile/             # Investor profile + investment preferences
-│           ├── risk/
-│           ├── strategies/
-│           ├── backtesting/
-│           ├── paper-trading/
-│           ├── reports/
-│           ├── audit/
-│           └── settings/
-├── infra/
-│   └── docker-compose.yml
-└── docs/
-    ├── architecture.md
-    ├── admin-guide.md
-    └── project_spec.md
-```
-
----
-
-## API reference
-
-Interactive docs: `http://localhost:8000/docs` (Swagger UI)
-
-Key endpoints:
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET/POST | `/api/v1/investors` | List / create investor profiles |
-| GET/PUT | `/api/v1/investors/{id}` | Get / update investor profile |
-| GET/POST/PUT | `/api/v1/investors/{id}/financial-profile` | Financial profile |
-| GET/POST | `/api/v1/investors/{id}/risk-model` | Risk allocation model |
-| GET | `/api/v1/investors/{id}/decision` | Investment readiness decision |
-| GET | `/api/v1/investors/{id}/portfolio` | Portfolio analysis (P&L, allocation, exposure) |
-| POST | `/api/v1/investors/{id}/portfolio/refresh-prices` | Force-refresh market prices for all tickered holdings |
-| GET | `/api/v1/investors/{id}/portfolio/analytics` | Risk-adjusted metrics (Sharpe, Sortino, drawdown, benchmark) |
-| GET | `/api/v1/investors/{id}/portfolio/attribution` | Holding-level attribution + rolling returns + alpha |
-| GET | `/api/v1/investors/{id}/portfolio/history` | Historical portfolio snapshots (1m/3m/6m/1y/all) |
-| GET | `/api/v1/investors/{id}/portfolio/stress-test` | Scenario analysis + Monte Carlo simulation |
-| GET | `/api/v1/investors/{id}/portfolio/income` | Dividend income projection + upcoming ex-dates |
-| GET | `/api/v1/investors/{id}/portfolio/tax-opportunities` | Tax-loss harvesting alerts + estimated savings |
-| GET | `/api/v1/investors/{id}/portfolio/complexity-premium` | Complexity Premium vs passive 60/40 lazy portfolio |
-| GET | `/api/v1/investors/{id}/portfolio/liquidity-runway` | Liquidity tier breakdown + optional Emergency Lever (`?target_amount=`) |
-| POST | `/api/v1/investors/{id}/portfolio/resilience` | Life-event resilience simulation — depletion path, survival score (0–100), optional AI recommendation |
-| GET | `/api/v1/investors/{id}/market-signals` | Daily news sentiment per held ticker — composite score, trend direction, whale detection, connected insights |
-| POST | `/api/v1/investors/{id}/market-signals/{signal_id}/dismiss` | Dismiss a signal so it no longer appears in the monitor |
-| GET | `/api/v1/investors/{id}/family-portfolio` | Household portfolio aggregated by family member + generation |
-| GET | `/api/v1/investors/{id}/portfolio/rebalance` | Rebalance recommendations vs target allocation |
-| GET | `/api/v1/investors/{id}/reports/pdf` | PDF report download (`?period=monthly\|quarterly`) |
-| GET | `/api/v1/market/quote/{ticker}` | Get cached or fresh quote for a ticker |
-| GET/POST | `/api/v1/investors/{id}/accounts` | Investment accounts |
-| GET/PUT/DELETE | `/api/v1/investors/{id}/accounts/{id}` | Manage account |
-| GET/POST | `/api/v1/investors/{id}/accounts/{id}/holdings` | Holdings per account |
-| PUT/DELETE | `/api/v1/investors/{id}/accounts/{id}/holdings/{id}` | Manage holding |
-| GET/POST | `/api/v1/investors/{id}/strategies` | Strategy recommendations |
-| GET/POST | `/api/v1/investors/{id}/backtests` | Backtest runs |
-| GET/POST | `/api/v1/investors/{id}/paper-portfolios` | Paper trading portfolios |
-| POST | `/api/v1/investors/{id}/ai-report` | Generate AI financial report |
-| GET | `/api/v1/investors/{id}/audit-events` | Audit log |
-| GET | `/api/v1/strategies/templates` | Strategy template library |
+### Operational
+- **Audit log** — every significant action recorded
+- **Admin panel** — user management, AI cost tracking per feature
+- **PWA** — installable, offline-capable
+- **Mobile-first UI** — responsive sidebar, touch-friendly layouts
+- **Kubernetes / Helm** — production-hardened chart with NetworkPolicy, PDB, securityContext
 
 ---
 
 ## Architecture
 
-### System overview
-
-```mermaid
-graph TD
-    subgraph Browser["Browser (Next.js 14 App Router)"]
-        UI[Dashboard / Pages]
-    end
-
-    subgraph API["FastAPI Backend (Python 3.11)"]
-        PA[Portfolio Analysis\nP&L · Allocation · FX]
-        PERF[Performance Analytics\nSharpe · Sortino · Attribution]
-        SC[Scenario Analysis\nCrash Scenarios · Monte Carlo]
-        RES[Resilience Engine\nLife-Event Simulation · Survival Score]
-        LQ[Liquidity Runway\nTier Bucketing · Emergency Lever]
-        FP[Family Portfolio\nHousehold AUM · Generations]
-        TX[Tax Harvesting\nLoss Alerts · Replacement]
-        AI[AI Analysis\nClaude-Powered Reports]
-        STRAT[Strategy Library\n+ Selection + Backtest]
-        BROKER[Broker Import\nIBKR · eToro · Altshuler · ALTrade]
-        MD[Market Data\nyfinance · ER-API Cache]
-    end
-
-    subgraph Data["PostgreSQL 16"]
-        DB[(Database)]
-    end
-
-    UI -->|REST| PA & PERF & SC & RES & LQ & FP & TX & AI & STRAT & BROKER
-    PA & PERF & SC & RES & LQ & FP & TX & STRAT & BROKER --> DB
-    MD --> DB
-    AI -->|Anthropic API| Claude[(Claude)]
+```
+Browser (Next.js 14 + App Router)
+        │  REST/JSON + SSE
+        ▼
+FastAPI (Python 3.11)  ←→  Claude API (AI features)
+        │  SQLAlchemy ORM
+        ▼
+PostgreSQL 16
 ```
 
-### Database schema (key tables)
+All services run as Docker containers. Helm chart at `helm/tradeops/` for Kubernetes.
+See [`docs/architecture.md`](docs/architecture.md) for full module and routing reference.
 
-```mermaid
-erDiagram
-    investor_profiles ||--o{ investment_accounts : owns
-    investor_profiles ||--o| financial_profiles : has
-    investor_profiles ||--o{ financial_goals : sets
-    investor_profiles ||--o{ risk_models : has
-    investor_profiles ||--o{ audit_events : generates
-    investor_profiles ||--o{ portfolio_snapshots : tracks
+---
 
-    family_profiles ||--o{ family_members : contains
-    family_members ||--o{ investment_accounts : attributed_to
+## Quickstart
 
-    investment_accounts ||--o{ investment_holdings : holds
-    investment_holdings ||--o{ holding_transactions : records
+### Prerequisites
+- Docker + Docker Compose
+- `ANTHROPIC_API_KEY` (optional — AI features only)
 
-    financial_profiles ||--o{ financial_assets : lists
-    financial_profiles ||--o{ financial_liabilities : lists
+### 1. Clone and configure
 
-    strategy_templates ||--o{ generated_strategies : instantiates
-    generated_strategies ||--o{ backtest_runs : tested_by
-    generated_strategies ||--o{ paper_portfolios : simulated_by
-    paper_portfolios ||--o{ paper_trades : executes
-
-    investment_holdings {
-        uuid id
-        string name
-        string ticker
-        string asset_type
-        float quantity
-        float avg_buy_price
-        float brokerage_fee
-        date purchase_date
-        string currency
-    }
-
-    investor_profiles {
-        uuid id
-        string full_name
-        string country
-        string base_currency
-        date date_of_birth
-        string risk_tolerance
-    }
-
-    financial_profiles {
-        uuid id
-        float monthly_income
-        float monthly_expenses
-        float liquid_savings
-        float emergency_fund_months
-        string job_stability
-    }
+```bash
+git clone https://github.com/erezrozenbaum/tradeops.git
+cd tradeops
+cp backend/.env.example backend/.env
+# Set ANTHROPIC_API_KEY and JWT_SECRET_KEY in backend/.env
 ```
+
+### 2. Start
+
+```bash
+docker compose -f infra/docker-compose.yml up -d
+```
+
+### 3. Open
+
+| Service | URL |
+|---------|-----|
+| App | http://localhost:3000 |
+| API docs | http://localhost:8000/docs |
+
+Migrations run automatically on backend startup.
+
+---
+
+## Key environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `JWT_SECRET_KEY` | Yes | HS256 signing key (min 32 chars) |
+| `ANTHROPIC_API_KEY` | No | Enables all AI features |
+| `ALPHA_VANTAGE_API_KEY` | No | Higher price fetch rate limit |
+| `WORKERS_ENABLED` | No | `true` to enable background jobs |
+| `SMTP_HOST/USER/PASS` | No | Required for weekly digest emails |
+
+---
+
+## Documentation
+
+| Doc | Description |
+|-----|-------------|
+| [`docs/architecture.md`](docs/architecture.md) | Modules, API routing, frontend structure |
+| [`docs/schema.md`](docs/schema.md) | Full DB schema + migration history |
+| [`docs/admin-guide.md`](docs/admin-guide.md) | Installation, ops, K8s, troubleshooting |
+| [`docs/execution_plan.md`](docs/execution_plan.md) | Roadmap with implementation status |
+| [`CHANGELOG.md`](CHANGELOG.md) | Version history |
 
 ---
 
 ## Safety principles
 
-- Live trading is **disabled** in MVP scope
-- Minors are restricted to education-only mode
-- All strategy recommendations come from curated templates — AI cannot invent trading logic
-- Every significant action is written to the audit log
-- The system can recommend *not* investing (emergency fund, debt reduction first)
-- Risk allocation is percentage-based, not a vague low/medium/high slider
-
----
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md).
-
----
-
-## License
-
-Private — all rights reserved.
+1. AI never directly executes trades
+2. Live trading disabled by default — requires admin toggle + paper track record
+3. Every order passes the deterministic Risk Engine
+4. Strategy recommendations come from curated templates only
+5. Minors are education-only by default
+6. The system can recommend "don't invest yet"
+7. All significant actions are audit-logged
