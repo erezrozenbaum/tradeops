@@ -112,6 +112,7 @@ function isStale(iso: string): boolean {
 }
 
 function parseError(status: number, detail?: string): string {
+  if (status === 401) return "SESSION_EXPIRED";
   if (status === 503) return "AI service not configured — ANTHROPIC_API_KEY is missing.";
   if (status === 404) return "Investor profile not found. Try logging in again.";
   if (status === 502) return "Backend server unreachable. Make sure it is running.";
@@ -564,13 +565,21 @@ export default function MarketResearchPage() {
 
       {/* Error */}
       {error && (
-        <div className="flex items-start gap-3 text-sm p-4 rounded-lg border border-red-500/20 bg-red-500/5 text-red-600">
-          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          <div className="flex-1">{error}</div>
-          <button onClick={generate} disabled={loading} className="text-xs font-medium underline underline-offset-2 shrink-0">
-            Retry
-          </button>
-        </div>
+        error === "SESSION_EXPIRED" ? (
+          <div className="flex items-start gap-3 text-sm p-4 rounded-lg border border-amber-500/20 bg-amber-500/5 text-amber-700 dark:text-amber-400">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <div className="flex-1">Your session has expired. Please sign in again to refresh market research.</div>
+            <a href="/" className="text-xs font-medium underline underline-offset-2 shrink-0">Sign in</a>
+          </div>
+        ) : (
+          <div className="flex items-start gap-3 text-sm p-4 rounded-lg border border-red-500/20 bg-red-500/5 text-red-600">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <div className="flex-1">{error}</div>
+            <button onClick={generate} disabled={loading} className="text-xs font-medium underline underline-offset-2 shrink-0">
+              Retry
+            </button>
+          </div>
+        )
       )}
 
       {/* Stale notice */}
