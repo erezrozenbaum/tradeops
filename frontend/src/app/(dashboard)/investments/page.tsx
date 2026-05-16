@@ -354,6 +354,10 @@ export default function InvestmentsPage() {
   // Earnings calendar
   const [earningsMap, setEarningsMap] = useState<Record<string, string>>({});
 
+  // Live price streaming via SSE
+  const [livePrices, setLivePrices] = useState<Record<string, { price: number; currency: string }>>({});
+  const [liveConnected, setLiveConnected] = useState(false);
+
   useEffect(() => {
     if (!investorId) return;
     loadAll();
@@ -370,6 +374,28 @@ export default function InvestmentsPage() {
         }
       });
   }, [investorId]);
+
+  // SSE: open price stream once portfolio is loaded (has tickers to watch)
+  useEffect(() => {
+    if (!investorId || !portfolio) return;
+    const tickers = portfolio.accounts
+      .flatMap(a => a.holdings)
+      .map((h: { ticker?: string | null }) => h.ticker)
+      .filter((t): t is string => !!t)
+      .join(",");
+    if (!tickers) return;
+
+    const es = new EventSource(`/api/v1/market/stream?tickers=${encodeURIComponent(tickers)}&interval=30`);
+    es.onopen = () => setLiveConnected(true);
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data) as Record<string, { price: number; currency: string }>;
+        setLivePrices(prev => ({ ...prev, ...data }));
+      } catch {}
+    };
+    es.onerror = () => setLiveConnected(false);
+    return () => { es.close(); setLiveConnected(false); };
+  }, [investorId, portfolio]);
 
   async function loadAll() {
     setLoading(true);
@@ -1759,7 +1785,17 @@ export default function InvestmentsPage() {
                         <th className="text-left pb-2 font-medium">Type</th>
                         <th className="text-right pb-2 font-medium">Qty</th>
                         <th className="text-right pb-2 font-medium">Buy price</th>
-                        <th className="text-right pb-2 font-medium">Current value</th>
+                        <th className="text-right pb-2 font-medium">
+                          <span className="inline-flex items-center gap-1">
+                            Current value
+                            {liveConnected && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-green-600 dark:text-green-400">
+                                <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                                LIVE
+                              </span>
+                            )}
+                          </span>
+                        </th>
                         <th className="text-right pb-2 font-medium">P&L</th>
                         <th className="w-16" />
                       </tr>
@@ -1872,7 +1908,13 @@ export default function InvestmentsPage() {
                               ) : (
                                 <>
                                   <p className="tabular-nums">{formatCurrency(h.avg_buy_price, h.currency)}</p>
-                                  {ha?.price_source === "live" && ha.live_price != null && (
+                                  {h.ticker && livePrices[h.ticker] ? (
+                                    <p className="text-xs text-green-600 tabular-nums">
+                                      {formatCurrency(livePrices[h.ticker].price, livePrices[h.ticker].currency)}
+                                      {" "}
+                                      <span className="text-[10px] opacity-70">streaming</span>
+                                    </p>
+                                  ) : ha?.price_source === "live" && ha.live_price != null && (
                                     <p className="text-xs text-green-600 tabular-nums">{formatCurrency(ha.live_price, ha.live_price_currency ?? h.currency)} now</p>
                                   )}
                                 </>
