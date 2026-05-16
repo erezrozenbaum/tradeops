@@ -38,15 +38,13 @@ export default function JoinPage() {
     setAccepting(true);
     setError(null);
     try {
-      const authToken = localStorage.getItem("token");
-      if (!authToken) {
+      const res = await fetch(`/api/v1/family-profiles/invite/${token}/accept`, {
+        method: "POST",
+      });
+      if (res.status === 401) {
         router.push(`/login?redirect=/join?token=${token}`);
         return;
       }
-      const res = await fetch(`/api/v1/family-profiles/invite/${token}/accept`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
       if (res.ok) {
         setAccepted(true);
       } else {

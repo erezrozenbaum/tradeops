@@ -97,9 +97,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("tradeops_token");
-    if (!token) return;
-    fetch("/api/v1/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+    fetch("/api/v1/auth/me")
       .then(r => r.ok ? r.json() : null)
       .then(u => { if (u?.role === "admin") setIsAdmin(true); })
       .catch(() => {});
@@ -110,9 +108,9 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
     router.push("/login");
   }
 
-  function handleSignOut() {
+  async function handleSignOut() {
     localStorage.removeItem("tradeops_investor_id");
-    localStorage.removeItem("tradeops_token");
+    await fetch("/api/v1/auth/logout", { method: "POST" }).catch(() => {});
     router.push("/login");
   }
 

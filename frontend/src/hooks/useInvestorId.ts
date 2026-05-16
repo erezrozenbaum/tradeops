@@ -7,9 +7,8 @@ export function useInvestorId(): string | null {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem("tradeops_token");
     const id = localStorage.getItem("tradeops_investor_id");
-    if (!token || !id) {
+    if (!id) {
       router.push("/login");
     } else {
       setInvestorId(id);
