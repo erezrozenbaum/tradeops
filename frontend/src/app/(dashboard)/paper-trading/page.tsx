@@ -77,6 +77,8 @@ export default function PaperTradingPage() {
         setPortfolios(p);
         setTemplates(t);
         if (t.length > 0) setTemplateId(t[0].id);
+        // Auto-select the most recent portfolio so users don't land on an empty right panel
+        if (p.length > 0) loadDetail(p[0].id);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -170,7 +172,8 @@ export default function PaperTradingPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Paper Trading</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Simulate live trading without real capital
+          Simulate a strategy using your investable capital — no real money at risk.
+          Pick a strategy, start a portfolio, then advance ticks (each = one simulated month) to see performance over time.
         </p>
       </div>
 
@@ -273,6 +276,19 @@ export default function PaperTradingPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Zero-capital warning */}
+                {selected.initial_capital === 0 && (
+                  <div className="flex items-start gap-3 text-sm p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-400">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">No investable capital set</p>
+                      <p className="text-xs mt-0.5 opacity-80">
+                        Your risk model has ₪0 investable capital. Go to <strong>Financial</strong> → set your savings and investable %, then regenerate your <strong>Risk Model</strong>. The simulation will then use real capital.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-3 gap-4">
                   {[
                     {
@@ -334,10 +350,14 @@ export default function PaperTradingPage() {
                   </div>
                 )}
 
-                {selected.ticks.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    No ticks yet — click &quot;Advance tick&quot; to simulate one month.
-                  </p>
+                {selected.ticks.length === 0 && selected.status === "active" && (
+                  <div className="text-center py-8 space-y-1">
+                    <p className="text-sm font-medium">Ready to simulate</p>
+                    <p className="text-xs text-muted-foreground">
+                      Click <strong>Advance tick</strong> to simulate one month of returns based on the <strong>{selected.template.name}</strong> strategy.
+                      Each tick applies a randomised monthly return from the strategy&apos;s return distribution.
+                    </p>
+                  </div>
                 )}
               </CardContent>
             </Card>
