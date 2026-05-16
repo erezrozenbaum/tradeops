@@ -10,6 +10,28 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.75.0] — 2026-05-16
+
+### Security — JWT httpOnly Cookie Migration (TASK 83)
+
+Replaced localStorage-based JWT storage with server-set httpOnly cookies, eliminating XSS token theft risk.
+
+**Backend**
+- **`auth/dependencies.py`**: `get_current_user` now reads the `tradeops_token` cookie first; falls back to `Authorization: Bearer` for backward compatibility with existing Bearer clients. `HTTPBearer` changed to `auto_error=False` so missing headers don't throw 422.
+- **`auth/router.py`**: `POST /login` now sets an httpOnly, SameSite=Lax, 7-day cookie on the response instead of returning the raw token in the body. Response body changed to `{"message": "Login successful"}`. Added `POST /logout` endpoint (204) that clears the cookie.
+
+**Frontend**
+- **`auth-fetch-patch.tsx`**: Bearer injection removed; component is now a no-op. Cookies are sent automatically for same-origin `/api/` requests via the Next.js proxy rewrite.
+- **`lib/api.ts`**: Removed `getToken()` and `Authorization` header injection. 401 handler clears `tradeops_investor_id` and redirects to `/login`.
+- **`hooks/useInvestorId.ts`**: Removed token guard — only checks `tradeops_investor_id` in localStorage. Auth is validated by the cookie on the first API call.
+- **`login/page.tsx`**: Removed `token` state and all `localStorage.setItem/getItem("tradeops_token")` calls. Mount effect now calls `GET /auth/me` to detect existing session via cookie. After login, server cookie is set and `loadProfiles()` is called without an explicit token param.
+- **`sidebar.tsx`**: Sign-out now calls `POST /api/v1/auth/logout` to clear the server cookie, then clears `tradeops_investor_id`. Admin check fetches `/auth/me` without explicit Bearer header.
+- **`join/page.tsx`**: Fixed stale wrong key (`"token"` → cookie-based auth). Unauthenticated users are redirected to `/login` on 401 response.
+
+**Tests:** 389 backend tests passing. 0 TypeScript errors.
+
+---
+
 ## [0.74.0] — 2026-05-15
 
 ### Added — Proactive Insights Cache + DB CHECK Constraints
