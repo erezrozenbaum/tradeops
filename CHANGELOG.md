@@ -10,6 +10,29 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.82.0] — 2026-05-16
+
+### Added — Real-time SSE Price Streaming (TASK 90)
+
+Server-Sent Events endpoint for live price streaming across all portfolio tickers.
+
+**Backend (`app/market_data/router.py`)**
+- `GET /api/v1/market/stream?tickers=AAPL,MSFT&interval=30` — SSE endpoint (`text/event-stream`).
+- Accepts comma-separated tickers (max 20) and refresh interval 5–300 s (default 30 s).
+- Each event: `data: {"AAPL": {"price": 213.5, "currency": "USD", "fetched_at": "..."}}\n\n`
+- Sends one event immediately, then every `interval` seconds.
+- Uses `asyncio.run_in_executor` to keep the async loop free while DB + market data fetch runs in thread pool.
+- Creates a fresh `SessionLocal()` per tick (SSE connections are long-lived; request-scoped `get_db` sessions would close immediately after the first response chunk).
+- Sets `X-Accel-Buffering: no` to disable nginx buffering.
+
+**Frontend (`app/(dashboard)/investments/page.tsx`)**
+- Added `livePrices` and `liveConnected` state.
+- `useEffect` opens an `EventSource` after `portfolio` loads, subscribing to all tickers found in the portfolio holdings. Closes on unmount or portfolio change.
+- Holdings table "Current value" header shows a pulsing green dot + "LIVE" label when the SSE connection is open.
+- Each holding row shows the streaming price ("streaming" suffix) in the buy price column when SSE data is available for that ticker, falling back to the cached `ha.live_price` otherwise.
+
+---
+
 ## [0.81.0] — 2026-05-16
 
 ### Hardened — Kubernetes + Helm Production Readiness (TASK 89)
