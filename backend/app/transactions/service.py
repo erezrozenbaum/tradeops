@@ -15,6 +15,7 @@ def list_transactions(
     tx_type: str | None = None,
     since: date | None = None,
     until: date | None = None,
+    skip: int = 0,
     limit: int = 200,
 ) -> list[HoldingTransaction]:
     q = db.query(HoldingTransaction).filter(HoldingTransaction.investor_id == investor_id)
@@ -28,7 +29,7 @@ def list_transactions(
         q = q.filter(HoldingTransaction.transaction_date >= since)
     if until:
         q = q.filter(HoldingTransaction.transaction_date <= until)
-    return q.order_by(HoldingTransaction.transaction_date.desc()).limit(limit).all()
+    return q.order_by(HoldingTransaction.transaction_date.desc()).offset(skip).limit(limit).all()
 
 
 def get_transaction(db: Session, tx_id: uuid.UUID) -> HoldingTransaction | None:

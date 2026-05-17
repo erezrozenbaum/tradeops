@@ -4,7 +4,7 @@
 
 TradeOps AI helps you understand your financial position, model risk accurately, select validated investment strategies, and simulate outcomes before committing real capital.
 
-**Version:** 0.82.0 · **Stack:** FastAPI · PostgreSQL · Next.js 14 · Docker · Helm/K8s
+**Version:** 0.86.0 · **Stack:** FastAPI · PostgreSQL · Next.js 14 · Docker · Helm/K8s
 
 ---
 
@@ -65,9 +65,17 @@ The system recommends the right things before investing: build an emergency fund
 - **Crypto Staking Tracking** — APY-based staking rewards as income
 - **Options tracking** — call/put with strike/expiry/multiplier; long/short P&L
 
+### Live Trading (Gated)
+- **5-gate readiness check** — paper track record (Sharpe > 0.5, ≥30 days), risk acknowledgment, admin approval, order risk limits, IBKR connection
+- **IBKR Client Portal Gateway** — market and limit orders; order cancellation; position sync
+- **Kill switch** — halts session and cancels all open orders immediately
+
 ### Operational
 - **Audit log** — every significant action recorded
 - **Admin panel** — user management, AI cost tracking per feature
+- **Login rate limiting** — 5 attempts per IP per 5-minute window
+- **AI monthly budget guard** — configurable per-investor USD spending cap
+- **CORS** — configurable via `ALLOWED_ORIGINS` env var
 - **PWA** — installable, offline-capable
 - **Mobile-first UI** — responsive sidebar, touch-friendly layouts
 - **Kubernetes / Helm** — production-hardened chart with NetworkPolicy, PDB, securityContext
@@ -143,7 +151,6 @@ Migrations run automatically on backend startup.
 | [`docs/architecture.md`](docs/architecture.md) | Modules, API routing, frontend structure |
 | [`docs/schema.md`](docs/schema.md) | Full DB schema + migration history |
 | [`docs/admin-guide.md`](docs/admin-guide.md) | Installation, ops, K8s, troubleshooting |
-| [`docs/execution_plan.md`](docs/execution_plan.md) | Roadmap with implementation status |
 | [`CHANGELOG.md`](CHANGELOG.md) | Version history |
 
 ---

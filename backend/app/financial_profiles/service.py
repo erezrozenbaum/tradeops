@@ -15,6 +15,50 @@ from app.schemas.financial_profile import (
 from app.audit import service as audit
 
 
+def compute_effective_ef_months(
+    db: Session,
+    investor_id: uuid.UUID,
+    fp: FinancialProfile,
+) -> float:
+    """Return max(stored EF months, EF months computed from flagged holdings/accounts).
+
+    Uses stored holding values (current_balance / current_value).  The risk model
+    generator has its own variant that also incorporates live portfolio prices for
+    greater accuracy — this version is appropriate for dashboard and scoring calls.
+    """
+    effective = fp.emergency_fund_months
+    if fp.monthly_expenses <= 0:
+        return effective
+
+    from app.models.investment_account import InvestmentAccount, InvestmentHolding
+
+    ef_holdings = (
+        db.query(InvestmentHolding)
+        .join(InvestmentAccount, InvestmentHolding.account_id == InvestmentAccount.id)
+        .filter(
+            InvestmentAccount.investor_id == investor_id,
+            InvestmentHolding.is_emergency_fund.is_(True),
+        )
+        .all()
+    )
+    if not ef_holdings:
+        ef_accounts = (
+            db.query(InvestmentAccount)
+            .filter(
+                InvestmentAccount.investor_id == investor_id,
+                InvestmentAccount.is_emergency_fund.is_(True),
+            )
+            .all()
+        )
+        ef_holdings = [h for acc in ef_accounts for h in acc.holdings]
+
+    if ef_holdings:
+        ef_total = sum(h.current_balance or h.current_value or 0.0 for h in ef_holdings)
+        effective = max(effective, ef_total / fp.monthly_expenses)
+
+    return effective
+
+
 def get_by_investor(db: Session, investor_id: uuid.UUID) -> FinancialProfile | None:
     return (
         db.query(FinancialProfile)
