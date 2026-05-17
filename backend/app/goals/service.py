@@ -12,11 +12,18 @@ def get(db: Session, goal_id: uuid.UUID) -> FinancialGoal | None:
     return db.get(FinancialGoal, goal_id)
 
 
-def get_by_investor(db: Session, investor_id: uuid.UUID) -> list[FinancialGoal]:
+def get_by_investor(
+    db: Session,
+    investor_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100,
+) -> list[FinancialGoal]:
     return (
         db.query(FinancialGoal)
         .filter(FinancialGoal.investor_profile_id == investor_id)
         .order_by(FinancialGoal.priority)
+        .offset(skip)
+        .limit(limit)
         .all()
     )
 

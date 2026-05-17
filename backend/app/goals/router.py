@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -32,8 +32,13 @@ def create_goal(
 
 
 @router.get("", response_model=list[FinancialGoalOut])
-def list_goals(investor_id: uuid.UUID, db: Session = Depends(get_db)):
-    goals = service.get_by_investor(db, investor_id)
+def list_goals(
+    investor_id: uuid.UUID,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    goals = service.get_by_investor(db, investor_id, skip=skip, limit=limit)
     return [_enrich(g, db) for g in goals]
 
 

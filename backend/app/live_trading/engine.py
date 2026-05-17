@@ -3,9 +3,9 @@
 Five hard gates — ALL must pass before any order is submitted:
   1. Paper trading: ≥30 calendar days old, ≥3 ticks, Sharpe ratio > 0.5
   2. Risk acknowledgment: investor explicitly acknowledged real-money risk
-  3. Risk model: live_trading_allowed = True (admin-toggled per investor)
-  4. Order risk: estimated_value / investable_capital <= max_trade_size_pct %
-                 open order count < max_open_positions
+  3. Admin approval: risk_model.live_trading_allowed = True
+  4. Order risk limits: investable_capital > 0, max_trade_size_pct and
+                        max_open_positions configured in risk model
   5. IBKR connection: gateway reachable and authenticated
 """
 import math
@@ -139,6 +139,34 @@ def _gate_admin_enabled(db: Session, investor_id: uuid.UUID) -> GateStatus:
     )
 
 
+# ── Gate 4: order risk limits configured ─────────────────────────────────────
+
+def _gate_order_risk_limits(db: Session, investor_id: uuid.UUID) -> GateStatus:
+    """Static check — risk model has order-size and position limits set."""
+    risk_model = rm_service.get_latest(db, investor_id)
+    if risk_model is None:
+        return GateStatus(
+            passed=False,
+            label="Order risk limits",
+            detail="No risk model found. Generate a risk model first.",
+        )
+    if risk_model.investable_capital <= 0:
+        return GateStatus(
+            passed=False,
+            label="Order risk limits",
+            detail="Investable capital is zero. Update your financial profile and regenerate the risk model.",
+        )
+    return GateStatus(
+        passed=True,
+        label="Order risk limits",
+        detail=(
+            f"Max trade size: {risk_model.max_trade_size_pct:.1f}% of "
+            f"{risk_model.investable_capital:,.0f} {risk_model.currency}. "
+            f"Max open positions: {risk_model.max_open_positions}."
+        ),
+    )
+
+
 # ── Gate 5: IBKR connectivity (called separately with gateway_url) ────────────
 
 def check_ibkr_connection(gateway_url: str, ibkr_account_id: str, verify_ssl: bool = False) -> GateStatus:
@@ -186,6 +214,7 @@ def check_readiness(
     gate_paper, sharpe, paper_days = _gate_paper_history(db, investor_id)
     gate_ack = _gate_acknowledgment(db, investor_id)
     gate_admin = _gate_admin_enabled(db, investor_id)
+    gate_order_risk = _gate_order_risk_limits(db, investor_id)
 
     if gateway_url and ibkr_account_id:
         gate_ibkr = check_ibkr_connection(gateway_url, ibkr_account_id)
@@ -196,7 +225,7 @@ def check_readiness(
             detail="Provide gateway_url and ibkr_account_id to test connection.",
         )
 
-    gates = [gate_paper, gate_ack, gate_admin, gate_ibkr]
+    gates = [gate_paper, gate_ack, gate_admin, gate_order_risk, gate_ibkr]
     return LiveTradingReadiness(
         all_gates_passed=all(g.passed for g in gates),
         gates=gates,

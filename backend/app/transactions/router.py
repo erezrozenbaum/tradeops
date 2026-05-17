@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -19,12 +19,13 @@ def list_transactions(
     tx_type: str | None = None,
     since: date | None = None,
     until: date | None = None,
-    limit: int = 200,
+    skip: int = Query(0, ge=0, description="Records to skip"),
+    limit: int = Query(200, ge=1, le=1000, description="Max records to return"),
     db: Session = Depends(get_db),
 ):
     return service.list_transactions(
         db, investor_id, account_id=account_id, ticker=ticker,
-        tx_type=tx_type, since=since, until=until, limit=limit,
+        tx_type=tx_type, since=since, until=until, skip=skip, limit=limit,
     )
 
 

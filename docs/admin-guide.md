@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.82.0  
-**Last updated:** 2026-05-16
+**Version:** 0.86.0  
+**Last updated:** 2026-05-17
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
@@ -69,6 +69,8 @@ ANTHROPIC_API_KEY=sk-ant-...
 # Optional — defaults shown
 SECRET_KEY=change-me-in-production
 ENVIRONMENT=development
+ALLOWED_ORIGINS=http://localhost:3000
+AI_MONTHLY_BUDGET_USD=0
 ```
 
 | Variable | Required | Description |
@@ -76,6 +78,8 @@ ENVIRONMENT=development
 | `DATABASE_URL` | Yes | PostgreSQL connection string. In Docker Compose the host is `db`. |
 | `ANTHROPIC_API_KEY` | Yes (for AI features) | AI Report, Market Research, Recommendations, and AI Agent all require this. The platform runs without it but those features return errors. |
 | `SECRET_KEY` | Recommended | Change before any internet-facing deployment. |
+| `ALLOWED_ORIGINS` | Production | Comma-separated list of allowed CORS origins. Default `http://localhost:3000`. Set to your production URL in deployment. |
+| `AI_MONTHLY_BUDGET_USD` | No | Rolling 30-day AI spend cap per investor in USD. `0` = unlimited (default). Set e.g. `5.0` to cap at $5/investor/month. |
 
 ---
 
@@ -611,6 +615,10 @@ kubectl describe ingress tradeops
 | IBKR REST Sync | `broker_sync/ibkr_rest.py` + `POST .../broker-sync/ibkr-rest` | Live sync from IBKR Client Portal Gateway. Asset mapping: STK/ETF/CRYPTO/BOND/OPT. `verify_ssl=false` default. Read-only. |
 | K8s Hardening | `helm/tradeops/` | Non-root securityContext, NetworkPolicy (backend ← ingress+frontend; postgres ← backend only), PodDisruptionBudget, podAntiAffinity, JWT_SECRET_KEY + ALPHA_VANTAGE_API_KEY as Helm secrets. All flags default false. |
 | SSE Price Streaming | `market_data/router.py` `GET /market/stream?tickers=...&interval=30` | text/event-stream. Max 20 tickers. Fresh SessionLocal per tick. nginx pass-through via X-Accel-Buffering. Frontend: pulsing LIVE dot + streaming price per holding row. |
+| Live Trading (Gated) | `live_trading/` + migration 0035 | 5-gate readiness checker (paper ≥30d Sharpe>0.5, risk ack, admin toggle, order risk limits, IBKR connection). IBKR Client Portal Gateway REST client: `lookup_conid`, `submit_order`, `cancel_order`. Session lifecycle: `POST /acknowledge`, `POST /session`, `POST /halt` (kill switch). Order form with market/limit, buy/sell, qty, limit price. All actions audit-logged. Live trading is **disabled by default** — admin must set `risk_model.live_trading_allowed=True` per investor. |
+| IDOR Protection | `auth/investor_access.py` + `api/v1/router.py` | `verify_investor_access` FastAPI dependency applied at `include_router` level for all 37 investor-scoped routers. Returns HTTP 404 if the requested `investor_id` does not belong to the authenticated user. Zero changes to individual endpoint handlers. |
+| Login Rate Limiting | `auth/rate_limiter.py` + `auth/router.py` | In-memory sliding-window limiter: 5 login attempts per client IP per 5-minute window. Returns HTTP 429 before credential verification. Thread-safe. Resets on process restart (single-process only; use Redis for multi-instance). |
+| AI Monthly Budget | `ai_usage/logger.py` + `core/config.py` | `AI_MONTHLY_BUDGET_USD` env var (default 0 = unlimited). `require_ai_budget` FastAPI dependency applied to 6 expensive AI routers. Queries rolling 30-day aggregate from `ai_usage_logs`; raises HTTP 429 when cap is reached. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.

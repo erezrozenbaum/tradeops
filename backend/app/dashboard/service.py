@@ -6,7 +6,6 @@ from app.financial_profiles import service as fp_service
 from app.financial_scoring.engine import calculate_stability_score
 from app.financial_scoring.schemas import FinancialScoringInput
 from app.goals import service as goals_service
-from app.models.investment_account import InvestmentAccount, InvestmentHolding
 from app.models.investor_profile import InvestorProfile
 from app.risk_modeling import service as rm_service
 from app.schemas.dashboard import (
@@ -56,33 +55,7 @@ def get_dashboard(db: Session, investor_id: uuid.UUID) -> DashboardOut | None:
             if fp.monthly_income > 0
             else 0.0
         )
-        # Compute effective emergency fund months: take the max of the manually
-        # entered profile value and the value derived from flagged holdings/accounts.
-        effective_ef_months = fp.emergency_fund_months
-        if fp.monthly_expenses > 0:
-            ef_holdings = (
-                db.query(InvestmentHolding)
-                .join(InvestmentAccount, InvestmentHolding.account_id == InvestmentAccount.id)
-                .filter(
-                    InvestmentAccount.investor_id == investor_id,
-                    InvestmentHolding.is_emergency_fund.is_(True),
-                )
-                .all()
-            )
-            if not ef_holdings:
-                ef_accounts = (
-                    db.query(InvestmentAccount)
-                    .filter(
-                        InvestmentAccount.investor_id == investor_id,
-                        InvestmentAccount.is_emergency_fund.is_(True),
-                    )
-                    .all()
-                )
-                ef_holdings = [h for acc in ef_accounts for h in acc.holdings]
-            if ef_holdings:
-                ef_total = sum(h.current_balance or h.current_value or 0.0 for h in ef_holdings)
-                computed = ef_total / fp.monthly_expenses
-                effective_ef_months = max(effective_ef_months, computed)
+        effective_ef_months = fp_service.compute_effective_ef_months(db, investor_id, fp)
 
         cash_flow_section = DashboardCashFlow(
             monthly_income=fp.monthly_income,

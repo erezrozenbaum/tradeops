@@ -10,6 +10,34 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.86.0] — 2026-05-17
+
+### Quality & Completeness
+
+**Emergency fund months: extracted shared helper**
+- `financial_profiles/service.py`: new `compute_effective_ef_months(db, investor_id, fp)` helper
+  centralises the three-place duplicate logic — queries holdings/accounts flagged with
+  `is_emergency_fund=True`, takes the max of the manually-entered value and the computed one.
+- `dashboard/service.py`: replaced 23-line inline EF block with the helper call; removed unused
+  `InvestmentAccount`/`InvestmentHolding` imports.
+- `investor_profiles/router.py`: stability-score endpoint now also uses the helper, making EF
+  computation consistent across dashboard, risk-model, and stability-score paths.
+
+**Pagination on previously-unbounded list endpoints**
+- `transactions/service.py` + `router.py`: `list_transactions` now accepts `skip: int` with
+  `Query(0, ge=0)`; `limit` switched from a plain default to `Query(200, ge=1, le=1000)`.
+- `goals/service.py` + `router.py`: `get_by_investor` / `list_goals` now accept `skip: int`
+  (`Query(0, ge=0)`) and `limit: int` (`Query(100, ge=1, le=200)`).
+
+**Live trading: Gate 4 added to readiness check**
+- `live_trading/engine.py`: new `_gate_order_risk_limits` gate (position 4 of 5) verifies that a
+  risk model exists with `investable_capital > 0` and surfaces the configured `max_trade_size_pct`
+  and `max_open_positions` limits in the gate detail string. Previously the `validate_order_risk`
+  guard enforced these at order-submission time only; now they are visible in the pre-trade
+  readiness checklist.
+
+---
+
 ## [0.85.0] — 2026-05-17
 
 ### Security, Performance & Limits — Multi-issue batch fix
@@ -161,7 +189,7 @@ were unaffected — those are transparent browser-proxied requests.
 
 ## [0.83.0] — 2026-05-16
 
-### Added — Live Trading Execution (Gated) (TASK 91)
+### Added — Live Trading Execution (Gated)
 
 Real-money order execution through IBKR Client Portal Gateway, locked behind 5 hard safety gates.
 
@@ -194,7 +222,7 @@ Real-money order execution through IBKR Client Portal Gateway, locked behind 5 h
 
 ## [0.82.0] — 2026-05-16
 
-### Added — Real-time SSE Price Streaming (TASK 90)
+### Added — Real-time SSE Price Streaming
 
 Server-Sent Events endpoint for live price streaming across all portfolio tickers.
 
@@ -217,7 +245,7 @@ Server-Sent Events endpoint for live price streaming across all portfolio ticker
 
 ## [0.81.0] — 2026-05-16
 
-### Hardened — Kubernetes + Helm Production Readiness (TASK 89)
+### Hardened — Kubernetes + Helm Production Readiness
 
 Security, network isolation, and operational hardening of the Helm chart. All changes are backwards-compatible — new flags default to `false`.
 
@@ -250,7 +278,7 @@ Security, network isolation, and operational hardening of the Helm chart. All ch
 
 ## [0.80.0] — 2026-05-16
 
-### Added — IBKR REST API Sync (TASK 88)
+### Added — IBKR REST API Sync
 
 Live position sync from IBKR Client Portal Gateway — no file export needed. Read-only, data sync only (no trade execution).
 
@@ -270,7 +298,7 @@ Live position sync from IBKR Client Portal Gateway — no file export needed. Re
 
 ## [0.79.0] — 2026-05-16
 
-### Added — Crypto Staking & Yield Tracker (TASK 87)
+### Added — Crypto Staking & Yield Tracker
 
 Track staking APY and estimated annual rewards with correct income tax treatment — no schema migration (uses existing `fund_status` and `annual_return_rate` fields on `InvestmentHolding`).
 
@@ -296,7 +324,7 @@ Track staking APY and estimated annual rewards with correct income tax treatment
 
 ## [0.78.0] — 2026-05-16
 
-### Added — PDF Statement Import (TASK 86)
+### Added — PDF Statement Import
 
 Upload any broker PDF statement and let Claude AI extract holdings automatically — no regex patterns, works with any broker format.
 
@@ -320,7 +348,7 @@ Upload any broker PDF statement and let Claude AI extract holdings automatically
 
 ## [0.77.0] — 2026-05-16
 
-### Added — Statistical Arbitrage Pairs Trading Engine (TASK 85)
+### Added — Statistical Arbitrage Pairs Trading Engine
 
 Paper-mode quant engine for market-neutral statistical arbitrage — no new dependencies (numpy already available via yfinance transitive dep).
 
@@ -344,7 +372,7 @@ Paper-mode quant engine for market-neutral statistical arbitrage — no new depe
 
 ## [0.76.0] — 2026-05-16
 
-### Added — Daily Action Feed (TASK 84)
+### Added — Daily Action Feed
 
 Deterministic, real-time morning briefing that aggregates all existing signal sources into a prioritised action list telling the investor exactly what to do and why — no AI required, always fresh.
 
@@ -371,7 +399,7 @@ Deterministic, real-time morning briefing that aggregates all existing signal so
 
 ## [0.75.0] — 2026-05-16
 
-### Security — JWT httpOnly Cookie Migration (TASK 83)
+### Security — JWT httpOnly Cookie Migration
 
 Replaced localStorage-based JWT storage with server-set httpOnly cookies, eliminating XSS token theft risk.
 
@@ -429,8 +457,6 @@ Replaced localStorage-based JWT storage with server-set httpOnly cookies, elimin
 **Dashboard Error Boundary**
 - **`frontend/src/app/(dashboard)/error.tsx`** (new): Next.js route-segment error boundary covering all dashboard pages. Shows a friendly "Something went wrong" panel with error ID (digest) and a "Try again" reset button. Prevents any unhandled exception from leaving the user on a blank page.
 
-**CHANGELOG cleanup**
-- Stripped all `TASK XX:`, `TASK A:`, `TASK B:` internal prefixes from CHANGELOG section headers and bold body titles. Public changelog now uses feature names only.
 
 **Tests:** 408 backend tests passing. 0 TypeScript errors.
 
@@ -872,7 +898,7 @@ Replaced localStorage-based JWT storage with server-set httpOnly cookies, elimin
 - Gain offsets: top 5 holdings with unrealized gains that could be partially offset by harvested losses
 - New endpoint `GET /portfolio/tax-opportunities`
 - **Tax Opportunities card** on Performance page: summary strip (total harvestable loss, estimated saving, offsettable gains count), per-candidate rows with all flags, gain offset chips, disclaimer footer
-- README and admin-guide updated to reflect all Phase 8 features (TASK 37–40)
+- README and admin-guide updated to reflect all Phase 8 features
 
 ---
 
@@ -915,7 +941,6 @@ Replaced localStorage-based JWT storage with server-set httpOnly cookies, elimin
 - **Alpha badge** — prominent green/red `α +X.XX% vs TA-35 / S&P 500` badge computed over full snapshot history
 - **Top Contributors / Detractors** — two-column card showing which holdings drove portfolio gains and losses, with mini bar chart, weight %, and individual return %
 - **Dynamic benchmark by currency** — ILS investors compare vs `^TA35` (Tel Aviv 35); USD/others compare vs SPY. Applies to both the analytics endpoint (line chart) and the new attribution endpoint
-- `docs/execution_plan.md` — Phase 8 added with TASK 37–41 specs
 
 ---
 
@@ -1083,9 +1108,6 @@ Replaced localStorage-based JWT storage with server-set httpOnly cookies, elimin
 - `ai_analysis/service.py` — fetches tax context and passes it to `build_context()`.
 - `investment_recommendations/analyzer.py` — `build_recommendation_context()` now accepts `tax_context`; system prompt updated with tax-efficiency guidance (prioritise Keren Hishtalmut for IL, 401k/IRA for US, distinguish LTCG from STCG).
 - `investment_recommendations/service.py` — fetches tax context and passes it to the recommendation context builder.
-
-### Planning
-- Added TASK 28–36 to execution plan: Performance History, Core Risk Metrics (Sharpe/drawdown/benchmark), Transaction Log, Price Alerts, Economic Calendar, Correlation Matrix, Position Sizing, News Feed, CSV Import.
 
 ---
 

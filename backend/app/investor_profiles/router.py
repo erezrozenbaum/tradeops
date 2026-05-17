@@ -9,7 +9,6 @@ from app.financial_profiles import service as fp_service
 from app.financial_scoring.engine import calculate_stability_score
 from app.financial_scoring.schemas import FinancialScoringInput, FinancialStabilityScore
 from app.investor_profiles import service
-from app.models.investment_account import InvestmentAccount, InvestmentHolding
 from app.models.user import User
 from app.schemas.investor_profile import (
     InvestorProfileCreate,
@@ -93,31 +92,7 @@ def get_stability_score(
             detail="No financial profile found. Add income, expenses, and financial data first.",
         )
 
-    # Compute effective emergency fund months — same logic as dashboard + risk model
-    effective_ef_months = fp.emergency_fund_months
-    if fp.monthly_expenses > 0:
-        ef_holdings = (
-            db.query(InvestmentHolding)
-            .join(InvestmentAccount, InvestmentHolding.account_id == InvestmentAccount.id)
-            .filter(
-                InvestmentAccount.investor_id == investor_id,
-                InvestmentHolding.is_emergency_fund.is_(True),
-            )
-            .all()
-        )
-        if not ef_holdings:
-            ef_accounts = (
-                db.query(InvestmentAccount)
-                .filter(
-                    InvestmentAccount.investor_id == investor_id,
-                    InvestmentAccount.is_emergency_fund.is_(True),
-                )
-                .all()
-            )
-            ef_holdings = [h for acc in ef_accounts for h in acc.holdings]
-        if ef_holdings:
-            ef_total = sum(h.current_balance or h.current_value or 0.0 for h in ef_holdings)
-            effective_ef_months = max(effective_ef_months, ef_total / fp.monthly_expenses)
+    effective_ef_months = fp_service.compute_effective_ef_months(db, investor_id, fp)
 
     scoring_input = FinancialScoringInput(
         monthly_income=fp.monthly_income,
