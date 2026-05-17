@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -39,8 +39,13 @@ def create_portfolio(
 
 
 @router.get("", response_model=list[PaperPortfolioSummaryOut])
-def list_portfolios(investor_id: uuid.UUID, db: Session = Depends(get_db)):
-    return service.list_for_investor(db, investor_id)
+def list_portfolios(
+    investor_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(50, ge=1, le=200, description="Max records to return"),
+):
+    return service.list_for_investor(db, investor_id, skip=skip, limit=limit)
 
 
 @router.get("/{portfolio_id}", response_model=PaperPortfolioOut)

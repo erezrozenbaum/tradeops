@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     # Comma-separated list of allowed CORS origins.
     # Example: ALLOWED_ORIGINS=http://localhost:3000,https://tradeops.example.com
     ALLOWED_ORIGINS: str = "http://localhost:3000"
+    # Per-investor AI spend cap over a rolling 30-day window (USD). 0 = unlimited.
+    AI_MONTHLY_BUDGET_USD: float = 0.0
 
     @property
     def allowed_origins_list(self) -> list[str]:

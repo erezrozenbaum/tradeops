@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.auth import service
 from app.auth.dependencies import get_current_user
+from app.auth.rate_limiter import is_rate_limited
 from app.auth.schemas import UserCreate, UserLogin, UserOut
 from app.db.session import get_db
 from app.models.user import User
@@ -18,7 +19,13 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login")
-def login(data: UserLogin, response: Response, db: Session = Depends(get_db)):
+def login(request: Request, data: UserLogin, response: Response, db: Session = Depends(get_db)):
+    client_ip = request.client.host if request.client else "unknown"
+    if is_rate_limited(f"login:{client_ip}"):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts. Please try again in 5 minutes.",
+        )
     user = service.get_user_by_email(db, data.email)
     if not user or not service.verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")

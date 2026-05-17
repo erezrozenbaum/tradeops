@@ -169,11 +169,15 @@ def get(
     return _get_owned(db, investor_id, portfolio_id)
 
 
-def list_for_investor(db: Session, investor_id: uuid.UUID) -> list[PaperPortfolio]:
+def list_for_investor(
+    db: Session, investor_id: uuid.UUID, skip: int = 0, limit: int = 50
+) -> list[PaperPortfolio]:
     return (
         db.query(PaperPortfolio)
         .filter(PaperPortfolio.investor_profile_id == investor_id)
         .order_by(PaperPortfolio.started_at.desc())
+        .offset(skip)
+        .limit(limit)
         .all()
     )
 
