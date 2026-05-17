@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.auth.investor_access import verify_investor_access
+from app.ai_usage.logger import require_ai_budget
 from app.ai_analysis.router import router as ai_analysis_router
 from app.audit.router import router as audit_router
 from app.backtesting.router import router as backtesting_router
@@ -51,6 +52,8 @@ api_router = APIRouter()
 
 # Shorthand for investor-scoped ownership guard
 _own = [Depends(verify_investor_access)]
+# Ownership guard + AI budget check for expensive AI endpoints
+_ai = [Depends(verify_investor_access), Depends(require_ai_budget)]
 
 # ── Public/admin-scoped routers (no investor ownership check) ─────────────────
 api_router.include_router(investor_router, prefix="/investors", tags=["investors"])
@@ -67,18 +70,18 @@ api_router.include_router(risk_model_router, prefix="/investors/{investor_id}/ri
 api_router.include_router(strategy_selection_router, prefix="/investors/{investor_id}/strategies", tags=["strategies"], dependencies=_own)
 api_router.include_router(backtesting_router, prefix="/investors/{investor_id}/backtests", tags=["backtesting"], dependencies=_own)
 api_router.include_router(paper_trading_router, prefix="/investors/{investor_id}/paper-portfolios", tags=["paper-trading"], dependencies=_own)
-api_router.include_router(ai_analysis_router, prefix="/investors/{investor_id}/ai-report", tags=["ai-analysis"], dependencies=_own)
+api_router.include_router(ai_analysis_router, prefix="/investors/{investor_id}/ai-report", tags=["ai-analysis"], dependencies=_ai)
 api_router.include_router(decision_router, prefix="/investors/{investor_id}/decision", tags=["decision"], dependencies=_own)
 api_router.include_router(portfolio_router, prefix="/investors/{investor_id}/portfolio", tags=["portfolio"], dependencies=_own)
 api_router.include_router(pension_simulation_router, prefix="/investors/{investor_id}/pension-simulation", tags=["pension-simulation"], dependencies=_own)
 api_router.include_router(debt_planner_router, prefix="/investors/{investor_id}/debt-planner", tags=["debt-planner"], dependencies=_own)
 api_router.include_router(watchlist_router, prefix="/investors/{investor_id}/watchlist", tags=["watchlist"], dependencies=_own)
 api_router.include_router(notifications_router, prefix="/investors/{investor_id}/notifications", tags=["notifications"], dependencies=_own)
-api_router.include_router(investment_agent_router, prefix="/investors/{investor_id}/agent", tags=["investment-agent"], dependencies=_own)
+api_router.include_router(investment_agent_router, prefix="/investors/{investor_id}/agent", tags=["investment-agent"], dependencies=_ai)
 api_router.include_router(goals_analysis_router, prefix="/investors/{investor_id}/goals-analysis", tags=["goals-analysis"], dependencies=_own)
-api_router.include_router(market_scanner_router, prefix="/investors/{investor_id}/market-scan", tags=["market-scan"], dependencies=_own)
-api_router.include_router(investment_recommendations_router, prefix="/investors/{investor_id}/recommendations", tags=["recommendations"], dependencies=_own)
-api_router.include_router(market_research_router, prefix="/investors/{investor_id}/market-research", tags=["market-research"], dependencies=_own)
+api_router.include_router(market_scanner_router, prefix="/investors/{investor_id}/market-scan", tags=["market-scan"], dependencies=_ai)
+api_router.include_router(investment_recommendations_router, prefix="/investors/{investor_id}/recommendations", tags=["recommendations"], dependencies=_ai)
+api_router.include_router(market_research_router, prefix="/investors/{investor_id}/market-research", tags=["market-research"], dependencies=_ai)
 api_router.include_router(holdings_router, prefix="/investors", tags=["holdings"], dependencies=_own)
 api_router.include_router(dashboard_router, prefix="/investors", tags=["dashboard"], dependencies=_own)
 api_router.include_router(transactions_router, prefix="/investors/{investor_id}/transactions", tags=["transactions"], dependencies=_own)
@@ -90,7 +93,7 @@ api_router.include_router(reports_router, prefix="/investors/{investor_id}/repor
 api_router.include_router(retirement_readiness_router, prefix="/investors/{investor_id}/retirement-readiness", tags=["retirement-readiness"], dependencies=_own)
 api_router.include_router(broker_sync_router, prefix="/investors", tags=["broker-sync"], dependencies=_own)
 api_router.include_router(audit_router, prefix="/investors", tags=["audit"], dependencies=_own)
-api_router.include_router(portfolio_chat_router, prefix="/investors/{investor_id}/chat", tags=["chat"], dependencies=_own)
+api_router.include_router(portfolio_chat_router, prefix="/investors/{investor_id}/chat", tags=["chat"], dependencies=_ai)
 api_router.include_router(family_portfolio_router, prefix="/investors/{investor_id}/family-portfolio", tags=["family-portfolio"], dependencies=_own)
 api_router.include_router(liquidity_runway_router, prefix="/investors/{investor_id}/portfolio", tags=["liquidity-runway"], dependencies=_own)
 api_router.include_router(resilience_router, prefix="/investors/{investor_id}/portfolio", tags=["resilience"], dependencies=_own)
