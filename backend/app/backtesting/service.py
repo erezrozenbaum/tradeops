@@ -97,10 +97,14 @@ def get(db: Session, investor_id: uuid.UUID, run_id: uuid.UUID) -> BacktestRun |
     )
 
 
-def list_for_investor(db: Session, investor_id: uuid.UUID) -> list[BacktestRun]:
+def list_for_investor(
+    db: Session, investor_id: uuid.UUID, skip: int = 0, limit: int = 50
+) -> list[BacktestRun]:
     return (
         db.query(BacktestRun)
         .filter(BacktestRun.investor_profile_id == investor_id)
         .order_by(BacktestRun.created_at.desc())
+        .offset(skip)
+        .limit(limit)
         .all()
     )

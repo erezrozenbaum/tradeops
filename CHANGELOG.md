@@ -10,6 +10,33 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.85.0] — 2026-05-17
+
+### Security, Performance & Limits — Multi-issue batch fix
+
+**Login rate limiting (brute-force protection)**
+- `auth/rate_limiter.py`: new in-memory sliding-window rate limiter — 5 attempts
+  per IP per 5-minute window, thread-safe for single-process deployments.
+- `auth/router.py`: login endpoint now checks `is_rate_limited(f"login:{ip}")` and
+  raises HTTP 429 before attempting any credential verification.
+
+**AI monthly budget guard**
+- `core/config.py`: new `AI_MONTHLY_BUDGET_USD: float = 0.0` setting (0 = unlimited).
+  Set to a positive value to cap per-investor rolling 30-day AI spend in USD.
+- `ai_usage/logger.py`: `check_monthly_budget` queries `ai_usage_log` for 30-day
+  aggregate cost and raises HTTP 429 if the cap is reached. `require_ai_budget`
+  wraps it as a FastAPI dependency.
+- `api/v1/router.py`: `_ai = [Depends(verify_investor_access), Depends(require_ai_budget)]`
+  applied to 6 expensive AI routers: `ai-report`, `agent`, `recommendations`,
+  `market-research`, `market-scan`, `chat`.
+
+**Pagination on list endpoints**
+- `backtesting/service.py` + `router.py`: `list_for_investor` accepts `skip` and
+  `limit` (default 50, max 200). Previously returned all rows.
+- `paper_trading/service.py` + `router.py`: same pagination added.
+
+---
+
 ## [0.84.0] — 2026-05-16
 
 ### Security & Quality — Multi-issue batch fix
