@@ -10,6 +10,25 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.89.0] — 2026-05-18
+
+### Fix — AI Cost Tracking for All AI Features
+
+**Problem**: Admin panel showed $0 AI API cost despite Market Research, Recommendations, AI Agent, and Portfolio Chat all calling Claude. `log_ai_call()` was only wired to AI Report and Market Signals.
+
+**Root cause**: The four analyzer functions returned plain `dict` with no token counts, and no callers ever called `log_ai_call()`.
+
+- `market_research/analyzer.py`: `generate_research()` now returns `tuple[dict, int, int]` (result, input_tokens, output_tokens).
+- `market_research/service.py`: unpacks tuple; calls `log_ai_call(feature="market_research")` on cache miss only (cache hits consume no tokens).
+- `investment_recommendations/analyzer.py`: `generate_recommendations()` now returns `tuple[dict, int, int]`.
+- `investment_recommendations/service.py`: unpacks tuple; calls `log_ai_call(feature="recommendations")`.
+- `investment_agent/engine.py`: calls `log_ai_call(feature="ai_agent")` immediately after the Claude response, before JSON parsing — ensures tokens are recorded even on parse failure.
+- `portfolio_chat/engine.py`: `chat()` return type extended to `tuple[str, dict|None, int, int]`; returns `(0, 0)` tokens on API failure.
+- `portfolio_chat/router.py`: unpacks token counts; calls `log_ai_call(feature="portfolio_chat")` when `in_tok > 0`.
+- `admin/page.tsx`: `FeatureLabel` mapping extended with display names for all 4 new feature keys; empty-state message updated to list all tracked features.
+
+---
+
 ## [0.88.0] — 2026-05-18
 
 ### Infrastructure — Distributed Rate Limiting (Redis)

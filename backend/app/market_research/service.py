@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
+from app.ai_usage.logger import log_ai_call
 from app.core.config import settings
 from app.market_research import analyzer, screener
 from app.market_research.schemas import MarketResearchReport, SectorPerformance
@@ -60,7 +61,7 @@ def get_research(db: Session, investor_id: uuid.UUID) -> MarketResearchReport | 
     if cached and (time.time() - cached[1]) < _AI_CACHE_TTL:
         raw = cached[0]
     else:
-        raw = analyzer.generate_research(
+        raw, in_tok, out_tok = analyzer.generate_research(
             candidates=candidates,
             sector_performance=sector_perf,
             investor_context=investor_context,
@@ -68,6 +69,15 @@ def get_research(db: Session, investor_id: uuid.UUID) -> MarketResearchReport | 
             crypto_candidates=crypto_candidates,
         )
         _AI_CACHE[cache_key] = (raw, time.time())
+        log_ai_call(
+            db=db,
+            feature_name="market_research",
+            model="claude-sonnet-4-6",
+            input_tokens=in_tok,
+            output_tokens=out_tok,
+            investor_id=investor_id,
+        )
+        db.commit()
 
     candidates_map = {c.ticker: c for c in candidates}
 

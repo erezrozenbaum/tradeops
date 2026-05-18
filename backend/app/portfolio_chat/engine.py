@@ -111,8 +111,8 @@ def chat(
     message: str,
     history: list[dict],
     api_key: str,
-) -> tuple[str, dict | None]:
-    """Return (reply_text, optional_data_dict)."""
+) -> tuple[str, dict | None, int, int]:
+    """Return (reply_text, optional_data_dict, input_tokens, output_tokens)."""
     context = _gather_context(db, investor_id)
 
     system = _SYSTEM_PROMPT + f"\n\nInvestor data (JSON):\n{json.dumps(context, indent=2, default=str)}"
@@ -128,8 +128,8 @@ def chat(
             messages=messages,
         )
         reply = response.content[0].text.strip()
+        return reply, None, response.usage.input_tokens, response.usage.output_tokens
     except Exception as exc:
         log.error("portfolio_chat: AI call failed: %s", exc)
         reply = "I'm unable to process your question right now. Please try again in a moment."
-
-    return reply, None
+        return reply, None, 0, 0

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import anthropic
 from sqlalchemy.orm import Session
 
+from app.ai_usage.logger import log_ai_call
 from app.investment_agent.schemas import (
     ActionItem, AgentReport, CapitalThresholdPlan, Opportunity,
 )
@@ -241,6 +242,16 @@ def run_agent(db: Session, investor_id: uuid.UUID) -> AgentReport:
         system=_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_msg}],
     )
+
+    log_ai_call(
+        db=db,
+        feature_name="ai_agent",
+        model="claude-sonnet-4-6",
+        input_tokens=response.usage.input_tokens,
+        output_tokens=response.usage.output_tokens,
+        investor_id=investor_id,
+    )
+    db.commit()
 
     raw = response.content[0].text.strip()
     if raw.startswith("```"):

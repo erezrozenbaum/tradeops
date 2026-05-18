@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
+from app.ai_usage.logger import log_ai_call
 from app.core.config import settings
 from app.financial_profiles import service as fp_service
 from app.goals_analysis import service as goals_analysis_service
@@ -84,7 +85,16 @@ def get_recommendations(db: Session, investor_id: uuid.UUID) -> RecommendationRe
         tax_context=tax_context,
     )
 
-    raw = analyzer.generate_recommendations(context, api_key=settings.ANTHROPIC_API_KEY)
+    raw, in_tok, out_tok = analyzer.generate_recommendations(context, api_key=settings.ANTHROPIC_API_KEY)
+    log_ai_call(
+        db=db,
+        feature_name="recommendations",
+        model="claude-sonnet-4-6",
+        input_tokens=in_tok,
+        output_tokens=out_tok,
+        investor_id=investor_id,
+    )
+    db.commit()
 
     portfolio_actions = [
         PortfolioAction(**a) for a in raw.get("portfolio_actions", [])
