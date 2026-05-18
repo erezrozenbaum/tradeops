@@ -73,6 +73,10 @@ function FeatureLabel({ name }: { name: string }) {
   const labels: Record<string, string> = {
     market_signals: "Market Signals",
     ai_report: "AI Report",
+    market_research: "Deep Market Research",
+    recommendations: "Recommendations",
+    ai_agent: "AI Agent",
+    portfolio_chat: "Portfolio Chat",
   };
   return <span>{labels[name] ?? name}</span>;
 }
@@ -322,7 +326,7 @@ export default function AdminPage() {
 
             {aiUsage.total_calls === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">
-                No AI calls recorded in this period. Logs appear after the daily market signals worker runs (20:15 UTC) or after an AI report is generated.
+                No AI calls recorded in this period. Costs are logged when AI Report, Deep Market Research, Recommendations, AI Agent, Portfolio Chat, or Market Signals features are used.
               </p>
             )}
           </div>

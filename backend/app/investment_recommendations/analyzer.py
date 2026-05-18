@@ -152,7 +152,7 @@ def _build_catalog_summary() -> list[dict]:
     ]
 
 
-def generate_recommendations(context: dict, api_key: str) -> dict:
+def generate_recommendations(context: dict, api_key: str) -> tuple[dict, int, int]:
     client = anthropic.Anthropic(api_key=api_key)
     context_json = json.dumps(context, indent=2, default=str)
 
@@ -171,6 +171,9 @@ def generate_recommendations(context: dict, api_key: str) -> dict:
         ],
     )
 
+    in_tok = message.usage.input_tokens
+    out_tok = message.usage.output_tokens
+
     raw = message.content[0].text.strip()
     if raw.startswith("```"):
         parts = raw.split("```", 2)
@@ -182,7 +185,7 @@ def generate_recommendations(context: dict, api_key: str) -> dict:
             raw = raw[:-3].strip()
 
     try:
-        return json.loads(raw)
+        return json.loads(raw), in_tok, out_tok
     except json.JSONDecodeError:
         return {
             "overall_guidance": "Unable to generate recommendations at this time. Please try again.",
@@ -190,7 +193,7 @@ def generate_recommendations(context: dict, api_key: str) -> dict:
             "investment_roadmap": None,
             "recommendations": [],
             "disclaimer": "This is educational guidance only.",
-        }
+        }, in_tok, out_tok
 
 
 def build_recommendation_context(

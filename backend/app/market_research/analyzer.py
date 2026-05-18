@@ -215,7 +215,7 @@ def generate_research(
     investor_context: dict,
     api_key: str,
     crypto_candidates: list[StockFundamentals] | None = None,
-) -> dict:
+) -> tuple[dict, int, int]:
     client = anthropic.Anthropic(api_key=api_key)
     context = _build_context(candidates, sector_performance, investor_context, crypto_candidates)
     context_json = json.dumps(context, indent=2, default=str)
@@ -236,6 +236,9 @@ def generate_research(
         ],
     )
 
+    in_tok = message.usage.input_tokens
+    out_tok = message.usage.output_tokens
+
     raw = message.content[0].text.strip()
     if raw.startswith("```"):
         parts = raw.split("```", 2)
@@ -245,7 +248,7 @@ def generate_research(
         raw = raw.strip().rstrip("`").strip()
 
     try:
-        return json.loads(raw)
+        return json.loads(raw), in_tok, out_tok
     except json.JSONDecodeError:
         log.error("[market_research] Claude returned invalid JSON (len=%d, preview=%s) — using fallback", len(raw), raw[:200])
         return {
@@ -255,4 +258,4 @@ def generate_research(
             "opportunity_picks": [],
             "sector_outlooks": [],
             "disclaimer": "This is for educational purposes only. Not financial advice.",
-        }
+        }, in_tok, out_tok
