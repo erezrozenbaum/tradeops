@@ -4,7 +4,7 @@
 
 TradeOps AI helps you understand your financial position, model risk accurately, select validated investment strategies, and simulate outcomes before committing real capital.
 
-**Version:** 0.87.0 · **Stack:** FastAPI · PostgreSQL · Next.js 14 · Docker · Helm/K8s
+**Version:** 0.88.0 · **Stack:** FastAPI · PostgreSQL · Redis · Next.js 14 · Docker · Helm/K8s
 
 ---
 
@@ -89,9 +89,9 @@ Browser (Next.js 14 + App Router)
         │  REST/JSON + SSE
         ▼
 FastAPI (Python 3.11)  ←→  Claude API (AI features)
-        │  SQLAlchemy ORM
-        ▼
-PostgreSQL 16
+        │  SQLAlchemy ORM          │  redis-py
+        ▼                          ▼
+PostgreSQL 16               Redis 7 (rate limiting)
 ```
 
 All services run as Docker containers. Helm chart at `helm/tradeops/` for Kubernetes.
@@ -140,6 +140,7 @@ Migrations run automatically on backend startup.
 | `ANTHROPIC_API_KEY` | No | Enables all AI features |
 | `ALPHA_VANTAGE_API_KEY` | No | Higher price fetch rate limit |
 | `WORKERS_ENABLED` | No | `true` to enable background jobs |
+| `REDIS_URL` | No | Redis for distributed rate limiting (e.g. `redis://redis:6379/0`). Falls back to in-memory if unset. |
 | `SMTP_HOST/USER/PASS` | No | Required for weekly digest emails |
 
 ---

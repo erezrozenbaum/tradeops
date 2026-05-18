@@ -56,4 +56,30 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.postgresql.port }}
+{{- if .Values.redis.enabled }}
+---
+# Redis NetworkPolicy: only allow ingress from backend pod
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "tradeops.fullname" . }}-redis
+  labels:
+    {{- include "tradeops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "tradeops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "tradeops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: backend
+      ports:
+        - protocol: TCP
+          port: {{ .Values.redis.port }}
+{{- end }}
 {{- end }}

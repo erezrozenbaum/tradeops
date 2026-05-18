@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.87.0  
+**Version:** 0.88.0  
 **Last updated:** 2026-05-18
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -71,6 +71,7 @@ SECRET_KEY=change-me-in-production
 ENVIRONMENT=development
 ALLOWED_ORIGINS=http://localhost:3000
 AI_MONTHLY_BUDGET_USD=0
+REDIS_URL=redis://redis:6379/0
 ```
 
 | Variable | Required | Description |
@@ -80,6 +81,7 @@ AI_MONTHLY_BUDGET_USD=0
 | `SECRET_KEY` | Recommended | Change before any internet-facing deployment. |
 | `ALLOWED_ORIGINS` | Production | Comma-separated list of allowed CORS origins. Default `http://localhost:3000`. Set to your production URL in deployment. |
 | `AI_MONTHLY_BUDGET_USD` | No | Rolling 30-day AI spend cap per investor in USD. `0` = unlimited (default). Set e.g. `5.0` to cap at $5/investor/month. |
+| `REDIS_URL` | No | Redis connection string for distributed rate limiting. Example: `redis://redis:6379/0`. Falls back to in-memory if unset (safe for single-instance dev). |
 
 ---
 
@@ -617,7 +619,7 @@ kubectl describe ingress tradeops
 | SSE Price Streaming | `market_data/router.py` `GET /market/stream?tickers=...&interval=30` | text/event-stream. Max 20 tickers. Fresh SessionLocal per tick. nginx pass-through via X-Accel-Buffering. Frontend: pulsing LIVE dot + streaming price per holding row. |
 | Live Trading (Gated) | `live_trading/` + migration 0035 | 5-gate readiness checker (paper ≥30d Sharpe>0.5, risk ack, admin toggle, order risk limits, IBKR connection). IBKR Client Portal Gateway REST client: `lookup_conid`, `submit_order`, `cancel_order`. Session lifecycle: `POST /acknowledge`, `POST /session`, `POST /halt` (kill switch). Order form with market/limit, buy/sell, qty, limit price. All actions audit-logged. Live trading is **disabled by default** — admin must set `risk_model.live_trading_allowed=True` per investor. |
 | IDOR Protection | `auth/investor_access.py` + `api/v1/router.py` | `verify_investor_access` FastAPI dependency applied at `include_router` level for all 37 investor-scoped routers. Returns HTTP 404 if the requested `investor_id` does not belong to the authenticated user. Zero changes to individual endpoint handlers. |
-| Login Rate Limiting | `auth/rate_limiter.py` + `auth/router.py` | In-memory sliding-window limiter: 5 login attempts per client IP per 5-minute window. Returns HTTP 429 before credential verification. Thread-safe. Resets on process restart (single-process only; use Redis for multi-instance). |
+| Login Rate Limiting | `auth/rate_limiter.py` + `auth/router.py` | Sliding-window limiter: 5 login attempts per client IP per 5-minute window. Returns HTTP 429 before credential verification. Uses Redis sorted sets when `REDIS_URL` is set (distributed, survives restarts, multi-instance safe). Falls back to in-memory when Redis is unavailable. |
 | AI Monthly Budget | `ai_usage/logger.py` + `core/config.py` | `AI_MONTHLY_BUDGET_USD` env var (default 0 = unlimited). `require_ai_budget` FastAPI dependency applied to 6 expensive AI routers. Queries rolling 30-day aggregate from `ai_usage_logs`; raises HTTP 429 when cap is reached. Market signals background worker also checks per-investor budget before each Claude call. |
 | Minor Account Block | `live_trading/service.py` | `submit_order()` explicitly checks `investor.is_minor` before any gate evaluation and rejects with HTTP 422. Enforces safety rule #4 at the service layer, independent of gate configuration. |
 | Live Trading Gateway Validation | `live_trading/schemas.py` + `live_trading/router.py` | `gateway_url` validated on all write paths: must use `http`/`https` scheme and hostname must be `localhost` or `127.0.0.1`. Prevents SSRF via user-supplied gateway URLs. |
