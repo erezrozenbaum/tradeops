@@ -1,7 +1,10 @@
+import time
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.auth import service
+from app.auth.blacklist import blacklist_token
 from app.auth.dependencies import get_current_user
 from app.auth.rate_limiter import is_rate_limited
 from app.auth.schemas import UserCreate, UserLogin, UserOut
@@ -34,15 +37,25 @@ def login(request: Request, data: UserLogin, response: Response, db: Session = D
         key="tradeops_token",
         value=token,
         httponly=True,
-        samesite="lax",
-        max_age=7 * 24 * 3600,
+        samesite="strict",
+        max_age=service.ACCESS_TOKEN_EXPIRE_SECONDS,
         path="/",
     )
     return {"message": "Login successful"}
 
 
 @router.post("/logout", status_code=204)
-def logout(response: Response):
+def logout(request: Request, response: Response):
+    token = request.cookies.get("tradeops_token")
+    if token:
+        payload = service.decode_token_raw(token)
+        if payload:
+            jti = payload.get("jti")
+            exp = payload.get("exp")
+            if jti and exp:
+                remaining = int(exp - time.time())
+                if remaining > 0:
+                    blacklist_token(jti, remaining)
     response.delete_cookie("tradeops_token", path="/")
 
 

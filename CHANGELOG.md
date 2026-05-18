@@ -10,6 +10,24 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.90.0] — 2026-05-18
+
+### Security — JWT Token Revocation on Logout
+
+**Problem**: `POST /auth/logout` only cleared the browser cookie. The JWT itself remained cryptographically valid for 7 days — any captured token (XSS, network intercept, server log) could be replayed. There was also no `jti` claim in tokens, making selective revocation impossible.
+
+**Solution**: Redis-backed JTI blacklist with in-memory fallback. Logout now actively revokes the token server-side.
+
+- `auth/blacklist.py` (NEW): `blacklist_token(jti, ttl)` writes to Redis with exact remaining-lifetime TTL; `is_blacklisted(jti)` queries Redis. Falls back to per-process in-memory dict when Redis is unreachable. Expired entries are pruned on write.
+- `auth/service.py`: `create_access_token()` now includes `"jti": str(uuid.uuid4())` in every token payload. `decode_token()` rejects tokens whose JTI is in the blacklist. New `decode_token_raw()` decodes without blacklist check — used only by the logout handler (avoids double-blacklist-check on a token being revoked).
+- `auth/router.py`: `POST /logout` extracts the token from the request cookie, decodes it raw, computes remaining TTL (`exp − now`), and writes the JTI to the blacklist before clearing the cookie. `SameSite` on the login cookie upgraded from `lax` to `strict`.
+
+**Backward compatibility**: tokens issued before this deploy have no `jti` field. `decode_token()` treats a missing JTI as non-revocable (skips the blacklist check). Existing sessions remain valid until natural expiry — no forced re-login on deploy.
+
+**Degraded mode**: if Redis is down, the in-memory fallback is per-process. A token revoked in one worker/pod may still pass in another during an outage. This is the accepted trade-off; Redis is highly available in normal operation.
+
+---
+
 ## [0.89.0] — 2026-05-18
 
 ### Fix — AI Cost Tracking for All AI Features
