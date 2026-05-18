@@ -30,8 +30,9 @@ spec:
                     app.kubernetes.io/component: backend
                 topologyKey: kubernetes.io/hostname
       {{- end }}
-      {{- if .Values.postgresql.enabled }}
+      {{- if or .Values.postgresql.enabled .Values.redis.enabled }}
       initContainers:
+        {{- if .Values.postgresql.enabled }}
         - name: wait-for-postgres
           image: busybox:1.36
           command:
@@ -48,6 +49,25 @@ spec:
             capabilities:
               drop:
                 - ALL
+        {{- end }}
+        {{- if .Values.redis.enabled }}
+        - name: wait-for-redis
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z {{ include "tradeops.fullname" . }}-redis {{ .Values.redis.port }}; do
+                echo "waiting for redis..."; sleep 2
+              done
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+        {{- end }}
       {{- end }}
       containers:
         - name: backend
@@ -87,6 +107,10 @@ spec:
                   optional: true
             - name: ENVIRONMENT
               value: {{ .Values.backend.env.ENVIRONMENT | quote }}
+            {{- if .Values.redis.enabled }}
+            - name: REDIS_URL
+              value: "redis://{{ include "tradeops.fullname" . }}-redis:{{ .Values.redis.port }}/0"
+            {{- end }}
           command:
             - sh
             - -c

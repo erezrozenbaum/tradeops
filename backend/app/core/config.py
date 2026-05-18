@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:3000"
     # Per-investor AI spend cap over a rolling 30-day window (USD). 0 = unlimited.
     AI_MONTHLY_BUDGET_USD: float = 0.0
+    # Redis URL for distributed rate limiting. Leave empty to use in-memory fallback.
+    # Example: redis://redis:6379/0
+    REDIS_URL: str = ""
 
     @property
     def allowed_origins_list(self) -> list[str]:

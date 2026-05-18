@@ -10,6 +10,23 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.88.0] — 2026-05-18
+
+### Infrastructure — Distributed Rate Limiting (Redis)
+
+**Problem**: Login rate limiter was in-memory only — bypassed by multiple Gunicorn workers, horizontal scaling, or service restarts.
+
+**Solution**: Redis-backed sliding-window rate limiter with graceful in-memory fallback.
+
+- `auth/rate_limiter.py`: rewritten with lazy Redis client (sorted-set sliding window via `ZADD`/`ZREMRANGEBYSCORE`/`ZCARD`). Falls back to in-memory automatically when `REDIS_URL` is unset or Redis is unreachable — zero breaking change for existing deployments.
+- `core/config.py`: new `REDIS_URL` setting (default `""` = disabled).
+- `requirements.txt`: added `redis>=5.0.0`.
+- `infra/docker-compose.yml`: added `redis:7-alpine` service with healthcheck; backend depends on it and receives `REDIS_URL=redis://redis:6379/0`.
+- `.env.example`: documented `REDIS_URL`.
+- `helm/tradeops/`: Redis Deployment + Service templates; `values.yaml` `redis:` section (`enabled: true`, image, resources); backend Deployment injects `REDIS_URL` when `redis.enabled`; `wait-for-redis` init container added; NetworkPolicy restricts Redis ingress to backend pod only.
+
+---
+
 ## [0.87.0] — 2026-05-18
 
 ### Security & Safety Hardening

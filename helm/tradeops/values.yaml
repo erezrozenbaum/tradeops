@@ -42,6 +42,22 @@ frontend:
       cpu: 500m
       memory: 512Mi
 
+# ── Redis (bundled — for distributed rate limiting) ──────────
+redis:
+  # Set enabled: false to use an external Redis and supply REDIS_URL in backend env
+  enabled: true
+  image:
+    repository: redis
+    tag: "7-alpine"
+  port: 6379
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
 # ── PostgreSQL (bundled) ─────────────────────────────────────
 postgresql:
   # Set enabled: false to use an external database and supply DATABASE_URL in secret
