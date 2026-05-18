@@ -495,8 +495,13 @@ export default function MarketResearchPage() {
       const raw = localStorage.getItem(CACHE_KEY(investorId));
       if (raw) {
         const { data, savedAt } = JSON.parse(raw);
-        setReport(data);
-        setCachedAt(savedAt);
+        const ageMs = Date.now() - new Date(savedAt).getTime();
+        if (ageMs > 12 * 3600 * 1000) {
+          localStorage.removeItem(CACHE_KEY(investorId));
+        } else {
+          setReport(data);
+          setCachedAt(savedAt);
+        }
       }
     } catch {}
   }, [investorId]);

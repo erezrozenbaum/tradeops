@@ -126,6 +126,14 @@ def run_daily_sentiment() -> None:
                 if not investor:
                     continue
 
+                # Skip investors whose AI budget is exhausted
+                try:
+                    from app.ai_usage.logger import check_monthly_budget
+                    check_monthly_budget(db, investor_id)
+                except Exception:
+                    log.info("[signal_worker] Budget exhausted for investor %s — skipping", investor_id)
+                    continue
+
                 portfolio = get_portfolio(db, investor_id)
                 if not portfolio or portfolio.total_current_value <= 0:
                     continue

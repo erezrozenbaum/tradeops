@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const BACKEND = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 /**
  * Dedicated proxy for the AI agent endpoint.
@@ -23,9 +23,9 @@ export async function GET(
       });
 
       if (!res.ok) {
-        const body = await res.text().catch(() => "");
+        await res.text().catch(() => ""); // consume body; do not forward internals
         return NextResponse.json(
-          { error: "Backend error", detail: body },
+          { error: "Backend error" },
           { status: res.status }
         );
       }

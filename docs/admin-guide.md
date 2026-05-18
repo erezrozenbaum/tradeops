@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.86.0  
-**Last updated:** 2026-05-17
+**Version:** 0.87.0  
+**Last updated:** 2026-05-18
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
@@ -618,7 +618,11 @@ kubectl describe ingress tradeops
 | Live Trading (Gated) | `live_trading/` + migration 0035 | 5-gate readiness checker (paper ≥30d Sharpe>0.5, risk ack, admin toggle, order risk limits, IBKR connection). IBKR Client Portal Gateway REST client: `lookup_conid`, `submit_order`, `cancel_order`. Session lifecycle: `POST /acknowledge`, `POST /session`, `POST /halt` (kill switch). Order form with market/limit, buy/sell, qty, limit price. All actions audit-logged. Live trading is **disabled by default** — admin must set `risk_model.live_trading_allowed=True` per investor. |
 | IDOR Protection | `auth/investor_access.py` + `api/v1/router.py` | `verify_investor_access` FastAPI dependency applied at `include_router` level for all 37 investor-scoped routers. Returns HTTP 404 if the requested `investor_id` does not belong to the authenticated user. Zero changes to individual endpoint handlers. |
 | Login Rate Limiting | `auth/rate_limiter.py` + `auth/router.py` | In-memory sliding-window limiter: 5 login attempts per client IP per 5-minute window. Returns HTTP 429 before credential verification. Thread-safe. Resets on process restart (single-process only; use Redis for multi-instance). |
-| AI Monthly Budget | `ai_usage/logger.py` + `core/config.py` | `AI_MONTHLY_BUDGET_USD` env var (default 0 = unlimited). `require_ai_budget` FastAPI dependency applied to 6 expensive AI routers. Queries rolling 30-day aggregate from `ai_usage_logs`; raises HTTP 429 when cap is reached. |
+| AI Monthly Budget | `ai_usage/logger.py` + `core/config.py` | `AI_MONTHLY_BUDGET_USD` env var (default 0 = unlimited). `require_ai_budget` FastAPI dependency applied to 6 expensive AI routers. Queries rolling 30-day aggregate from `ai_usage_logs`; raises HTTP 429 when cap is reached. Market signals background worker also checks per-investor budget before each Claude call. |
+| Minor Account Block | `live_trading/service.py` | `submit_order()` explicitly checks `investor.is_minor` before any gate evaluation and rejects with HTTP 422. Enforces safety rule #4 at the service layer, independent of gate configuration. |
+| Live Trading Gateway Validation | `live_trading/schemas.py` + `live_trading/router.py` | `gateway_url` validated on all write paths: must use `http`/`https` scheme and hostname must be `localhost` or `127.0.0.1`. Prevents SSRF via user-supplied gateway URLs. |
+| Audit Event Index | Migration 0036 | `ix_audit_events_investor_profile_id` index on `audit_events` table. Required for efficient per-investor audit log queries at scale. |
+| Pct Field Constraints | Migration 0036 | `CHECK` constraints: `investable_capital_pct` (0–100) on `financial_profiles`, `max_trade_size_pct` (0–100) on `risk_models`. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.

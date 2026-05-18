@@ -10,6 +10,43 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.87.0] — 2026-05-18
+
+### Security & Safety Hardening
+
+**Critical: minor account live trading block**
+- `live_trading/service.py`: `submit_order()` now checks `investor.is_minor` at the entry point and returns an error before any gate evaluation. Prevents live orders for minor accounts even if admin accidentally sets `live_trading_allowed = True`.
+
+**High: SSRF fix — gateway_url validation**
+- `live_trading/schemas.py`: `AcknowledgeRiskRequest.gateway_url` validated by `_validate_gateway_url()` — rejects any host other than `localhost` / `127.0.0.1`. IBKR gateway always runs locally.
+- `live_trading/router.py`: `activate_session` endpoint applies same validation to the `gateway_url` Query param.
+
+**High: order confirmation step in live trading UI**
+- `live-trading/page.tsx`: submit button now requires two deliberate clicks — first click shows an amber confirmation banner with the full order summary; second click submits. Cancel button dismisses. Also added `Number.isFinite` guard on `parseFloat(quantity)` and gate re-check before submission.
+
+**High: AI budget check in market signals worker**
+- `market_signals/worker.py`: per-investor loop now calls `check_monthly_budget()` before making any Claude API calls, skipping investors whose rolling 30-day spend is at the cap.
+
+**High: missing index on `audit_events.investor_profile_id`**
+- Alembic migration `0036_audit_index_and_pct_constraints.py`: adds `ix_audit_events_investor_profile_id` index. Prevents full table scans on audit log queries.
+
+**Medium: pct field range constraints**
+- Migration `0036`: adds `CHECK (investable_capital_pct >= 0 AND investable_capital_pct <= 100)` on `financial_profiles` and `CHECK (max_trade_size_pct >= 0 AND max_trade_size_pct <= 100)` on `risk_models`.
+
+**Medium: AI prompt injection hardening**
+- `ai_analysis/analyzer.py`: `_sanitize_strings()` helper strips newlines and backticks from all string values before JSON-encoding context passed to Claude, preventing user-controlled field names from injecting prompt instructions.
+
+**Medium: localStorage cache TTL for AI reports**
+- `agent/page.tsx`, `market-research/page.tsx`, `recommendations/page.tsx`: cache entries older than 12 hours are invalidated on read and removed from localStorage.
+
+**Medium: raw backend errors no longer proxied to client**
+- `api/v1/.../agent/route.ts`, `ai-report/route.ts`, `market-research/route.ts`, `recommendations/route.ts`: error responses from the backend no longer include the raw response body; returns generic `{ error: "Backend error" }` only.
+
+**Low: server-only env var in Next.js API routes**
+- Same 4 route files: `BACKEND` constant now resolves `API_URL` first, falling back to `NEXT_PUBLIC_API_URL` for backward compatibility. Prevents backend URL from being baked into the client JS bundle.
+
+---
+
 ## [0.86.0] — 2026-05-17
 
 ### Quality & Completeness
