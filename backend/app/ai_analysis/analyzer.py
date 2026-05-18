@@ -217,10 +217,21 @@ def build_context(
 _SONNET_MODEL = "claude-sonnet-4-6"
 
 
+def _sanitize_strings(obj):
+    """Recursively strip newlines and backticks from string values to prevent prompt injection."""
+    if isinstance(obj, str):
+        return obj.replace("\n", " ").replace("\r", " ").replace("`", "'")
+    if isinstance(obj, dict):
+        return {k: _sanitize_strings(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_strings(item) for item in obj]
+    return obj
+
+
 def generate_report(context: dict, api_key: str) -> tuple[dict, int, int]:
     """Returns (report_dict, input_tokens, output_tokens)."""
     client = anthropic.Anthropic(api_key=api_key)
-    context_json = json.dumps(context, indent=2, default=str)
+    context_json = json.dumps(_sanitize_strings(context), indent=2, default=str)
 
     message = client.messages.create(
         model=_SONNET_MODEL,

@@ -102,6 +102,7 @@ export default function LiveTradingPage() {
   const [limitPrice, setLimitPrice] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
+  const [orderPendingConfirm, setOrderPendingConfirm] = useState(false);
 
   // Orders list
   const [orders, setOrders] = useState<LiveOrder[]>([]);
@@ -178,14 +179,43 @@ export default function LiveTradingPage() {
 
   async function submitOrder() {
     if (!investorId) return;
-    setSubmitting(true);
     setOrderError(null);
+
+    // Input validation
+    const qty = parseFloat(quantity);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      setOrderError("Quantity must be a positive number.");
+      return;
+    }
+    if (orderType === "limit") {
+      const lp = parseFloat(limitPrice);
+      if (!Number.isFinite(lp) || lp <= 0) {
+        setOrderError("Limit price must be a positive number.");
+        return;
+      }
+    }
+
+    // Gate re-check before submit
+    if (!readiness?.all_gates_passed) {
+      setOrderError("Safety gates no longer pass. Refresh readiness and try again.");
+      return;
+    }
+
+    // First click: show confirmation
+    if (!orderPendingConfirm) {
+      setOrderPendingConfirm(true);
+      return;
+    }
+
+    // Second click: confirmed — submit
+    setOrderPendingConfirm(false);
+    setSubmitting(true);
     try {
       const body: Record<string, unknown> = {
         ticker: ticker.toUpperCase(),
         order_type: orderType,
         side,
-        quantity: parseFloat(quantity),
+        quantity: qty,
       };
       if (orderType === "limit" && limitPrice) body.limit_price = parseFloat(limitPrice);
       const res = await fetch(`/api/v1/investors/${investorId}/live-trading/orders`, {
@@ -466,15 +496,38 @@ export default function LiveTradingPage() {
                 {orderError}
               </div>
             )}
+            {orderPendingConfirm && (
+              <div className="rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+                <strong>Confirm real-money order:</strong>{" "}
+                {side.toUpperCase()} {quantity} {ticker.toUpperCase() || "…"}{" "}
+                ({orderType}){orderType === "limit" ? ` @ ${limitPrice}` : ""}.
+                Click the button again to confirm.
+              </div>
+            )}
             <div className="flex gap-3">
               <Button
                 disabled={submitting || !ticker || !quantity}
                 onClick={submitOrder}
-                className={side === "buy" ? "bg-green-600 hover:bg-green-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"}
+                className={
+                  orderPendingConfirm
+                    ? "bg-amber-500 hover:bg-amber-600 text-white"
+                    : side === "buy"
+                    ? "bg-green-600 hover:bg-green-700 text-white"
+                    : "bg-red-600 hover:bg-red-700 text-white"
+                }
               >
                 {side === "buy" ? <ArrowUp className="h-3.5 w-3.5 mr-1" /> : <ArrowDown className="h-3.5 w-3.5 mr-1" />}
-                {submitting ? "Submitting…" : `${side === "buy" ? "Buy" : "Sell"} ${ticker || "…"}`}
+                {submitting
+                  ? "Submitting…"
+                  : orderPendingConfirm
+                  ? "Confirm order"
+                  : `${side === "buy" ? "Buy" : "Sell"} ${ticker || "…"}`}
               </Button>
+              {orderPendingConfirm && (
+                <Button variant="outline" size="sm" onClick={() => setOrderPendingConfirm(false)}>
+                  Cancel
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

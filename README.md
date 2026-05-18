@@ -4,7 +4,7 @@
 
 TradeOps AI helps you understand your financial position, model risk accurately, select validated investment strategies, and simulate outcomes before committing real capital.
 
-**Version:** 0.86.0 · **Stack:** FastAPI · PostgreSQL · Next.js 14 · Docker · Helm/K8s
+**Version:** 0.87.0 · **Stack:** FastAPI · PostgreSQL · Next.js 14 · Docker · Helm/K8s
 
 ---
 

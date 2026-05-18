@@ -1,8 +1,23 @@
 import uuid
 from datetime import datetime
 from typing import Literal
+from urllib.parse import urlparse
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+_ALLOWED_GATEWAY_HOSTS = {"localhost", "127.0.0.1"}
+
+
+def _validate_gateway_url(v: str) -> str:
+    """IBKR Client Portal Gateway always runs locally — reject any remote URL."""
+    parsed = urlparse(v)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError("gateway_url must use http or https scheme")
+    if parsed.hostname not in _ALLOWED_GATEWAY_HOSTS:
+        raise ValueError(
+            f"gateway_url host must be localhost or 127.0.0.1, got: {parsed.hostname!r}"
+        )
+    return v
 
 
 class GateStatus(BaseModel):
@@ -22,6 +37,11 @@ class AcknowledgeRiskRequest(BaseModel):
     confirmation: str = Field(..., description='Must be exactly "I UNDERSTAND"')
     ibkr_account_id: str
     gateway_url: str
+
+    @field_validator("gateway_url")
+    @classmethod
+    def validate_gateway_url(cls, v: str) -> str:
+        return _validate_gateway_url(v)
 
     @model_validator(mode="after")
     def check_confirmation(self) -> "AcknowledgeRiskRequest":

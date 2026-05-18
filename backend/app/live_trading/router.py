@@ -14,6 +14,7 @@ from app.live_trading.schemas import (
     LiveTradingReadiness,
     LiveTradingSessionOut,
     OrderRequest,
+    _validate_gateway_url,
 )
 
 router = APIRouter()
@@ -50,6 +51,10 @@ def activate_session(
     db: Session = Depends(get_db),
 ):
     """Activate live trading session. All 5 gates must pass."""
+    try:
+        _validate_gateway_url(gateway_url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     session, error = service.activate_session(db, investor_id, gateway_url, ibkr_account_id)
     if error:
         raise HTTPException(status_code=422, detail=error)

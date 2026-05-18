@@ -130,15 +130,20 @@ export default function AgentPage() {
   const [error, setError] = useState<string | null>(null);
   const [cachedAt, setCachedAt] = useState<string | null>(null);
 
-  // Load cache on mount
+  // Load cache on mount (12h TTL)
   useEffect(() => {
     if (!investorId) return;
     try {
       const raw = localStorage.getItem(CACHE_KEY(investorId));
       if (raw) {
         const { data, savedAt } = JSON.parse(raw);
-        setReport(data);
-        setCachedAt(savedAt);
+        const ageMs = Date.now() - new Date(savedAt).getTime();
+        if (ageMs > 12 * 3600 * 1000) {
+          localStorage.removeItem(CACHE_KEY(investorId));
+        } else {
+          setReport(data);
+          setCachedAt(savedAt);
+        }
       }
     } catch {}
   }, [investorId]);

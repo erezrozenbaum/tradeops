@@ -8,6 +8,7 @@ from app.live_trading import engine as gate_engine
 from app.live_trading import ibkr as ibkr_client
 from app.live_trading.schemas import AcknowledgeRiskRequest, OrderRequest
 from app.market_data import service as market_data_svc
+from app.models.investor_profile import InvestorProfile
 from app.models.live_trading import LiveOrder, LiveTradingSession
 from app.risk_modeling import service as rm_service
 
@@ -161,6 +162,10 @@ def submit_order(
     body: OrderRequest,
 ) -> tuple[LiveOrder | None, str | None]:
     """Submit a live order through all safety gates. Returns (order, error)."""
+    investor = db.get(InvestorProfile, investor_id)
+    if investor and getattr(investor, "is_minor", False):
+        return None, "Live trading is not permitted for minor accounts."
+
     session = get_active_session(db, investor_id)
     if session is None:
         return None, "No active live trading session. Activate session first."
