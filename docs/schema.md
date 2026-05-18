@@ -1,8 +1,8 @@
 # TradeOps AI — Database Schema Reference
 
-**Version:** 0.82.0  
-**Last updated:** 2026-05-16  
-**Migration head:** 0034
+**Version:** 0.90.0  
+**Last updated:** 2026-05-18  
+**Migration head:** 0036
 
 All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete unless noted.
 
@@ -672,3 +672,5 @@ Tracks every Claude API call for cost attribution and admin reporting.
 | 0032 | ai_usage_logs table (feature_name, model, input_tokens, output_tokens, cost_usd, called_at) |
 | 0033 | Family multi-user: invite_email/invite_token/invite_status on family_members; owner_type on investment_accounts (personal/joint); balance_updated_at on investment_holdings |
 | 0034 | CHECK constraints on enum VARCHAR columns (owner_type, invite_status, asset_type, transaction_type, signal_type, etc.) |
+| 0035 | live_trading_sessions table (gateway_url, session_token, session_status, acknowledged_at, order log JSONB) |
+| 0036 | Index on audit_events.investor_profile_id; CHECK constraints on financial_profiles.investable_capital_pct and risk_models.max_trade_size_pct (0–100 range) |

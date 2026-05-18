@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.88.0  
+**Version:** 0.90.0  
 **Last updated:** 2026-05-18
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -13,16 +13,17 @@ This guide covers installation, configuration, database management, Kubernetes d
 2. [Environment configuration](#2-environment-configuration)
 3. [Starting with Docker Compose (local/dev)](#3-starting-with-docker-compose-localdev)
 4. [Database management](#4-database-management)
-5. [Managing investor profiles](#5-managing-investor-profiles)
-6. [Strategy templates](#6-strategy-templates)
-7. [Monitoring and logs](#7-monitoring-and-logs)
-8. [Stopping and resetting](#8-stopping-and-resetting)
-9. [Kubernetes deployment (Helm)](#9-kubernetes-deployment-helm)
-10. [ArgoCD — GitOps CI/CD](#10-argocd--gitops-cicd)
-11. [GitHub Actions — Docker image pipeline](#11-github-actions--docker-image-pipeline)
-12. [Troubleshooting](#12-troubleshooting)
-13. [Feature reference](#13-feature-reference)
-14. [Maintenance checklist](#14-maintenance-checklist)
+5. [Authentication & user management](#5-authentication--user-management)
+6. [Managing investor profiles](#6-managing-investor-profiles)
+7. [Strategy templates](#7-strategy-templates)
+8. [Monitoring and logs](#8-monitoring-and-logs)
+9. [Stopping and resetting](#9-stopping-and-resetting)
+10. [Kubernetes deployment (Helm)](#10-kubernetes-deployment-helm)
+11. [ArgoCD — GitOps CI/CD](#11-argocd--gitops-cicd)
+12. [GitHub Actions — Docker image pipeline](#12-github-actions--docker-image-pipeline)
+13. [Troubleshooting](#13-troubleshooting)
+14. [Feature reference](#14-feature-reference)
+15. [Maintenance checklist](#15-maintenance-checklist)
 
 ---
 
@@ -120,11 +121,11 @@ docker compose -f infra/docker-compose.yml exec backend alembic upgrade head
 
 Migrations also run automatically on every container start.
 
-### Migration history (22 migrations as of v0.49.0)
+### Migration history (36 migrations as of v0.90.0)
 
 | # | Description |
 |---|-------------|
-| 0001 | Initial schema (investor_profiles, financial_profiles, etc.) |
+| 0001 | Initial schema (investor_profiles, financial_profiles, goals, risk_models, strategy_templates) |
 | 0002 | Strategy tables |
 | 0003 | Backtest tables |
 | 0004 | Paper trading tables |
@@ -146,6 +147,20 @@ Migrations also run automatically on every container start.
 | 0020 | Price alerts |
 | 0021 | `is_emergency_fund` flag on `investment_accounts` |
 | 0022 | `is_emergency_fund` flag on `investment_holdings` |
+| 0023 | Goal linked_account_id FK |
+| 0024 | **users table + JWT auth** (email, password_hash, role) |
+| 0025 | Account auto-sync fields |
+| 0026 | Holding management fees |
+| 0027 | Options holdings (strike, expiry, type, multiplier, position_type) |
+| 0028 | Investor weekly digest opt-in |
+| 0029 | Holding purchase_fx_rate |
+| 0030 | market_signals table |
+| 0031 | Holding makdam column (Israeli pension) |
+| 0032 | ai_usage_logs table (AI cost tracking) |
+| 0033 | Family multi-user invite fields; account owner_type; holding balance_updated_at |
+| 0034 | CHECK constraints on enum VARCHAR columns |
+| 0035 | live_trading_sessions table |
+| 0036 | Index on audit_events.investor_profile_id; CHECK constraints on pct columns |
 
 ### Creating a new migration
 
@@ -192,7 +207,55 @@ SELECT id, name, strategy_type, risk_level FROM strategy_templates ORDER BY risk
 
 ---
 
-## 5. Managing investor profiles
+## 5. Authentication & user management
+
+### How authentication works
+
+TradeOps AI uses stateless JWT authentication:
+
+1. User registers via `POST /api/v1/auth/register` (email + password).
+2. User logs in via `POST /api/v1/auth/login` — a 7-day HS256 JWT is issued containing `user_id`, `exp`, and a unique `jti` (JWT ID). The token is stored in an HttpOnly `SameSite=Strict` cookie (`tradeops_token`).
+3. All `/api/v1/investors/...` routes require a valid, non-blacklisted token.
+4. `POST /api/v1/auth/logout` — writes the token's JTI to Redis with a TTL equal to the remaining token lifetime. The token is immediately invalid even if replayed.
+
+Passwords are hashed with bcrypt. There is no plaintext password storage.
+
+### User roles
+
+| Role | Capabilities |
+|------|-------------|
+| `user` | Access their own investor profiles only |
+| `admin` | Access admin panel, AI cost logs, user management, assign profiles |
+
+Promote a user to admin via the admin panel UI, or directly:
+
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'admin@example.com';
+```
+
+### Creating the first admin
+
+The first user to register gets the `user` role by default. Promote them manually:
+
+```bash
+docker compose -f infra/docker-compose.yml exec db \
+  psql -U tradeops -d tradeops \
+  -c "UPDATE users SET role = 'admin' WHERE email = 'your@email.com';"
+```
+
+### Token blacklist (Redis)
+
+The JWT JTI blacklist lives in Redis under keys `jwt_bl:{jti}`. Each key expires automatically when the token would have expired naturally — no manual cleanup needed.
+
+If Redis is unavailable, the blacklist falls back to per-process in-memory storage. This means tokens revoked during a Redis outage may still pass validation in other worker processes. Redis availability is important for production deployments with multiple replicas.
+
+### Login rate limiting
+
+5 failed login attempts per IP address per 5-minute sliding window. Backed by Redis sorted sets. Falls back to in-memory if Redis is unavailable (per-process, not distributed in that mode).
+
+---
+
+## 6. Managing investor profiles
 
 ### Via the UI
 
@@ -200,9 +263,19 @@ Open http://localhost:3000. If no profiles exist, the creation form opens automa
 
 ### Via the API
 
+All API calls require authentication. Obtain a session cookie first:
+
 ```bash
+# 1. Login — sets HttpOnly tradeops_token cookie
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -c cookies.txt \
+  -d '{"email": "admin@example.com", "password": "your-password"}'
+
+# 2. Create investor profile (cookie forwarded automatically)
 curl -X POST http://localhost:8000/api/v1/investors \
   -H "Content-Type: application/json" \
+  -b cookies.txt \
   -d '{
     "full_name": "Jane Smith",
     "date_of_birth": "1990-06-15",
@@ -224,7 +297,7 @@ All related rows cascade-delete automatically.
 
 ---
 
-## 6. Strategy templates
+## 7. Strategy templates
 
 Templates are seeded by migration `0002_strategy_tables.py`.
 
@@ -234,7 +307,7 @@ curl http://localhost:8000/api/v1/strategies/templates
 
 ---
 
-## 7. Monitoring and logs
+## 8. Monitoring and logs
 
 ```bash
 docker compose -f infra/docker-compose.yml logs -f              # all services
@@ -266,7 +339,7 @@ Or view in the UI at http://localhost:3000/audit.
 
 ---
 
-## 8. Stopping and resetting
+## 9. Stopping and resetting
 
 ```bash
 # Stop containers, preserve data
@@ -282,7 +355,7 @@ docker compose -f infra/docker-compose.yml up -d backend
 
 ---
 
-## 9. Kubernetes deployment (Helm)
+## 10. Kubernetes deployment (Helm)
 
 The Helm chart is at `helm/tradeops/`. It deploys:
 
@@ -389,7 +462,7 @@ frontend:
 
 ---
 
-## 10. ArgoCD — GitOps CI/CD
+## 11. ArgoCD — GitOps CI/CD
 
 The ArgoCD Application manifest is at `argocd/application.yaml`. It watches the `helm/tradeops/` path in this repository and auto-syncs on changes.
 
@@ -454,7 +527,7 @@ For simple self-hosted setups, set the secret values via `helm upgrade --set sec
 
 ---
 
-## 11. GitHub Actions — Docker image pipeline
+## 12. GitHub Actions — Docker image pipeline
 
 Workflow file: `.github/workflows/docker-build-push.yml`
 
@@ -486,7 +559,7 @@ git push origin v0.43.0
 
 ---
 
-## 12. Troubleshooting
+## 13. Troubleshooting
 
 ### Backend fails to start — "could not connect to server"
 
@@ -545,7 +618,7 @@ kubectl describe ingress tradeops
 
 ---
 
-## 13. Feature reference
+## 14. Feature reference
 
 ### AI Intelligence features (require ANTHROPIC_API_KEY)
 
@@ -679,7 +752,7 @@ Portfolio snapshots are captured daily at 21:00 UTC by the `snapshot_writer` wor
 
 ---
 
-## 14. Maintenance checklist
+## 15. Maintenance checklist
 
 When making changes to the platform:
 

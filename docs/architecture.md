@@ -1,7 +1,7 @@
 # TradeOps AI — Architecture
 
-**Version:** 0.82.0  
-**Last updated:** 2026-05-16
+**Version:** 0.90.0  
+**Last updated:** 2026-05-18
 
 ---
 
@@ -10,23 +10,27 @@
 TradeOps AI is a personal financial intelligence platform. It is not a trading bot. It helps users understand their financial position, model risk, select validated strategies, and simulate outcomes before committing real capital.
 
 ```
-Browser (Next.js)
-      │
-      │  REST/JSON
+Browser (Next.js 14)
+      │  REST/JSON + SSE
+      │  HttpOnly cookie (tradeops_token)
       ▼
-FastAPI (Python 3.11)
-      │
-      │  SQLAlchemy ORM
-      ▼
-PostgreSQL 16
-      │
-      │  HTTP (Anthropic SDK)
-      ▼
-Claude API  (AI report generation only)
+FastAPI (Python 3.11)  ←→  Claude API (AI features)
+      │  SQLAlchemy ORM       │
+      ▼                       │  redis-py
+PostgreSQL 16            Redis 7
+                         ├── login rate limiting (sorted-set sliding window)
+                         └── JWT JTI blacklist (SET + TTL)
 ```
 
-All services run as Docker containers orchestrated by Docker Compose.  
+All services run as Docker containers orchestrated by Docker Compose (local) or Helm/Kubernetes (production).  
 CI (GitHub Actions) runs backend tests and builds both Docker images on every push to `main`.
+
+### Next.js proxy
+
+`next.config.mjs` defines a fallback rewrite: all `/api/*` requests not handled by a Next.js Route Handler are proxied to the backend (`NEXT_PUBLIC_API_URL`). This means:
+- The browser always calls the frontend origin — no cross-origin cookie issues.
+- HttpOnly cookies set by the backend are visible to the browser under the frontend domain.
+- Four dedicated Next.js Route Handlers exist for long-running AI requests (agent, ai-report, market-research, recommendations) to handle timeouts and retry logic; all other API calls fall through to the proxy.
 
 ---
 
@@ -164,6 +168,22 @@ backend/app/
 ├── liquidity_runway/           # Tiered liquidation model
 ├── resilience/                 # Life-event survival simulator
 │
+├── auth/
+│   ├── service.py              # JWT creation/decoding, bcrypt password hashing
+│   ├── dependencies.py         # get_current_user FastAPI dependency (cookie + Bearer)
+│   ├── investor_access.py      # verify_investor_access — ownership enforcement
+│   ├── blacklist.py            # JTI blacklist: Redis primary, in-memory fallback
+│   ├── rate_limiter.py         # Login rate limiter: Redis sorted-set sliding window
+│   ├── router.py               # POST /auth/login|register|logout  GET /auth/me
+│   └── schemas.py              # UserCreate, UserLogin, UserOut, Token
+│
+├── live_trading/
+│   ├── ibkr.py                 # IBKR Client Portal Gateway HTTP client (market + limit orders)
+│   ├── engine.py               # 5-gate readiness check + order risk validation
+│   ├── service.py              # submit_order, cancel_order, kill_switch
+│   ├── schemas.py              # OrderRequest, AcknowledgeRiskRequest (gateway_url SSRF-validated)
+│   └── router.py               # /investors/{id}/live-trading — gated by all 5 safety checks
+│
 ├── audit/                      # Event log for all significant actions
 ├── dashboard/                  # Aggregated summary endpoint
 ├── admin/                      # Multi-tenant admin panel + AI cost tracking
@@ -178,7 +198,18 @@ backend/app/
 
 ### API routing
 
-All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`:
+All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`.
+
+**Auth routes** (public — no ownership check required):
+
+| Prefix | Module | Notes |
+|--------|--------|-------|
+| `/auth/register` | auth | `POST` — create account, bcrypt-hashed |
+| `/auth/login` | auth | `POST` — sets HttpOnly `tradeops_token` cookie (7-day JWT with JTI) |
+| `/auth/logout` | auth | `POST` — blacklists JTI in Redis, clears cookie |
+| `/auth/me` | auth | `GET` — returns current user from token |
+
+**Investor-scoped routes** — all require `verify_investor_access` (JWT valid + investor owned by caller):
 
 | Prefix | Module | Tags |
 |--------|--------|------|
@@ -221,12 +252,21 @@ All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`:
 | `/investors/{id}/family-portfolio` | family_portfolio | family-portfolio |
 | `/investors/{id}/portfolio/liquidity-runway` | liquidity_runway | liquidity-runway |
 | `/investors/{id}/portfolio/resilience` | resilience | resilience |
+| `/investors/{id}/live-trading` | live_trading | live-trading |
 | `/market` | market_data | market-data (REST + SSE) |
 | `/investors/{id}/accounts` | holdings | holdings |
 | `/investors/{id}/accounts/{id}/holdings` | holdings | holdings |
 | `/family-profiles` | family_profiles | family-profiles |
 | `/strategies/templates` | strategy_library | strategy-templates |
 | `/admin` | admin | admin |
+
+**Dependency groups used in `router.py`:**
+```python
+_own = [Depends(verify_investor_access)]          # JWT + ownership check
+_ai  = [Depends(verify_investor_access),           # JWT + ownership + monthly budget guard
+        Depends(require_ai_budget)]
+```
+AI-gated routes (`_ai`): `ai-report`, `agent`, `market-scan`, `recommendations`, `market-research`, `chat`.
 
 Interactive docs: `http://localhost:8000/docs`
 
@@ -272,6 +312,8 @@ Managed by Alembic. Migrations in `backend/alembic/versions/`.
 | `0032` | ai_usage_logs table (token counts, cost_usd per Claude API call) |
 | `0033` | family multi-user invite fields; investment_accounts owner_type; holding balance_updated_at |
 | `0034` | CHECK constraints on enum-like VARCHAR columns (owner_type, invite_status, asset_type, etc.) |
+| `0035` | live_trading_sessions table (gateway_url, session_token, status, order log) |
+| `0036` | audit_events index on investor_profile_id; CHECK constraints on investable_capital_pct, max_trade_size_pct |
 
 ### Core tables
 
@@ -353,9 +395,56 @@ frontend/src/
 
 ### Session management
 
-JWT authentication (HS256, 7-day expiry). Token stored in an httpOnly cookie (`tradeops_token`). All `/api/v1` routes require a valid token via `get_current_user` dependency (reads cookie, falls back to `Authorization: Bearer`).
+JWT authentication (HS256, 7-day expiry). Token stored in an HttpOnly `SameSite=Strict` cookie (`tradeops_token`). Every token includes a unique `jti` (JWT ID) claim.
 
-The active investor UUID is stored in `localStorage` under `tradeops_investor_id`. The `useInvestorId` hook reads this and redirects to `/login` if absent.
+The active investor UUID is stored in `localStorage` under `tradeops_investor_id`. The `useInvestorId` hook reads this and redirects to `/login` if absent. This controls *which profile* is displayed; it does not bypass auth — all API requests still require a valid JWT.
+
+See [Authentication & Authorization](#authentication--authorization) for the full security model.
+
+---
+
+## Authentication & Authorization
+
+### Token lifecycle
+
+1. `POST /auth/login` — verifies bcrypt password, issues a HS256 JWT containing `{"sub": user_id, "exp": +7 days, "jti": uuid4}`. Sets the `tradeops_token` HttpOnly, `SameSite=Strict` cookie with matching `max_age`.
+2. Every subsequent request — `get_current_user` dependency extracts the token (cookie preferred, `Authorization: Bearer` fallback), decodes it, checks JTI against the Redis blacklist, and returns the `User` model.
+3. `POST /auth/logout` — decodes the token **without** blacklist check, writes `jwt_bl:{jti}` to Redis with TTL = remaining token lifetime, then clears the cookie. The token is now permanently invalid even if an attacker replayed the cookie.
+
+### JTI blacklist
+
+Location: `auth/blacklist.py`
+
+- **Primary store**: Redis — `SET jwt_bl:{jti} 1 EX <remaining_seconds>`. TTL matches the token's remaining lifetime exactly so no manual cleanup is needed.
+- **Fallback**: per-process in-memory dict `{jti: expires_at}` — used automatically when Redis is unreachable. Expired entries are pruned on every write.
+- **Degraded mode**: during a Redis outage, a JTI revoked in one worker/pod may still pass in another. This is the accepted trade-off; Redis liveness probes keep outages brief.
+- **Backward compatibility**: tokens issued before v0.90.0 have no `jti` field. `decode_token()` skips the blacklist check when `jti` is absent — existing sessions remain valid until natural expiry.
+
+### Multi-tenant ownership model
+
+One **user** → many **investor profiles**. Every investor-scoped route carries `{investor_id}` in the path. The `verify_investor_access` dependency (`auth/investor_access.py`) checks:
+
+```python
+profile = db.get(InvestorProfile, investor_id)
+if not profile or profile.user_id != current_user.id:
+    raise HTTPException(404)  # 404 not 403 — avoids leaking existence
+```
+
+Admins bypass this check via the admin router's separate `require_admin` dependency.
+
+### Route protection summary
+
+| Scope | Dependency | Applied to |
+|-------|-----------|------------|
+| Public | None | `/auth/*`, `/market/*` |
+| Authenticated | `get_current_user` | `/auth/me`, investor creation |
+| Investor-owned | `_own` = `verify_investor_access` | All 35+ `/investors/{id}/...` routes |
+| AI-gated | `_ai` = ownership + `require_ai_budget` | ai-report, agent, recommendations, market-research, market-scan, chat |
+| Admin-only | `require_admin` | `/admin/*` |
+
+### Password hashing
+
+bcrypt via `bcrypt` library. No migration needed to change hash algorithm for existing users — new hashes are verified by the algorithm stored in the hash prefix.
 
 ---
 
@@ -490,15 +579,35 @@ Location: `backend/app/paper_trading/engine.py`
 
 ---
 
-## AI analysis
+## AI features
 
-Location: `backend/app/ai_analysis/`
+Six features call the Anthropic Claude API. All require `ANTHROPIC_API_KEY`. All are gated by the `require_ai_budget` dependency (monthly per-investor spend cap, configurable via `AI_MONTHLY_BUDGET_USD`).
 
-- Uses the Anthropic Claude API (`claude-sonnet-4-5` or configured model)
-- `service.py` aggregates investor data: financial profile, risk model, strategy recommendations, backtest results, paper trading history
-- `analyzer.py` sends a structured prompt and parses the 7-section response
-- Output is returned directly to the caller — not persisted (stateless per request)
-- Requires `ANTHROPIC_API_KEY` in environment
+| Feature | Module | Model | Route |
+|---------|--------|-------|-------|
+| AI Report | `ai_analysis/` | `claude-sonnet-4-6` | `GET /investors/{id}/ai-report` |
+| Deep Market Research | `market_research/` | `claude-sonnet-4-6` | `GET /investors/{id}/market-research` |
+| Recommendations | `investment_recommendations/` | `claude-sonnet-4-6` | `GET /investors/{id}/recommendations` |
+| AI Agent | `investment_agent/` | `claude-sonnet-4-6` | `GET /investors/{id}/agent` |
+| Portfolio Chat | `portfolio_chat/` | `claude-haiku-4-5-20251001` | `POST /investors/{id}/chat` |
+| Market Signals | `market_signals/` (worker) | `claude-haiku-4-5-20251001` | background job 20:15 UTC |
+
+### AI cost tracking
+
+Every Claude API call logs to the `ai_usage_logs` table via `log_ai_call()` (`ai_usage/logger.py`):
+- `feature_name`, `model`, `input_tokens`, `output_tokens`, `cost_usd`, `investor_id`, `called_at`
+- Cost is computed from published per-token pricing for each model
+- Market research skips logging on cache hits (no tokens consumed)
+- Portfolio chat skips logging when the API call fails (0 tokens consumed)
+
+Visible in the admin panel under **AI API Cost** with 7/30/90-day views, breakdown by feature, and per-user drill-down.
+
+### AI output rules (enforced in prompts)
+- Never guarantee returns
+- Never recommend leverage, margin, options, futures, or shorting
+- Only recommend instruments from the curated catalog (no invented tickers)
+- If investor is a minor: education/preservation instruments only
+- Strategies come from controlled templates — AI cannot invent new ones
 
 ---
 
@@ -607,8 +716,14 @@ In-memory 5-turn conversation history per investor. Context includes live portfo
 
 ## Known gaps (current)
 
-- No authentication — investor switching is based on localStorage only
-- No real live trading (intentionally disabled)
-- No role-based access control
-- No tax engine (tax-loss harvesting is UI-only analysis)
-- FX historical rates not stored — `currency_rates` table holds only the current rate per pair (relevant for FX impact analysis planned in v0.64)
+- **No real live trading** — intentionally disabled by default. Requires 5-gate readiness check: paper track record (Sharpe > 0.5, ≥30 days), risk acknowledgment, admin approval, order risk limits, and active IBKR connection. Kill switch halts session and cancels all open orders immediately.
+- **No tax engine** — tax-loss harvesting is analysis-only (candidates + estimated saving). Actual tax calculations are country-specific and not implemented.
+- **FX historical rates** — `currency_rates` table holds only the current rate per pair. Historical FX rates are not stored, which limits P&L attribution decomposition into FX vs asset components.
+- **Refresh token rotation** — the current auth uses a single 7-day access token with JTI blacklist on logout. Short-lived access tokens with rotating refresh tokens are not implemented; the 7-day window is acceptable given server-side revocation via the blacklist.
+
+> **What is implemented** (common misconceptions):
+> - Full JWT authentication with HttpOnly cookies since v0.24 (migration 0024)
+> - Role-based access control: `user` and `admin` roles enforced on all routes
+> - Multi-tenant ownership: all investor routes verify the requester owns the profile
+> - Token revocation on logout via Redis JTI blacklist (v0.90.0)
+> - Login rate limiting: 5 attempts per IP per 5 minutes, Redis-backed (v0.88.0)

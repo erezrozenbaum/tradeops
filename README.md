@@ -71,9 +71,12 @@ The system recommends the right things before investing: build an emergency fund
 - **Kill switch** — halts session and cancels all open orders immediately
 
 ### Operational
+- **JWT authentication** — HS256, HttpOnly `SameSite=Strict` cookie; supports cookie and `Authorization: Bearer`
+- **Token revocation** — Redis JTI blacklist on logout; in-memory fallback when Redis unavailable
+- **Role-based access** — `user` and `admin` roles; all 35+ investor routes enforce ownership
 - **Audit log** — every significant action recorded
 - **Admin panel** — user management, AI cost tracking per feature
-- **Login rate limiting** — 5 attempts per IP per 5-minute window
+- **Login rate limiting** — 5 attempts per IP per 5-minute window (Redis-backed)
 - **AI monthly budget guard** — configurable per-investor USD spending cap
 - **CORS** — configurable via `ALLOWED_ORIGINS` env var
 - **PWA** — installable, offline-capable
