@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 class AiUsageFeatureRow(BaseModel):
     feature_name: str
+    model: str
     calls: int
     input_tokens: int
     output_tokens: int
@@ -28,6 +29,8 @@ class AiUsageSummary(BaseModel):
     total_input_tokens: int
     total_output_tokens: int
     total_cost_usd: float
+    monthly_budget_usd: float
+    budget_remaining_usd: float | None
     by_feature: list[AiUsageFeatureRow]
     by_user: list[AiUsageUserRow]
 

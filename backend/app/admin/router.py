@@ -7,6 +7,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.admin.dependencies import require_admin
+from app.core.config import settings
 from app.admin.schemas import (
     AdminProfileOut, AdminStats, AdminUserOut, AssignProfile, RoleUpdate,
     AiUsageSummary, AiUsageFeatureRow, AiUsageUserRow,
@@ -128,12 +129,13 @@ def get_ai_usage(
                 investor_email[log_entry.investor_id] = None
 
     # Aggregate by feature
-    feature_agg: dict[str, dict] = defaultdict(lambda: {"calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0})
+    feature_agg: dict[str, dict] = defaultdict(lambda: {"calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "model": ""})
     for l in logs:
         feature_agg[l.feature_name]["calls"] += 1
         feature_agg[l.feature_name]["input_tokens"] += l.input_tokens
         feature_agg[l.feature_name]["output_tokens"] += l.output_tokens
         feature_agg[l.feature_name]["cost_usd"] += l.cost_usd
+        feature_agg[l.feature_name]["model"] = l.model  # each feature uses one model; last wins
 
     by_feature = [
         AiUsageFeatureRow(feature_name=k, **v)
@@ -142,7 +144,7 @@ def get_ai_usage(
 
     # Aggregate by investor
     investor_agg: dict[uuid.UUID | None, dict] = defaultdict(
-        lambda: {"calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "by_feature": defaultdict(lambda: {"calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0})}
+        lambda: {"calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "by_feature": defaultdict(lambda: {"calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "model": ""})}
     )
     for l in logs:
         key = l.investor_id
@@ -154,6 +156,7 @@ def get_ai_usage(
         investor_agg[key]["by_feature"][l.feature_name]["input_tokens"] += l.input_tokens
         investor_agg[key]["by_feature"][l.feature_name]["output_tokens"] += l.output_tokens
         investor_agg[key]["by_feature"][l.feature_name]["cost_usd"] += l.cost_usd
+        investor_agg[key]["by_feature"][l.feature_name]["model"] = l.model
 
     by_user = []
     for inv_id, agg in sorted(investor_agg.items(), key=lambda x: -x[1]["cost_usd"]):
@@ -175,12 +178,17 @@ def get_ai_usage(
     total_in = sum(l.input_tokens for l in logs)
     total_out = sum(l.output_tokens for l in logs)
 
+    budget = settings.AI_MONTHLY_BUDGET_USD
+    budget_remaining = round(budget - total_cost, 6) if budget > 0 and days == 30 else None
+
     return AiUsageSummary(
         period_label=f"Last {days} days",
         total_calls=len(logs),
         total_input_tokens=total_in,
         total_output_tokens=total_out,
         total_cost_usd=round(total_cost, 6),
+        monthly_budget_usd=budget,
+        budget_remaining_usd=budget_remaining,
         by_feature=by_feature,
         by_user=by_user,
     )

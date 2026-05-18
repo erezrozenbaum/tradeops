@@ -32,6 +32,7 @@ interface Stats {
 
 interface AiFeatureRow {
   feature_name: string;
+  model: string;
   calls: number;
   input_tokens: number;
   output_tokens: number;
@@ -54,6 +55,8 @@ interface AiUsageSummary {
   total_input_tokens: number;
   total_output_tokens: number;
   total_cost_usd: number;
+  monthly_budget_usd: number;
+  budget_remaining_usd: number | null;
   by_feature: AiFeatureRow[];
   by_user: AiUserRow[];
 }
@@ -67,6 +70,14 @@ function fmtTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return String(n);
+}
+
+function modelLabel(model: string): string {
+  if (model.includes("sonnet-4-6")) return "Sonnet 4.6";
+  if (model.includes("haiku-4-5")) return "Haiku 4.5";
+  if (model.includes("opus-4-7")) return "Opus 4.7";
+  if (model.includes("opus-4-6")) return "Opus 4.6";
+  return model;
 }
 
 function FeatureLabel({ name }: { name: string }) {
@@ -252,7 +263,7 @@ export default function AdminPage() {
         {aiUsage ? (
           <div className="p-5 space-y-5">
             {/* Summary cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               <div className="rounded-md border border-border bg-muted/30 p-3">
                 <p className="text-xs text-muted-foreground mb-1">Total cost</p>
                 <p className="text-xl font-bold tabular-nums">{fmtCost(aiUsage.total_cost_usd)}</p>
@@ -269,6 +280,27 @@ export default function AdminPage() {
                 <p className="text-xs text-muted-foreground mb-1">Output tokens</p>
                 <p className="text-xl font-bold">{fmtTokens(aiUsage.total_output_tokens)}</p>
               </div>
+              <div className={`rounded-md border p-3 ${
+                aiUsage.monthly_budget_usd === 0
+                  ? "border-border bg-muted/30"
+                  : aiUsage.budget_remaining_usd !== null && aiUsage.budget_remaining_usd < 0
+                    ? "border-destructive/40 bg-destructive/10"
+                    : "border-border bg-muted/30"
+              }`}>
+                <p className="text-xs text-muted-foreground mb-1">
+                  {aiUsage.budget_remaining_usd !== null ? "Budget remaining" : "Monthly budget"}
+                </p>
+                {aiUsage.monthly_budget_usd === 0 ? (
+                  <p className="text-sm font-medium text-muted-foreground">Unlimited</p>
+                ) : aiUsage.budget_remaining_usd !== null ? (
+                  <p className={`text-xl font-bold tabular-nums ${aiUsage.budget_remaining_usd < 0 ? "text-destructive" : ""}`}>
+                    {fmtCost(Math.max(0, aiUsage.budget_remaining_usd))}
+                    <span className="text-xs font-normal text-muted-foreground ml-1">of {fmtCost(aiUsage.monthly_budget_usd)}</span>
+                  </p>
+                ) : (
+                  <p className="text-xl font-bold tabular-nums">{fmtCost(aiUsage.monthly_budget_usd)}<span className="text-xs font-normal text-muted-foreground ml-1">/mo</span></p>
+                )}
+              </div>
             </div>
 
             {/* By feature */}
@@ -280,6 +312,7 @@ export default function AdminPage() {
                     <thead>
                       <tr className="border-b border-border">
                         <th className="text-left py-2 text-xs font-medium text-muted-foreground">Feature</th>
+                        <th className="text-left px-4 py-2 text-xs font-medium text-muted-foreground">Model</th>
                         <th className="text-left px-4 py-2 text-xs font-medium text-muted-foreground">Calls</th>
                         <th className="text-left px-4 py-2 text-xs font-medium text-muted-foreground">Tokens (in+out)</th>
                         <th className="text-left px-4 py-2 text-xs font-medium text-muted-foreground">Cost</th>
@@ -289,6 +322,9 @@ export default function AdminPage() {
                       {aiUsage.by_feature.map(f => (
                         <tr key={f.feature_name} className="border-b border-border last:border-0">
                           <td className="py-2 font-medium"><FeatureLabel name={f.feature_name} /></td>
+                          <td className="px-4 py-2">
+                            <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{modelLabel(f.model)}</span>
+                          </td>
                           <td className="px-4 py-2 text-muted-foreground">{f.calls}</td>
                           <td className="px-4 py-2 text-muted-foreground">{fmtTokens(f.input_tokens + f.output_tokens)}</td>
                           <td className="px-4 py-2 font-medium tabular-nums">{fmtCost(f.cost_usd)}</td>

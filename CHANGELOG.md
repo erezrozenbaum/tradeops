@@ -10,6 +10,22 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.91.0] — 2026-05-18
+
+### Improvement — Admin Panel: Model Info + Budget Tracking
+
+**Problem**: The admin AI cost panel showed raw feature keys (`market_research`) and had no model visibility or budget awareness.
+
+**Changes**:
+
+- `admin/schemas.py`: `AiUsageFeatureRow` gains `model: str`. `AiUsageSummary` gains `monthly_budget_usd: float` and `budget_remaining_usd: float | None`.
+- `admin/router.py`: Feature aggregation now captures `model` per feature (last-write; each feature uses exactly one model). `monthly_budget_usd` sourced from `settings.AI_MONTHLY_BUDGET_USD`. `budget_remaining_usd` returned when `days == 30` and a budget is configured; `null` otherwise.
+- `frontend/admin/page.tsx`: "By feature" table gains a Model column with a monospace badge showing a friendly name (e.g., `Sonnet 4.6`, `Haiku 4.5`). Summary cards grid expanded to 5 columns — new "Budget remaining" card shows remaining vs monthly cap, or "Unlimited" when `AI_MONTHLY_BUDGET_USD = 0`. Card turns red if over budget.
+
+**Note on Anthropic account balance**: The Anthropic API does not expose account credit balance via API key. Remaining credits must be checked at console.anthropic.com.
+
+---
+
 ## [0.90.0] — 2026-05-18
 
 ### Security — JWT Token Revocation on Logout
