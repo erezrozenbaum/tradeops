@@ -10,6 +10,7 @@ from app.models.user import User
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
+ACCESS_TOKEN_EXPIRE_SECONDS = ACCESS_TOKEN_EXPIRE_DAYS * 24 * 3600
 
 
 def hash_password(password: str) -> str:
@@ -22,14 +23,30 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(user_id: uuid.UUID) -> str:
     expire = datetime.now(timezone.utc) + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
-    payload = {"sub": str(user_id), "exp": expire}
+    payload = {
+        "sub": str(user_id),
+        "exp": expire,
+        "jti": str(uuid.uuid4()),
+    }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
 
 
 def decode_token(token: str) -> str | None:
+    from app.auth.blacklist import is_blacklisted
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        jti = payload.get("jti")
+        if jti and is_blacklisted(jti):
+            return None
         return payload.get("sub")
+    except JWTError:
+        return None
+
+
+def decode_token_raw(token: str) -> dict | None:
+    """Decode without blacklist check — used only by the logout endpoint."""
+    try:
+        return jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError:
         return None
 
