@@ -1,8 +1,8 @@
 # TradeOps AI — Database Schema Reference
 
-**Version:** 0.90.0  
-**Last updated:** 2026-05-18  
-**Migration head:** 0036
+**Version:** 0.93.0  
+**Last updated:** 2026-05-19  
+**Migration head:** 0037
 
 All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete unless noted.
 
@@ -26,6 +26,7 @@ All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete
 14. [investment_holdings](#14-investment_holdings)
 15. [holding_transactions](#15-holding_transactions)
 16. [currency_rates](#16-currency_rates)
+16a. [fx_rate_history](#16a-fx_rate_history)
 17. [price_snapshots](#17-price_snapshots)
 18. [portfolio_snapshots](#18-portfolio_snapshots)
 19. [price_alerts](#19-price_alerts)
@@ -388,7 +389,7 @@ Immutable transaction log for holdings (buy/sell/dividend/fee/split/bonus).
 
 ## 16. currency_rates
 
-Live FX cache. One row per (base, target) pair, upserted on each fetch. **No historical rows.**
+Live FX cache. One row per (base, target) pair, upserted on each fetch. **No historical rows** — see fx_rate_history for time-series data.
 
 | Column | Type | Nullable | Default | Notes |
 |--------|------|----------|---------|-------|
@@ -399,6 +400,29 @@ Live FX cache. One row per (base, target) pair, upserted on each fetch. **No his
 | fetched_at | TIMESTAMPTZ | NO | `now()` | Cache TTL: 4 hours |
 
 **Source:** `open.er-api.com/v6/latest/{base}` (free tier, ~1500 req/month)
+
+---
+
+## 16a. fx_rate_history
+
+Daily FX closing rates for historical P&L decomposition. Added in migration 0037 (v0.92.0).
+
+One row per (from_currency, to_currency, date). Unique constraint enforces one rate per pair per day.
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | UUID | NO | uuid4 | PK |
+| from_currency | VARCHAR(10) | NO | — | e.g. `ILS` — indexed |
+| to_currency | VARCHAR(10) | NO | — | e.g. `USD` — indexed |
+| date | DATE | NO | — | Closing date — indexed |
+| rate | FLOAT | NO | — | 1 from_currency = rate × to_currency |
+| source | VARCHAR(50) | NO | `'yfinance'` | Data provider |
+
+**Unique constraint:** `(from_currency, to_currency, date)`
+
+**Used by:** `currency_engine/history.py:get_rate_at_date()` — provides historically-accurate `purchase_fx_rate` for new holdings when `purchase_date` is known. The `fx_impact` engine uses `purchase_fx_rate` to decompose total P&L into Asset P&L (price movement) and Currency P&L (FX movement).
+
+**Populated by:** daily worker `fx_history_sync` (21:30 UTC); on-demand fetch on cache miss in `get_rate_at_date()`.
 
 ---
 
@@ -674,3 +698,4 @@ Tracks every Claude API call for cost attribution and admin reporting.
 | 0034 | CHECK constraints on enum VARCHAR columns (owner_type, invite_status, asset_type, transaction_type, signal_type, etc.) |
 | 0035 | live_trading_sessions table (gateway_url, session_token, session_status, acknowledged_at, order log JSONB) |
 | 0036 | Index on audit_events.investor_profile_id; CHECK constraints on financial_profiles.investable_capital_pct and risk_models.max_trade_size_pct (0–100 range) |
+| 0037 | fx_rate_history table (from_currency, to_currency, date, rate, source) — daily FX closing rate store with unique constraint per pair+date |

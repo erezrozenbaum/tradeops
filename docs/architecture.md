@@ -1,7 +1,7 @@
 # TradeOps AI — Architecture
 
-**Version:** 0.90.0  
-**Last updated:** 2026-05-18
+**Version:** 0.93.0  
+**Last updated:** 2026-05-19
 
 ---
 
@@ -83,7 +83,13 @@ backend/app/
 │   └── router.py               # /investors/{id}/accounts + /holdings
 │
 ├── currency_engine/
-│   └── rates.py                # FX rate fetch (open.er-api.com) + 24h DB cache
+│   ├── rates.py                # FX rate fetch (open.er-api.com) + 4h DB cache
+│   └── history.py              # Daily FX history: get_rate_at_date(), _fetch_and_store_pair() via yfinance, sync_yesterday(), backfill_all_pairs()
+│
+├── fx_impact/
+│   ├── engine.py               # P&L decomposition: asset P&L vs currency P&L per holding
+│   ├── schemas.py              # HoldingFxImpactOut, FxImpactResultOut
+│   └── router.py               # GET /investors/{id}/fx-impact
 │
 ├── market_data/
 │   ├── fetcher.py              # Alpha Vantage GLOBAL_QUOTE HTTP call
@@ -186,14 +192,15 @@ backend/app/
 │
 ├── audit/                      # Event log for all significant actions
 ├── dashboard/                  # Aggregated summary endpoint
-├── admin/                      # Multi-tenant admin panel + AI cost tracking
+├── admin/                      # Multi-tenant admin panel + AI cost tracking + live trading queue
 └── workers/                    # APScheduler background jobs
     ├── scheduler.py            # Job registry + start/stop
     └── jobs/
         ├── market_signals_job.py   # 20:15 UTC daily — sentiment per holding
         ├── broker_auto_sync.py     # 09:00 UTC daily — auto-sync enabled accounts
         ├── weekly_digest.py        # 18:00 UTC Friday — email digest
-        └── research_prewarm.py     # Scheduled market research refresh
+        ├── research_prewarm.py     # Scheduled market research refresh
+        └── fx_history_sync.py      # 21:30 UTC daily — yesterday's FX rates for all active currency pairs
 ```
 
 ### API routing
@@ -253,6 +260,7 @@ All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`.
 | `/investors/{id}/portfolio/liquidity-runway` | liquidity_runway | liquidity-runway |
 | `/investors/{id}/portfolio/resilience` | resilience | resilience |
 | `/investors/{id}/live-trading` | live_trading | live-trading |
+| `/investors/{id}/fx-impact` | fx_impact | fx-impact |
 | `/market` | market_data | market-data (REST + SSE) |
 | `/investors/{id}/accounts` | holdings | holdings |
 | `/investors/{id}/accounts/{id}/holdings` | holdings | holdings |
@@ -314,6 +322,7 @@ Managed by Alembic. Migrations in `backend/alembic/versions/`.
 | `0034` | CHECK constraints on enum-like VARCHAR columns (owner_type, invite_status, asset_type, etc.) |
 | `0035` | live_trading_sessions table (gateway_url, session_token, status, order log) |
 | `0036` | audit_events index on investor_profile_id; CHECK constraints on investable_capital_pct, max_trade_size_pct |
+| `0037` | fx_rate_history table (from_currency, to_currency, date, rate, source) — daily FX rate store |
 
 ### Core tables
 
@@ -382,7 +391,8 @@ frontend/src/
 │   │   ├── ai-agent/page.tsx       # Free-form AI financial assistant
 │   │   ├── recommendations/page.tsx # Tailored recommendations
 │   │   ├── audit/page.tsx          # Audit event log
-│   │   ├── admin/page.tsx          # Admin panel (admin role required)
+│   │   ├── admin/page.tsx          # Admin panel: users, profiles, AI cost, live trading queue (admin role required)
+│   │   ├── fx-impact/page.tsx      # FX Impact: asset P&L vs currency P&L breakdown
 │   │   └── settings/page.tsx       # Account and platform info
 │   └── page.tsx                    # Root redirect → /dashboard
 ├── components/ui/                  # Shared UI primitives (Card, Badge, Button, etc.)
@@ -672,7 +682,7 @@ The sections above describe the baseline architecture at v0.29.0. All additions 
 | `GET /portfolio/rebalance` | rebalance_engine | Tier-level drift vs risk model, suggested trades |
 | `GET /portfolio/tax-opportunities` | tax_harvesting | Tax-loss harvesting candidates |
 | `GET /portfolio/options` | options_engine | Options P&L, expiry status, short-position flags |
-| `GET /portfolio/fx-impact` | *(planned v0.64)* | Asset P&L vs Currency P&L decomposition |
+| `GET /portfolio/fx-impact` | fx_impact | Asset P&L vs Currency P&L decomposition (historical rates since v0.92) |
 | `GET /pension-simulation` | pension_simulation | FV projection with management fees |
 | `GET /retirement-readiness` | retirement_readiness | Retirement readiness score |
 | `POST/GET /transactions` | transactions | Holding transaction log |

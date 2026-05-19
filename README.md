@@ -4,7 +4,7 @@
 
 TradeOps AI helps you understand your financial position, model risk accurately, select validated investment strategies, and simulate outcomes before committing real capital.
 
-**Version:** 0.90.0 · **Stack:** FastAPI · PostgreSQL · Redis · Next.js 14 · Docker · Helm/K8s
+**Version:** 0.93.0 · **Stack:** FastAPI · PostgreSQL · Redis · Next.js 14 · Docker · Helm/K8s
 
 ---
 
@@ -32,6 +32,7 @@ The system recommends the right things before investing: build an emergency fund
 - **Live price refresh** — Alpha Vantage / yfinance with 24h cache
 - **Real-time SSE streaming** — live price updates via Server-Sent Events (30s interval)
 - **Portfolio analysis** — P&L, unrealized/realized gains, after-tax P&L, FX exposure
+- **FX Impact** — P&L split into Asset P&L (price movement) vs Currency P&L (FX movement); historical rates at purchase date
 - **Performance attribution** — TWR, MWR (IRR), alpha vs benchmark, per-holding CAGR
 - **Rebalancing engine** — actionable BUY/SELL suggestions per allocation tier
 - **Correlation matrix** — 90-day Pearson correlation, concentration risk flags
@@ -67,6 +68,7 @@ The system recommends the right things before investing: build an emergency fund
 
 ### Live Trading (Gated)
 - **5-gate readiness check** — paper track record (Sharpe > 0.5, ≥30 days), risk acknowledgment, admin approval, order risk limits, IBKR connection
+- **Live trading admin queue** — admin panel shows eligible investors, gate status, Sharpe ratio; Approve/Revoke buttons with audit trail
 - **IBKR Client Portal Gateway** — market and limit orders; order cancellation; position sync
 - **Kill switch** — halts session and cancels all open orders immediately
 

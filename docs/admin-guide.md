@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.90.0  
-**Last updated:** 2026-05-18
+**Version:** 0.93.0  
+**Last updated:** 2026-05-19
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
@@ -161,6 +161,7 @@ Migrations also run automatically on every container start.
 | 0034 | CHECK constraints on enum VARCHAR columns |
 | 0035 | live_trading_sessions table |
 | 0036 | Index on audit_events.investor_profile_id; CHECK constraints on pct columns |
+| 0037 | fx_rate_history table (daily FX closing rates, unique per pair+date) |
 
 ### Creating a new migration
 
@@ -225,7 +226,7 @@ Passwords are hashed with bcrypt. There is no plaintext password storage.
 | Role | Capabilities |
 |------|-------------|
 | `user` | Access their own investor profiles only |
-| `admin` | Access admin panel, AI cost logs, user management, assign profiles |
+| `admin` | Access admin panel, AI cost logs, user management, assign profiles, live trading approvals |
 
 Promote a user to admin via the admin panel UI, or directly:
 
@@ -682,7 +683,9 @@ kubectl describe ingress tradeops
 | Liquidity Runway Engine | `liquidity_runway/` + `GET /portfolio/liquidity-runway` | Tiers every holding: Tier 1 (stocks/ETFs/crypto — T+2), Tier 2 (bonds/funds — 1wk), Tier 3 (locked: pension, keren hishtalmut, real estate). Net-to-pocket = gross − estimated CGT (gains only) − market impact buffer (0.5% Tier 1, 0% Tier 2). Optional `target_amount` query param activates Emergency Lever: greedy selection of cheapest-to-liquidate holdings (lowest cost/gross ratio first). Shown as Liquidity Runway card on /investments page. No DB migration. |
 | Resilience Stress-Test | `resilience/` + `POST /portfolio/resilience` | Life-event simulation (job loss, expense spike). Drains cash reserve (liquid_savings) → Tier 1 → Tier 2 in cost-efficiency order. Survival Score (0–100): 100 = Tier 3 never touched; <100 = Tier 3 breach required. Verdicts: Safe (≥80), At Risk (50–79), Critical (<50). Optional Claude Haiku AI recommendation (skipped if no API key). Depletion path shows month-by-month which assets are liquidated. Added to /stress-test page as ResilienceSimulatorCard. No DB migration. |
 | Market Signal Monitor | `market_signals/` + migration 0030 + `GET /market-signals` + `POST /market-signals/{id}/dismiss` | Daily APScheduler job (20:15 UTC) fetches yfinance news for all held tickers, calls Claude Haiku for sentiment (−1.0 to +1.0), whale mention detection, and personalized rationale. Personal Signal Guard mutes signals with composite_score < 50 (stability) or ticker > 15% of portfolio (concentration). 7-day rolling trend (improving/deteriorating/stable). Connected insights: tax-loss harvest, rebalancing, accumulation. Idempotent via unique index on (investor_id, ticker, signal_date). MarketSignalCard on /investments page. DB migration: 0030. |
-| Admin AI Cost Tracking | `ai_usage/logger.py` + `models/ai_usage_log.py` + migration 0032 + `GET /admin/ai-usage` | Logs every Claude API call (market signals + AI reports) to `ai_usage_logs` table with token counts and computed USD cost. Admin panel `/admin` shows: 4 summary cards (total cost, calls, input tokens, output tokens), per-feature table, per-user expandable rows. Period selector: 7/30/90 days. Cost rates: Haiku $0.80/$4.00 per MTok in/out; Sonnet $3.00/$15.00. |
+| Admin AI Cost Tracking | `ai_usage/logger.py` + `models/ai_usage_log.py` + migration 0032 + `GET /admin/ai-usage` | Logs every Claude API call to `ai_usage_logs` table with token counts and computed USD cost. Admin panel shows: 5 summary cards (total cost, calls, input tokens, output tokens, **budget remaining**), per-feature table with **model badge** (Sonnet 4.6 / Haiku 4.5), per-user expandable rows. Period selector: 7/30/90 days. Budget card shows remaining vs `AI_MONTHLY_BUDGET_USD`; turns red if over-budget; "Unlimited" when unconfigured. Note: Anthropic account credit balance is **not** available via API — check console.anthropic.com. |
+| Live Trading Admin Queue | `admin/router.py` + `GET /admin/live-trading/queue` + `POST /admin/live-trading/{id}/approve\|revoke` | Admin panel "Live Trading Queue" section. Shows every investor's gate 1–4 status (icons), Sharpe ratio, paper days, and approval badge. Expandable rows show gate detail text. **Approve** button activates when gates 1, 2, 4 pass (risk acknowledgment, paper track record, risk limits). **Revoke** disables live trading. Both actions audit-logged. Gate 5 (IBKR connection) excluded — investor provides gateway URL at session start. |
+| Historical FX Layer | `currency_engine/history.py` + `models/fx_rate_history.py` + migration 0037 + `fx_history_sync` worker | `fx_rate_history` stores daily closing FX rates (from yfinance). `get_rate_at_date()` provides historically-accurate `purchase_fx_rate` for new holdings when `purchase_date` is known — fixes P&L decomposition accuracy for broker-imported positions. Daily worker at 21:30 UTC syncs yesterday's rates for all active currency pairs. On-demand fetch on cache miss. `/investors/{id}/fx-impact` endpoint exposes the full Asset P&L vs Currency P&L breakdown. |
 | Daily Action Feed | `action_feed/` + `GET /investors/{id}/action-feed` | Aggregates 5 signal sources into a prioritised morning briefing (max 12 items). Priority 1 = triggered alerts / option expiry ≤7d. Priority 2 = drift ≥10% / negative signal on large position. Priority 3 = moderate drift / at-risk goal. DailyActionFeedCard on dashboard. No DB migration. |
 | Pairs Trading | `pairs_trading/` + `GET /analyze` + `POST /signals` | OLS hedge ratio, ADF(0) cointegration (MacKinnon −2.87 threshold), Z-score signals (±2.0 entry, ±3.5 stop). Saves to market_signals (PAIRS_ZSCORE). `/pairs-trading` page with Z-score gauge and trade instructions. No new deps (pure numpy). |
 | PDF Statement Import | `pdf_import/` + `POST /investors/{id}/pdf-import/parse|import` | pypdf text extraction + Claude Haiku parsing. Any broker PDF format. Smart truncation for large PDFs. `parse` = dry-run preview; `import` = write holdings. Dep: `pypdf>=4.0.0`. |
