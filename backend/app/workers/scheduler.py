@@ -39,6 +39,7 @@ def _register_jobs() -> None:
     from app.workers.jobs.market_prewarm import prewarm_market_signals
     from app.workers.jobs.research_prewarm import prewarm_market_research
     from app.workers.jobs.sentiment_worker import run_sentiment_signals
+    from app.workers.jobs.fx_history_sync import sync_fx_history
 
     _scheduler.add_job(
         refresh_all_prices,
@@ -119,6 +120,13 @@ def _register_jobs() -> None:
         replace_existing=True,
         misfire_grace_time=3600,
     )
+    _scheduler.add_job(
+        sync_fx_history,
+        CronTrigger(hour=21, minute=30),   # after snapshot_writer (21:00)
+        id="fx_history_sync",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
 
 
 def start() -> None:
@@ -128,7 +136,7 @@ def start() -> None:
     _register_jobs()
     _scheduler.start()
     _started = True
-    log.info("Workers scheduler started (jobs: price_refresh, snapshot_writer, price_alert_checker, goal_evaluation, proactive_insights, notification_alerts, broker_auto_sync, weekly_digest, market_prewarm, research_prewarm, sentiment_signals)")
+    log.info("Workers scheduler started (jobs: price_refresh, snapshot_writer, price_alert_checker, goal_evaluation, proactive_insights, notification_alerts, broker_auto_sync, weekly_digest, market_prewarm, research_prewarm, sentiment_signals, fx_history_sync)")
 
 
 def stop() -> None:

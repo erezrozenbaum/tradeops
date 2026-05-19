@@ -69,3 +69,20 @@ class RoleUpdate(BaseModel):
 
 class AssignProfile(BaseModel):
     user_id: uuid.UUID | None
+
+
+class LiveTradingGateOut(BaseModel):
+    label: str
+    passed: bool
+    detail: str
+
+
+class LiveTradingQueueEntry(BaseModel):
+    investor_id: uuid.UUID
+    investor_name: str
+    user_email: str | None
+    sharpe_ratio: float | None
+    paper_days: int | None
+    gates: list[LiveTradingGateOut]
+    gates_1_2_4_passed: bool
+    live_trading_allowed: bool

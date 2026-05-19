@@ -47,6 +47,7 @@ from app.pairs_trading.router import router as pairs_trading_router
 from app.pdf_import.router import router as pdf_import_router
 from app.crypto_staking.router import router as crypto_staking_router
 from app.live_trading.router import router as live_trading_router
+from app.fx_impact.router import router as fx_impact_router
 
 api_router = APIRouter()
 
@@ -103,3 +104,4 @@ api_router.include_router(pairs_trading_router, prefix="/investors/{investor_id}
 api_router.include_router(pdf_import_router, prefix="/investors/{investor_id}/pdf-import", tags=["pdf-import"], dependencies=_own)
 api_router.include_router(crypto_staking_router, prefix="/investors/{investor_id}/crypto-staking", tags=["crypto-staking"], dependencies=_own)
 api_router.include_router(live_trading_router, prefix="/investors/{investor_id}/live-trading", tags=["live-trading"], dependencies=_own)
+api_router.include_router(fx_impact_router, prefix="/investors/{investor_id}", tags=["fx-impact"], dependencies=_own)

@@ -37,6 +37,7 @@ import {
   FileUp,
   Coins,
   Flame,
+  Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +75,7 @@ const sections = [
       { label: "Debt Planner", href: "/debt-planner", icon: CreditCard },
       { label: "PDF Import", href: "/pdf-import", icon: FileUp },
       { label: "Crypto Staking", href: "/crypto-staking", icon: Coins },
+      { label: "FX Impact", href: "/fx-impact", icon: Globe },
     ],
   },
   {

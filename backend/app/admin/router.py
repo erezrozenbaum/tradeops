@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.admin.schemas import (
     AdminProfileOut, AdminStats, AdminUserOut, AssignProfile, RoleUpdate,
     AiUsageSummary, AiUsageFeatureRow, AiUsageUserRow,
+    LiveTradingQueueEntry, LiveTradingGateOut,
 )
 from app.db.session import get_db
 from app.models.investor_profile import InvestorProfile
@@ -191,4 +192,83 @@ def get_ai_usage(
         budget_remaining_usd=budget_remaining,
         by_feature=by_feature,
         by_user=by_user,
+    )
+
+
+@router.get("/live-trading/queue", response_model=list[LiveTradingQueueEntry])
+def get_live_trading_queue(db: Session = Depends(get_db), _=Depends(require_admin)):
+    """All investors — their live trading gate status and eligibility for admin approval."""
+    from app.live_trading.engine import check_readiness
+    from app.models.investor_profile import InvestorProfile
+    from app.risk_modeling import service as rm_service
+
+    investors = db.query(InvestorProfile).order_by(InvestorProfile.full_name).all()
+
+    # Build investor_id → user email lookup
+    investor_email: dict[uuid.UUID, str | None] = {}
+    for inv in investors:
+        if inv.user_id:
+            user = db.get(User, inv.user_id)
+            investor_email[inv.id] = user.email if user else None
+        else:
+            investor_email[inv.id] = None
+
+    entries: list[LiveTradingQueueEntry] = []
+    for inv in investors:
+        readiness = check_readiness(db, inv.id)  # skips gate 5 (no gateway_url)
+        gates_1_2_4 = [g for g in readiness.gates[:4] if g.label != "Admin approval"]
+        gates_1_2_4_passed = all(g.passed for g in gates_1_2_4)
+
+        risk_model = rm_service.get_latest(db, inv.id)
+        live_allowed = risk_model.live_trading_allowed if risk_model else False
+
+        entries.append(LiveTradingQueueEntry(
+            investor_id=inv.id,
+            investor_name=inv.full_name,
+            user_email=investor_email.get(inv.id),
+            sharpe_ratio=readiness.sharpe_ratio,
+            paper_days=readiness.paper_days,
+            gates=[LiveTradingGateOut(label=g.label, passed=g.passed, detail=g.detail) for g in readiness.gates[:4]],
+            gates_1_2_4_passed=gates_1_2_4_passed,
+            live_trading_allowed=live_allowed,
+        ))
+
+    return entries
+
+
+@router.post("/live-trading/{investor_id}/approve", status_code=204)
+def approve_live_trading(investor_id: uuid.UUID, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Enable live trading for an investor (sets risk_model.live_trading_allowed = True)."""
+    from app.risk_modeling import service as rm_service
+    from app import audit
+
+    risk_model = rm_service.get_latest(db, investor_id)
+    if not risk_model:
+        raise HTTPException(status_code=404, detail="No risk model found for this investor")
+    risk_model.live_trading_allowed = True
+    db.commit()
+    audit.log_event(
+        db,
+        event_type="live_trading.admin_approved",
+        description="Admin enabled live trading",
+        investor_profile_id=investor_id,
+    )
+
+
+@router.post("/live-trading/{investor_id}/revoke", status_code=204)
+def revoke_live_trading(investor_id: uuid.UUID, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Disable live trading for an investor (sets risk_model.live_trading_allowed = False)."""
+    from app.risk_modeling import service as rm_service
+    from app import audit
+
+    risk_model = rm_service.get_latest(db, investor_id)
+    if not risk_model:
+        raise HTTPException(status_code=404, detail="No risk model found for this investor")
+    risk_model.live_trading_allowed = False
+    db.commit()
+    audit.log_event(
+        db,
+        event_type="live_trading.admin_revoked",
+        description="Admin disabled live trading",
+        investor_profile_id=investor_id,
     )

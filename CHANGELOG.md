@@ -10,6 +10,55 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.93.0] — 2026-05-19
+
+### Feature — Live Trading Admin Queue
+
+**Problem**: Admin had no visibility into which investors were eligible for live trading and no easy way to approve them. The `live_trading_allowed` flag on the risk model had to be set manually via the database.
+
+**Changes**:
+
+- `admin/schemas.py`: Added `LiveTradingGateOut` and `LiveTradingQueueEntry` schemas.
+- `admin/router.py`: Three new endpoints:
+  - `GET /admin/live-trading/queue` — all investors with their 4 non-IBKR gate statuses (gates 1–4), Sharpe ratio, paper days, and current approval state. Sorted by investor name.
+  - `POST /admin/live-trading/{investor_id}/approve` — sets `risk_model.live_trading_allowed = True` + audit log.
+  - `POST /admin/live-trading/{investor_id}/revoke` — sets `risk_model.live_trading_allowed = False` + audit log.
+- `frontend/admin/page.tsx`: New "Live Trading Queue" section above the Users table. Shows per-investor gate icons (✓/✗), Sharpe ratio, paper days, approval badge, and Approve/Revoke buttons. Expandable rows show full gate detail text.
+
+**Gate 5 (IBKR connection) excluded from admin queue** — it requires a live gateway URL and is irrelevant for the approval decision. Investors provide it when activating a session.
+
+**Design principle preserved**: admin approval is always a deliberate human action. The queue surfaces eligibility; it never auto-approves.
+
+---
+
+## [0.92.0] — 2026-05-19
+
+### Feature — Historical FX Rate Layer
+
+**Problem**: `purchase_fx_rate` on holdings was always set using the current FX rate at creation time — even for broker-imported positions with historical purchase dates. This made the existing `fx_impact` P&L decomposition (Asset P&L vs Currency P&L) inaccurate for any position purchased in the past.
+
+**Additionally**: the `fx_impact` engine existed but had no API endpoint — it was unreachable.
+
+**Changes**:
+
+- `models/fx_rate_history.py` (NEW): `FxRateHistory(id, from_currency, to_currency, date, rate, source)` — daily closing FX rates with unique constraint on `(from_currency, to_currency, date)`.
+- `alembic/versions/0037_fx_rate_history.py` (NEW): migration for the new table.
+- `currency_engine/history.py` (NEW):
+  - `get_rate_at_date(db, from_ccy, to_ccy, date)` — DB lookup within 7-day window (handles weekends/holidays); fetches from yfinance on miss.
+  - `_fetch_and_store_pair(db, from_ccy, to_ccy, days)` — upserts daily rates from yfinance; tries inverse ticker if direct unavailable.
+  - `sync_yesterday(db)` — fetches yesterday's rates for all active currency pairs (used by daily worker).
+  - `backfill_all_pairs(db, days=730)` — full 2-year history fetch for all pairs.
+- `holdings/service.py`: `create_holding()` now uses `get_rate_at_date(purchase_date)` when `purchase_date` is set, falling back to the current rate. This fixes accuracy for all new broker imports.
+- `fx_impact/schemas.py` (NEW): Pydantic schemas for the API response.
+- `fx_impact/router.py` (NEW): `GET /investors/{investor_id}/fx-impact` — returns full decomposed P&L per holding.
+- `api/v1/router.py`: registered `fx_impact_router`.
+- `workers/jobs/fx_history_sync.py` (NEW): daily worker job calling `sync_yesterday()`.
+- `workers/scheduler.py`: added `fx_history_sync` job at 21:30 UTC (after snapshot_writer).
+- `frontend/fx-impact/page.tsx` (NEW): FX Impact page with summary cards (Total / Asset / FX P&L), foreign-currency holdings table (with FX pair, rate at purchase → current, per-component P&L), and same-currency holdings table.
+- `frontend/sidebar.tsx`: added "FX Impact" nav item (Globe icon) to Portfolio section.
+
+---
+
 ## [0.91.0] — 2026-05-18
 
 ### Improvement — Admin Panel: Model Info + Budget Tracking

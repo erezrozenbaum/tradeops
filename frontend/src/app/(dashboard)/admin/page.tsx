@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Users, UserCircle, Trash2, RefreshCw, Bot, ChevronDown, ChevronRight } from "lucide-react";
+import { ShieldCheck, Users, UserCircle, Trash2, RefreshCw, Bot, ChevronDown, ChevronRight, Flame, CheckCircle2, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -28,6 +28,23 @@ interface Stats {
   total_users: number;
   total_profiles: number;
   unassigned_profiles: number;
+}
+
+interface LiveTradingGate {
+  label: string;
+  passed: boolean;
+  detail: string;
+}
+
+interface LiveTradingQueueEntry {
+  investor_id: string;
+  investor_name: string;
+  user_email: string | null;
+  sharpe_ratio: number | null;
+  paper_days: number | null;
+  gates: LiveTradingGate[];
+  gates_1_2_4_passed: boolean;
+  live_trading_allowed: boolean;
 }
 
 interface AiFeatureRow {
@@ -134,14 +151,17 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [assignTarget, setAssignTarget] = useState<{ profileId: string; userId: string } | null>(null);
+  const [liveQueue, setLiveQueue] = useState<LiveTradingQueueEntry[]>([]);
+  const [expandedGates, setExpandedGates] = useState<string | null>(null);
 
   async function loadAll() {
     try {
-      const [sRes, uRes, pRes, aRes] = await Promise.all([
+      const [sRes, uRes, pRes, aRes, lRes] = await Promise.all([
         fetch("/api/v1/admin/stats"),
         fetch("/api/v1/admin/users"),
         fetch("/api/v1/admin/profiles"),
         fetch(`/api/v1/admin/ai-usage?days=${aiDays}`),
+        fetch("/api/v1/admin/live-trading/queue"),
       ]);
       if (sRes.status === 403 || uRes.status === 403) {
         router.push("/dashboard");
@@ -151,6 +171,7 @@ export default function AdminPage() {
       setUsers(await uRes.json());
       setProfiles(await pRes.json());
       if (aRes.ok) setAiUsage(await aRes.json());
+      if (lRes.ok) setLiveQueue(await lRes.json());
     } catch {
       setError("Failed to load admin data");
     } finally {
@@ -368,6 +389,128 @@ export default function AdminPage() {
           </div>
         ) : (
           <div className="p-5 text-sm text-muted-foreground">Failed to load AI usage data.</div>
+        )}
+      </div>
+
+      {/* Live Trading Queue */}
+      <div className="rounded-lg border border-border bg-card">
+        <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
+          <Flame className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-semibold text-sm">Live Trading Queue</h2>
+          <span className="text-xs text-muted-foreground">
+            ({liveQueue.filter(e => e.gates_1_2_4_passed && !e.live_trading_allowed).length} pending approval)
+          </span>
+        </div>
+        {liveQueue.length === 0 ? (
+          <div className="px-5 py-6 text-sm text-muted-foreground">
+            No investor profiles found.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[700px]">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">Investor</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Gates 1–4</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Sharpe</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Paper days</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">Status</th>
+                  <th className="px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {liveQueue.map(entry => (
+                  <>
+                    <tr
+                      key={entry.investor_id}
+                      className="border-b border-border hover:bg-muted/30 cursor-pointer"
+                      onClick={() => setExpandedGates(expandedGates === entry.investor_id ? null : entry.investor_id)}
+                    >
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-1.5">
+                          {expandedGates === entry.investor_id
+                            ? <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                            : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                          <div>
+                            <div className="font-medium">{entry.investor_name}</div>
+                            {entry.user_email && <div className="text-xs text-muted-foreground">{entry.user_email}</div>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1">
+                          {entry.gates.map((g, i) => (
+                            <span key={i} title={g.detail}>
+                              {g.passed
+                                ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                                : <XCircle className="h-3.5 w-3.5 text-muted-foreground" />}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                        {entry.sharpe_ratio != null ? entry.sharpe_ratio.toFixed(2) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {entry.paper_days != null ? `${entry.paper_days}d` : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {entry.live_trading_allowed ? (
+                          <Badge variant="default">Live enabled</Badge>
+                        ) : entry.gates_1_2_4_passed ? (
+                          <Badge variant="muted" className="bg-amber-500/20 text-amber-600 border-amber-500/30">Pending approval</Badge>
+                        ) : (
+                          <Badge variant="muted">Not eligible</Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2 justify-end" onClick={e => e.stopPropagation()}>
+                          {!entry.live_trading_allowed && entry.gates_1_2_4_passed && (
+                            <Button
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={async () => {
+                                await fetch(`/api/v1/admin/live-trading/${entry.investor_id}/approve`, { method: "POST" });
+                                loadAll();
+                              }}
+                            >
+                              Approve
+                            </Button>
+                          )}
+                          {entry.live_trading_allowed && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs text-destructive border-destructive/40 hover:bg-destructive/10"
+                              onClick={async () => {
+                                await fetch(`/api/v1/admin/live-trading/${entry.investor_id}/revoke`, { method: "POST" });
+                                loadAll();
+                              }}
+                            >
+                              Revoke
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedGates === entry.investor_id && entry.gates.map((g, i) => (
+                      <tr key={`${entry.investor_id}-gate-${i}`} className="border-b border-border bg-muted/20">
+                        <td className="pl-12 pr-4 py-2 text-xs text-muted-foreground" colSpan={6}>
+                          <div className="flex items-center gap-2">
+                            {g.passed
+                              ? <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
+                              : <XCircle className="h-3 w-3 text-rose-500 shrink-0" />}
+                            <span className="font-medium">{g.label}:</span>
+                            <span>{g.detail}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

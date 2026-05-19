@@ -121,11 +121,17 @@ def add_holding(
     holding_data = data.model_dump()
 
     # Auto-capture FX rate at purchase time for FX impact analysis
+    # Use historical rate on purchase_date when known; fall back to current rate.
     try:
         investor = db.get(InvestorProfile, investor_id)
         if investor and data.currency and data.currency != investor.base_currency:
-            from app.currency_engine.rates import get_rate
-            rate = get_rate(db, investor.base_currency, data.currency)
+            rate: float | None = None
+            if data.purchase_date:
+                from app.currency_engine.history import get_rate_at_date
+                rate = get_rate_at_date(db, investor.base_currency, data.currency, data.purchase_date)
+            if not rate:
+                from app.currency_engine.rates import get_rate
+                rate = get_rate(db, investor.base_currency, data.currency)
             if rate and rate > 0:
                 holding_data["purchase_fx_rate"] = rate
     except Exception:
