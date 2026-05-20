@@ -15,7 +15,7 @@ from app.models.audit_event import AuditEvent
 from app.models.strategy_template import StrategyTemplate, StrategyType
 from app.models.strategy_recommendation import StrategyRecommendation
 from app.models.backtest import BacktestRun, BacktestPeriod
-from app.models.paper_trade import PaperPortfolio, PaperTick, PortfolioStatus
+from app.models.paper_trade import PaperOrder, PaperPortfolio, PaperPosition, PaperTick, PortfolioStatus
 from app.models.investment_account import InvestmentAccount, InvestmentHolding, AccountType, HoldingAssetType
 from app.models.currency_rate import CurrencyRate
 from app.models.price_snapshot import PriceSnapshot
@@ -48,6 +48,8 @@ __all__ = [
     "BacktestPeriod",
     "PaperPortfolio",
     "PaperTick",
+    "PaperPosition",
+    "PaperOrder",
     "PortfolioStatus",
     "InvestmentAccount",
     "InvestmentHolding",
