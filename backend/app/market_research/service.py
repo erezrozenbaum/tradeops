@@ -8,13 +8,14 @@ from sqlalchemy.orm import Session
 from app.ai_usage.logger import log_ai_call
 from app.core.config import settings
 from app.market_research import analyzer, screener
-from app.market_research.schemas import MarketResearchReport, SectorPerformance
+from app.market_research.schemas import MarketResearchHistoryItem, MarketResearchReport, SectorPerformance
 from app.models.investment_account import InvestmentAccount
 from app.models.investor_profile import InvestorProfile
+from app.models.market_research import MarketResearchSnapshot
 from app.risk_modeling import service as rm_service
 
 _AI_CACHE: dict[str, tuple[dict, float]] = {}
-_AI_CACHE_TTL = 21_600  # 6 hours — same as screener
+_AI_CACHE_TTL = 21_600  # 6 hours
 
 
 def get_research(db: Session, investor_id: uuid.UUID) -> MarketResearchReport | None:
@@ -52,7 +53,7 @@ def get_research(db: Session, investor_id: uuid.UUID) -> MarketResearchReport | 
             "high_risk_pct": risk_model.high_risk_pct,
         }
 
-    all_stocks, sector_perf, crypto_candidates = screener.run_screen()  # uses 6h cache
+    all_stocks, sector_perf, crypto_candidates = screener.run_screen()
     universe_size = len(all_stocks)
     candidates = all_stocks[:25]
 
@@ -77,7 +78,6 @@ def get_research(db: Session, investor_id: uuid.UUID) -> MarketResearchReport | 
             output_tokens=out_tok,
             investor_id=investor_id,
         )
-        db.commit()
 
     candidates_map = {c.ticker: c for c in candidates}
 
@@ -85,19 +85,15 @@ def get_research(db: Session, investor_id: uuid.UUID) -> MarketResearchReport | 
     moderate_picks = analyzer._parse_picks(raw.get("moderate_picks", []), candidates_map, "moderate")
     opportunity_picks = analyzer._parse_picks(raw.get("opportunity_picks", []), candidates_map, "high_opportunity")
 
-    # Enrich sector_performance with AI outlooks if provided
+    enriched_sectors: list[SectorPerformance] = []
     outlook_map: dict[str, str] = {}
     for so in raw.get("sector_outlooks", []):
         if isinstance(so, dict):
             outlook_map[so.get("sector", "")] = so.get("key_theme", "")
-
-    enriched_sectors: list[SectorPerformance] = []
     for sp in sector_perf:
-        theme = outlook_map.get(sp.sector)
-        enriched = sp.model_copy(update={"outlook": sp.outlook})
-        enriched_sectors.append(enriched)
+        enriched_sectors.append(sp.model_copy(update={"outlook": sp.outlook}))
 
-    return MarketResearchReport(
+    report = MarketResearchReport(
         investor_id=investor_id,
         generated_at=datetime.now(timezone.utc),
         market_overview=raw.get("market_overview", ""),
@@ -114,3 +110,55 @@ def get_research(db: Session, investor_id: uuid.UUID) -> MarketResearchReport | 
         all_stock_candidates=candidates,
         crypto_candidates=crypto_candidates,
     )
+
+    # Persist to DB (only when AI was freshly called, i.e. not from in-memory cache)
+    if not (cached and (time.time() - cached[1]) < _AI_CACHE_TTL):
+        picks_count = len(stable_picks) + len(moderate_picks) + len(opportunity_picks)
+        snapshot = MarketResearchSnapshot(
+            investor_id=investor_id,
+            generated_at=report.generated_at,
+            report=report.model_dump(mode="json"),
+            picks_count=picks_count,
+            universe_size=universe_size,
+        )
+        db.add(snapshot)
+
+    db.commit()
+    return report
+
+
+def get_history(
+    db: Session, investor_id: uuid.UUID, limit: int = 20
+) -> list[MarketResearchHistoryItem]:
+    rows = (
+        db.query(MarketResearchSnapshot)
+        .filter(MarketResearchSnapshot.investor_id == investor_id)
+        .order_by(MarketResearchSnapshot.generated_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        MarketResearchHistoryItem(
+            id=r.id,
+            generated_at=r.generated_at,
+            picks_count=r.picks_count,
+            universe_size=r.universe_size,
+        )
+        for r in rows
+    ]
+
+
+def get_snapshot(
+    db: Session, investor_id: uuid.UUID, snapshot_id: uuid.UUID
+) -> MarketResearchReport | None:
+    row = (
+        db.query(MarketResearchSnapshot)
+        .filter(
+            MarketResearchSnapshot.id == snapshot_id,
+            MarketResearchSnapshot.investor_id == investor_id,
+        )
+        .first()
+    )
+    if not row:
+        return None
+    return MarketResearchReport.model_validate(row.report)

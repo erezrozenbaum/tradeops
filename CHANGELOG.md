@@ -10,6 +10,40 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.95.0] — 2026-05-20
+
+### Feature — Market Research History
+
+**Problem**: Every visit to the Deep Market Research page required running the full pipeline from scratch (60+ instruments, 45–60s). Previous reports were lost on page reload or browser session end.
+
+**Changes**:
+
+- Migration 0039: new `market_research_reports` table — stores full report JSONB per investor with `picks_count` and `universe_size` denormalized for fast history listing.
+- `models/market_research.py` (NEW): `MarketResearchSnapshot` ORM model.
+- `market_research/service.py`: saves new report to DB after each AI call; `get_history(db, investor_id)` returns list; `get_snapshot(db, investor_id, snapshot_id)` loads a historical report.
+- `market_research/schemas.py`: added `MarketResearchHistoryItem` schema.
+- `market_research/router.py`: added `GET /history` and `GET /{snapshot_id}` endpoints (ordered before `GET ""` to avoid route shadowing).
+- `frontend/market-research/page.tsx`: history sidebar (left panel) shows all past runs with date, time, picks count, and universe size. Clicking any entry loads that report instantly without re-running AI. Most recent report auto-loads on page entry.
+
+---
+
+## [0.94.0] — 2026-05-20
+
+### Feature — Paper Trading Redesign (Real Simulator)
+
+**Problem**: The paper trading page used a confusing tick-based statistical simulation (Gaussian returns per strategy type). Users could not add individual stocks, could not delete portfolios, and all values showed 0.00 because it required a configured risk model.
+
+**Changes**:
+
+- Migration 0038: `cash_balance` added to `paper_portfolios`; `strategy_template_id` and `risk_model_id` made nullable; new `paper_positions` table (WACC tracking per ticker per portfolio) and `paper_orders` table (trade history).
+- `models/paper_trade.py`: `PaperPosition` and `PaperOrder` models added; `PaperPortfolio` updated.
+- `schemas/paper_trade.py`: `PaperPortfolioCreate` now takes `initial_cash` (float) and `currency` instead of pulling from risk model; added `PaperOrderCreate`, `PaperPositionOut`, `PaperOrderOut`.
+- `paper_trading/service.py`: `create()` now accepts user-defined cash + currency; `place_order()` handles buy (validates cash, WACC position update) and sell (validates position, deletes when fully closed); `delete_portfolio()` hard-deletes; `advance_tick()` still available for strategy-template portfolios.
+- `paper_trading/router.py`: added `POST /{id}/orders`, `DELETE /{id}`.
+- `frontend/paper-trading/page.tsx`: full redesign — cash/invested/total value summary cards; open positions table with quick-sell buttons; trade form with Buy/Sell toggle, live price auto-fetch, quantity + price inputs; order history table; red trash button per portfolio.
+
+---
+
 ## [0.93.0] — 2026-05-19
 
 ### Feature — Live Trading Admin Queue

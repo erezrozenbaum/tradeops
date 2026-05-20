@@ -22,6 +22,7 @@ from app.models.price_snapshot import PriceSnapshot
 from app.models.portfolio_snapshot import PortfolioSnapshot
 from app.models.user import User
 from app.models.live_trading import LiveTradingSession, LiveOrder
+from app.models.market_research import MarketResearchSnapshot
 
 __all__ = [
     "InvestorProfile",
@@ -61,4 +62,5 @@ __all__ = [
     "User",
     "LiveTradingSession",
     "LiveOrder",
+    "MarketResearchSnapshot",
 ]

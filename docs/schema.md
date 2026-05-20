@@ -1,8 +1,8 @@
 # TradeOps AI — Database Schema Reference
 
-**Version:** 0.93.0  
-**Last updated:** 2026-05-19  
-**Migration head:** 0037
+**Version:** 0.95.0  
+**Last updated:** 2026-05-20  
+**Migration head:** 0039
 
 All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete unless noted.
 
@@ -36,6 +36,9 @@ All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete
 23. [backtest_periods](#23-backtest_periods)
 24. [paper_portfolios](#24-paper_portfolios)
 25. [paper_ticks](#25-paper_ticks)
+25a. [paper_positions](#25a-paper_positions)
+25b. [paper_orders](#25b-paper_orders)
+25c. [market_research_reports](#25c-market_research_reports)
 26. [Relationships diagram](#26-relationships-diagram)
 27. [Migration history](#27-migration-history)
 
@@ -554,22 +557,23 @@ Month-by-month breakdown of a backtest run.
 
 ## 24. paper_portfolios
 
-Simulated portfolio following a strategy template in real time.
+Virtual paper trading portfolio. Supports both free-form (buy/sell any ticker) and strategy-simulation (tick-based) modes.
 
 | Column | Type | Nullable | Default | Notes |
 |--------|------|----------|---------|-------|
 | id | UUID | NO | uuid4 | PK |
 | investor_profile_id | UUID | NO | — | FK → investor_profiles (CASCADE) |
-| strategy_template_id | UUID | NO | — | FK → strategy_templates |
-| risk_model_id | UUID | NO | — | FK → risk_models |
+| strategy_template_id | UUID | YES | — | FK → strategy_templates (optional — null for free-form portfolios) |
+| risk_model_id | UUID | YES | — | FK → risk_models (optional — null for free-form portfolios) |
 | backtest_run_id | UUID | YES | — | FK → backtest_runs (if seeded from a backtest) |
-| initial_capital | FLOAT | NO | — | |
-| current_value | FLOAT | NO | — | |
+| initial_capital | FLOAT | NO | — | Starting cash set by user |
+| cash_balance | FLOAT | NO | `0` | Current available virtual cash |
+| current_value | FLOAT | NO | — | cash_balance + sum(positions at cost) |
 | total_return_pct | FLOAT | NO | `0.0` | |
 | currency | VARCHAR(3) | NO | — | |
 | status | ENUM | NO | `'active'` | `active` \| `paused` \| `completed` |
 | started_at | TIMESTAMPTZ | NO | `now()` | |
-| last_tick_at | TIMESTAMPTZ | YES | — | |
+| last_tick_at | TIMESTAMPTZ | YES | — | Set when strategy simulation ticks are advanced |
 
 ---
 
@@ -589,6 +593,61 @@ Monthly simulation ticks for a paper portfolio.
 
 ---
 
+---
+
+## 25a. paper_positions
+
+Open virtual positions held in a paper portfolio (one row per ticker per portfolio).
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | UUID | NO | uuid4 | PK |
+| portfolio_id | UUID | NO | — | FK → paper_portfolios (CASCADE) |
+| symbol | VARCHAR(20) | NO | — | Ticker symbol, e.g. `AAPL` |
+| name | VARCHAR(255) | YES | — | Display name |
+| quantity | FLOAT | NO | — | Current held quantity |
+| avg_cost_per_share | FLOAT | NO | — | Weighted average cost (WACC) |
+| currency | VARCHAR(10) | NO | `USD` | Asset-native currency |
+| created_at | TIMESTAMPTZ | NO | `now()` | |
+| updated_at | TIMESTAMPTZ | NO | `now()` | |
+
+**Unique index:** `(portfolio_id, symbol)` — one position per ticker per portfolio.
+
+---
+
+## 25b. paper_orders
+
+Executed paper buy/sell orders (trade history for a portfolio).
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | UUID | NO | uuid4 | PK |
+| portfolio_id | UUID | NO | — | FK → paper_portfolios (CASCADE) |
+| symbol | VARCHAR(20) | NO | — | |
+| side | VARCHAR(4) | NO | — | `buy` \| `sell` |
+| quantity | FLOAT | NO | — | |
+| price_per_share | FLOAT | NO | — | Execution price (live-fetched or user-supplied) |
+| total_value | FLOAT | NO | — | `quantity × price_per_share` |
+| executed_at | TIMESTAMPTZ | NO | `now()` | |
+
+---
+
+## 25c. market_research_reports
+
+Persisted market research report snapshots (JSONB). Allows history browsing without re-running analysis.
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | UUID | NO | uuid4 | PK |
+| investor_id | UUID | NO | — | FK → investor_profiles (CASCADE) |
+| generated_at | TIMESTAMPTZ | NO | — | When the AI report was generated |
+| report | JSONB | NO | — | Full `MarketResearchReport` payload |
+| picks_count | INTEGER | NO | `0` | Denormalized — total picks across all 3 tiers |
+| universe_size | INTEGER | NO | `0` | Denormalized — instruments screened |
+| created_at | TIMESTAMPTZ | NO | `now()` | |
+
+---
+
 ## 26. Relationships diagram
 
 ```
@@ -603,8 +662,11 @@ users
         ├── strategy_recommendations (1:N) → strategy_templates
         ├── backtest_runs (1:N) → strategy_templates
         │     └── backtest_periods (1:N)
-        ├── paper_portfolios (1:N) → strategy_templates
-        │     └── paper_ticks (1:N)
+        ├── paper_portfolios (1:N) → strategy_templates (optional)
+        │     ├── paper_ticks (1:N)
+        │     ├── paper_positions (1:N)
+        │     └── paper_orders (1:N)
+        ├── market_research_reports (1:N)
         ├── investment_accounts (1:N)
         │     └── investment_holdings (1:N)
         ├── holding_transactions (1:N)
@@ -699,3 +761,5 @@ Tracks every Claude API call for cost attribution and admin reporting.
 | 0035 | live_trading_sessions table (gateway_url, session_token, session_status, acknowledged_at, order log JSONB) |
 | 0036 | Index on audit_events.investor_profile_id; CHECK constraints on financial_profiles.investable_capital_pct and risk_models.max_trade_size_pct (0–100 range) |
 | 0037 | fx_rate_history table (from_currency, to_currency, date, rate, source) — daily FX closing rate store with unique constraint per pair+date |
+| 0038 | paper_trading_v2: cash_balance on paper_portfolios; strategy_template_id and risk_model_id made nullable; new paper_positions table (WACC positions) and paper_orders table (trade history) |
+| 0039 | market_research_reports table — JSONB persistence of deep market research reports for history browsing |

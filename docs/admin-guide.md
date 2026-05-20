@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.93.0  
-**Last updated:** 2026-05-19
+**Version:** 0.95.0  
+**Last updated:** 2026-05-20
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
@@ -162,6 +162,8 @@ Migrations also run automatically on every container start.
 | 0035 | live_trading_sessions table |
 | 0036 | Index on audit_events.investor_profile_id; CHECK constraints on pct columns |
 | 0037 | fx_rate_history table (daily FX closing rates, unique per pair+date) |
+| 0038 | paper_trading_v2: cash_balance on paper_portfolios; strategy/risk_model FKs nullable; paper_positions + paper_orders tables |
+| 0039 | market_research_reports table (JSONB report persistence for history browsing) |
 
 ### Creating a new migration
 

@@ -20,6 +20,7 @@ import {
   Target,
   BarChart2,
   Bitcoin,
+  History,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -91,6 +92,13 @@ interface MarketResearchReport {
   disclaimer: string;
   all_stock_candidates: StockCandidate[];
   crypto_candidates: StockCandidate[];
+}
+
+interface HistoryItem {
+  id: string;
+  generated_at: string;
+  picks_count: number;
+  universe_size: number;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -489,6 +497,31 @@ export default function MarketResearchPage() {
   const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
 
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+
+  // Load history list on mount
+  useEffect(() => {
+    if (!investorId) return;
+    setHistoryLoading(true);
+    fetch(`/api/v1/investors/${investorId}/market-research/history`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((items: HistoryItem[]) => {
+        setHistory(items);
+        // Auto-load the most recent saved report if no localStorage cache
+        if (items.length > 0) {
+          try {
+            const raw = localStorage.getItem(CACHE_KEY(investorId));
+            if (!raw) {
+              loadHistoricalReport(items[0].id, items[0].generated_at);
+            }
+          } catch {}
+        }
+      })
+      .finally(() => setHistoryLoading(false));
+  }, [investorId]);
+
   useEffect(() => {
     if (!investorId) return;
     try {
@@ -505,6 +538,20 @@ export default function MarketResearchPage() {
       }
     } catch {}
   }, [investorId]);
+
+  async function loadHistoricalReport(id: string, generatedAt: string) {
+    if (!investorId) return;
+    setError(null);
+    try {
+      const res = await fetch(`/api/v1/investors/${investorId}/market-research/${id}`);
+      if (res.ok) {
+        const data: MarketResearchReport = await res.json();
+        setReport(data);
+        setCachedAt(generatedAt);
+        setActiveHistoryId(id);
+      }
+    } catch {}
+  }
 
   useEffect(() => {
     if (!loading) { setElapsed(0); return; }
@@ -526,9 +573,15 @@ export default function MarketResearchPage() {
       }
       const data: MarketResearchReport = await res.json();
       setReport(data);
+      setActiveHistoryId(null);
       const savedAt = new Date().toISOString();
       setCachedAt(savedAt);
       localStorage.setItem(CACHE_KEY(investorId), JSON.stringify({ data, savedAt }));
+      // Refresh history list so new entry appears
+      fetch(`/api/v1/investors/${investorId}/market-research/history`)
+        .then((r) => (r.ok ? r.json() : []))
+        .then(setHistory)
+        .catch(() => {});
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
@@ -550,7 +603,51 @@ export default function MarketResearchPage() {
     : 0;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6 max-w-6xl">
+    <div className="flex gap-0 h-full">
+      {/* History sidebar */}
+      {history.length > 0 && (
+        <div className="w-56 shrink-0 border-r border-border bg-muted/20 flex flex-col overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+            <History className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground">History</span>
+          </div>
+          <div className="overflow-y-auto flex-1 py-1">
+            {history.map((item) => {
+              const isActive = activeHistoryId === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => loadHistoricalReport(item.id, item.generated_at)}
+                  className={cn(
+                    "w-full text-left px-4 py-3 hover:bg-muted/60 transition-colors border-b border-border/40",
+                    isActive && "bg-primary/5 border-l-2 border-l-primary"
+                  )}
+                >
+                  <p className="text-xs font-medium">
+                    {new Date(item.generated_at).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {new Date(item.generated_at).toLocaleTimeString(undefined, {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {item.picks_count} picks · {item.universe_size} screened
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6 max-w-6xl">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -760,6 +857,7 @@ export default function MarketResearchPage() {
           </p>
         </div>
       )}
+      </div>{/* end main content */}
     </div>
   );
 }

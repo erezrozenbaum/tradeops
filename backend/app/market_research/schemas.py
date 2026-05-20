@@ -5,6 +5,15 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class MarketResearchHistoryItem(BaseModel):
+    id: uuid.UUID
+    generated_at: datetime
+    picks_count: int
+    universe_size: int
+
+    model_config = {"from_attributes": True}
+
+
 class StockFundamentals(BaseModel):
     ticker: str
     name: str

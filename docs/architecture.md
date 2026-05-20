@@ -1,7 +1,7 @@
 # TradeOps AI — Architecture
 
-**Version:** 0.93.0  
-**Last updated:** 2026-05-19
+**Version:** 0.95.0  
+**Last updated:** 2026-05-20
 
 ---
 
@@ -127,8 +127,8 @@ backend/app/
 ├── market_research/            # Deep fundamental analysis + AI investment brief (TASK 57)
 │   ├── screener.py             # 63-instrument universe, scoring
 │   ├── analyzer.py             # Claude Sonnet AI thesis generation
-│   ├── service.py              # Cache + orchestration
-│   └── router.py               # GET /investors/{id}/market-research
+│   ├── service.py              # Cache + orchestration + DB persistence
+│   └── router.py               # GET /market-research, GET /market-research/history, GET /market-research/{id}
 │
 ├── broker_sync/                # Multi-broker import + scheduled auto-sync (TASK 53-56)
 │   ├── parsers/                # IBKR Flex XML, eToro CSV, Altshuler Shaham, ALTrade
@@ -580,12 +580,22 @@ Location: `backend/app/backtesting/engine.py`
 
 ## Paper trading engine
 
-Location: `backend/app/paper_trading/engine.py`
+Location: `backend/app/paper_trading/`
 
-- Portfolio starts with initial capital defined by the investor's financial profile
-- Each "tick" simulates one calendar month
-- Tick return is computed from the strategy template's expected return distribution with risk-adjusted variance
-- Portfolio status: `active` or `closed`
+**Free-form mode (v0.94+, primary):**
+- User sets starting virtual cash (any amount, any currency) — no risk model required
+- `POST /orders` — buy or sell any ticker; price auto-fetched from live market data cache
+- Buy: validates `cash_balance ≥ total_cost`; updates position using WACC average cost
+- Sell: validates position quantity; deletes position row when fully closed
+- `portfolio.current_value = cash_balance + Σ(position.qty × avg_cost)`
+- `DELETE /{portfolio_id}` — hard delete with cascade to positions + orders + ticks
+
+**Strategy simulation mode (legacy, optional):**
+- Requires a linked strategy template
+- Each tick = one simulated calendar month; Gaussian return from strategy type parameters
+- `POST /{id}/tick` still available
+
+Portfolio status: `active` | `paused` | `completed`
 
 ---
 
