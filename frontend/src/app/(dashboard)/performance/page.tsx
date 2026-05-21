@@ -14,6 +14,8 @@ import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
+import { StatCard } from "@/components/ui/stat-card";
+import { GlowChart, CHART_COLORS, AXIS_PROPS, GRID_PROPS, TOOLTIP_STYLE, TOOLTIP_LABEL_STYLE } from "@/components/ui/glow-chart";
 import { formatCurrency } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -187,62 +189,21 @@ function fmt(v: number | null, decimals = 2): string {
   return v.toFixed(decimals);
 }
 
-function MetricCard({
-  label,
-  value,
-  sub,
-  sub2,
-  positive,
-  neutral,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  sub2?: React.ReactNode;
-  positive?: boolean;
-  neutral?: boolean;
-  icon?: React.ElementType;
-}) {
-  const colour = neutral
-    ? "text-foreground"
-    : positive === true
-    ? "text-green-500"
-    : positive === false
-    ? "text-red-500"
-    : "text-foreground";
-  return (
-    <Card>
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">{label}</p>
-            <p className={`text-2xl font-bold ${colour}`}>{value}</p>
-            {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
-            {sub2 && <div className="mt-1.5 pt-1.5 border-t border-border/50">{sub2}</div>}
-          </div>
-          {Icon && <Icon className="h-5 w-5 text-muted-foreground/50 mt-0.5" />}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 // ── Chart tooltip ──────────────────────────────────────────────────────────
 
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-card border border-border rounded-lg p-3 text-xs shadow-md">
-      <p className="font-medium text-muted-foreground mb-1.5">{label}</p>
+    <div style={{ ...TOOLTIP_STYLE }}>
+      <p style={{ ...TOOLTIP_LABEL_STYLE }}>{label}</p>
       {payload.map((p: any) => (
         <div key={p.dataKey} className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-          <span className="text-muted-foreground">{p.name}:</span>
-          <span className="font-medium" style={{ color: p.color }}>
+          <span className="w-2 h-2 rounded-full inline-block" style={{ background: p.color }} />
+          <span style={{ color: "#94a3b8" }}>{p.name}:</span>
+          <span style={{ fontWeight: 600, color: p.color }}>
             {p.dataKey === "return_pct" || p.dataKey === "bench_pct"
               ? `${p.value >= 0 ? "+" : ""}${Number(p.value).toFixed(2)}%`
-              : formatCurrency(p.value, payload[0]?.payload?.currency ?? "USD")}
+              : p.value?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </span>
         </div>
       ))}
@@ -437,72 +398,78 @@ export default function PerformancePage() {
       {/* Key metric cards */}
       {analytics && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          <MetricCard
-            label="Total Return (TWR)"
+          <StatCard
+            label="Total Return"
             value={pct(analytics.total_return_pct)}
-            sub={analytics.annual_return_pct !== null ? `${pct(analytics.annual_return_pct)} / year` : undefined}
-            sub2={analytics.mwr_pct !== null ? (
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">MWR (IRR)</p>
-                <p className={`text-sm font-semibold ${analytics.mwr_pct >= 0 ? "text-green-500" : "text-red-500"}`}>
-                  {pct(analytics.mwr_pct)} / year
-                </p>
-              </div>
-            ) : undefined}
-            positive={analytics.total_return_pct >= 0}
-            icon={analytics.total_return_pct >= 0 ? TrendingUp : TrendingDown}
+            accent={analytics.total_return_pct >= 0 ? "emerald" : "red"}
+            trend={analytics.total_return_pct >= 0 ? "up" : "down"}
+            trendLabel={analytics.annual_return_pct !== null ? `${pct(analytics.annual_return_pct)} / yr` : undefined}
+            sub={analytics.mwr_pct !== null ? `MWR: ${pct(analytics.mwr_pct)} / yr` : undefined}
+            icon={analytics.total_return_pct >= 0
+              ? <TrendingUp className="h-4 w-4" />
+              : <TrendingDown className="h-4 w-4" />}
           />
-          <MetricCard
+          <StatCard
             label="Max Drawdown"
             value={`-${analytics.max_drawdown_pct.toFixed(1)}%`}
+            accent={analytics.max_drawdown_pct < 10 ? "emerald" : "red"}
+            trend={analytics.max_drawdown_pct < 10 ? "up" : "down"}
             sub={analytics.current_drawdown_pct > 0.5 ? `Currently -${analytics.current_drawdown_pct.toFixed(1)}%` : "At all-time high"}
-            positive={analytics.max_drawdown_pct < 10}
-            icon={AlertTriangle}
+            icon={<AlertTriangle className="h-4 w-4" />}
           />
-          <MetricCard
+          <StatCard
             label="Sharpe Ratio"
             value={analytics.sharpe_ratio !== null ? fmt(analytics.sharpe_ratio) : "—"}
+            accent={analytics.sharpe_ratio !== null
+              ? analytics.sharpe_ratio > 1 ? "emerald"
+                : analytics.sharpe_ratio > 0 ? "amber"
+                : "red"
+              : "cyan"}
+            trend={analytics.sharpe_ratio !== null
+              ? analytics.sharpe_ratio > 1 ? "up"
+                : analytics.sharpe_ratio > 0 ? "neutral"
+                : "down"
+              : undefined}
             sub={analytics.sharpe_ratio !== null
-              ? analytics.sharpe_ratio > 1 ? "Good risk-adjusted return"
+              ? analytics.sharpe_ratio > 1 ? "Good risk-adjusted"
                 : analytics.sharpe_ratio > 0 ? "Positive, below 1"
-                : "Below risk-free rate"
+                : "Below risk-free"
               : "Need more data"}
-            positive={analytics.sharpe_ratio !== null ? analytics.sharpe_ratio > 1 : undefined}
-            neutral={analytics.sharpe_ratio === null}
-            icon={Award}
+            icon={<Award className="h-4 w-4" />}
           />
-          <MetricCard
+          <StatCard
             label="Volatility"
             value={analytics.annual_volatility_pct !== null ? `${analytics.annual_volatility_pct.toFixed(1)}%` : "—"}
+            accent="cyan"
             sub="Annualised std dev"
-            neutral
-            icon={Activity}
+            icon={<Activity className="h-4 w-4" />}
           />
-          <MetricCard
+          <StatCard
             label={`vs ${analytics.benchmark_ticker === "^TA35" ? "TA-35" : "S&P 500"}`}
             value={analytics.benchmark_total_return_pct !== null
               ? pct(analytics.total_return_pct - analytics.benchmark_total_return_pct)
               : "—"}
+            accent={analytics.benchmark_total_return_pct !== null
+              ? analytics.total_return_pct > analytics.benchmark_total_return_pct ? "emerald" : "red"
+              : "cyan"}
+            trend={analytics.benchmark_total_return_pct !== null
+              ? analytics.total_return_pct > analytics.benchmark_total_return_pct ? "up" : "down"
+              : undefined}
             sub={analytics.benchmark_total_return_pct !== null
               ? `${analytics.benchmark_ticker ?? "SPY"}: ${pct(analytics.benchmark_total_return_pct)}`
               : "Benchmark unavailable"}
-            positive={analytics.benchmark_total_return_pct !== null
-              ? analytics.total_return_pct > analytics.benchmark_total_return_pct
-              : undefined}
-            neutral={analytics.benchmark_total_return_pct === null}
-            icon={BarChart2}
+            icon={<BarChart2 className="h-4 w-4" />}
           />
-          <MetricCard
+          <StatCard
             label="Beta"
             value={analytics.beta !== null ? fmt(analytics.beta) : "—"}
+            accent="cyan"
             sub={analytics.beta !== null
               ? analytics.beta > 1.2 ? "High market sensitivity"
                 : analytics.beta < 0.8 ? "Defensive portfolio"
                 : "Market-like sensitivity"
               : "Need more data"}
-            neutral
-            positive={analytics.beta !== null ? analytics.beta < 1.0 : undefined}
-            icon={Activity}
+            icon={<Activity className="h-4 w-4" />}
           />
         </div>
       )}
@@ -624,66 +591,49 @@ export default function PerformancePage() {
       {hasData && (
         <>
           {/* Portfolio value chart */}
-          <Card>
-            <CardHeader className="pb-0">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Portfolio Value</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={valueChartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                  <defs>
-                    <linearGradient id="grad-value" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                  <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                    tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Area type="monotone" dataKey="value" name="Portfolio value"
-                    stroke="#3b82f6" fill="url(#grad-value)" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="cost" name="Cost basis"
-                    stroke="#6b7280" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <GlowChart label="Portfolio Value" height={260} accentColor={CHART_COLORS.blue}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={valueChartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id="grad-value" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={CHART_COLORS.blue} stopOpacity={0.2} />
+                    <stop offset="95%" stopColor={CHART_COLORS.blue} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid {...GRID_PROPS} />
+                <XAxis dataKey="date" {...AXIS_PROPS} />
+                <YAxis {...AXIS_PROPS} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`} />
+                <Tooltip content={<ChartTooltip />} />
+                <Legend wrapperStyle={{ fontSize: 11, color: "#64748b" }} />
+                <Area type="monotone" dataKey="value" name="Portfolio value"
+                  stroke={CHART_COLORS.blue} fill="url(#grad-value)" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="cost" name="Cost basis"
+                  stroke="#4b5563" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </GlowChart>
 
           {/* Return vs benchmark chart */}
           {analytics?.benchmark_series && analytics.benchmark_series.length > 0 && (
-            <Card>
-              <CardHeader className="pb-0">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Return vs {analytics.benchmark_ticker ?? "S&P 500"}
-                  </CardTitle>
-                  <Badge variant="muted" className="text-xs">
-                    {analytics.benchmark_ticker ?? "SPY"} benchmark
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <ResponsiveContainer width="100%" height={220}>
-                  <LineChart data={returnChartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                    <YAxis
-                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                      tickFormatter={(v) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}%`}
-                    />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Line type="monotone" dataKey="return_pct" name="My portfolio"
-                      stroke="#3b82f6" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="bench_pct" name={analytics.benchmark_ticker === "^TA35" ? "TA-35" : "S&P 500 (SPY)"}
-                      stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+            <GlowChart
+              label={`Return vs ${analytics.benchmark_ticker === "^TA35" ? "TA-35" : "S&P 500"}`}
+              height={220}
+              accentColor={CHART_COLORS.amber}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={returnChartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                  <CartesianGrid {...GRID_PROPS} />
+                  <XAxis dataKey="date" {...AXIS_PROPS} />
+                  <YAxis {...AXIS_PROPS} tickFormatter={(v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}%`} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 11, color: "#64748b" }} />
+                  <Line type="monotone" dataKey="return_pct" name="My portfolio"
+                    stroke={CHART_COLORS.blue} strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="bench_pct" name={analytics.benchmark_ticker === "^TA35" ? "TA-35" : "S&P 500 (SPY)"}
+                    stroke={CHART_COLORS.amber} strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </GlowChart>
           )}
 
           {/* Risk details table */}

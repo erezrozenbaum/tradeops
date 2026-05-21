@@ -13,7 +13,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { AlertCircle, TrendingUp, TrendingDown, Minus, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, AlertTriangle, CheckCircle2, Circle, Zap, Clock, CalendarClock, PiggyBank, Bot, Calendar, Newspaper, ExternalLink, Target } from "lucide-react";
+import { AlertCircle, TrendingUp, TrendingDown, Minus, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, AlertTriangle, CheckCircle2, Circle, Zap, Clock, CalendarClock, PiggyBank, Bot, Calendar, Newspaper, ExternalLink, Target, Landmark } from "lucide-react";
+import { StatCard } from "@/components/ui/stat-card";
 import Link from "next/link";
 import { DailyActionFeedCard } from "@/components/DailyActionFeedCard";
 
@@ -339,23 +340,36 @@ export default function DashboardPage() {
         <StatCard
           label="Net Worth"
           value={net_worth ? formatCurrency(net_worth.net_worth, net_worth.currency) : "—"}
+          rawValue={net_worth?.net_worth ?? 0}
+          accent={!net_worth || net_worth.net_worth >= 0 ? "emerald" : "red"}
+          trend={net_worth ? (net_worth.net_worth >= 0 ? "up" : "down") : undefined}
           sub={net_worth ? `${formatCurrency(net_worth.total_assets, net_worth.currency)} assets` : "No financial data yet"}
+          icon={<Landmark className="h-4 w-4" />}
         />
         <StatCard
           label="Liquid Capital"
           value={net_worth ? formatCurrency(net_worth.liquid_capital, net_worth.currency) : "—"}
+          rawValue={net_worth?.liquid_capital ?? 0}
+          accent="cyan"
           sub={net_worth ? "Available liquid assets" : "No financial data yet"}
+          icon={<ShieldCheck className="h-4 w-4" />}
         />
         <StatCard
           label="Monthly Surplus"
           value={cash_flow ? formatCurrency(cash_flow.monthly_surplus, cash_flow.currency) : "—"}
-          sub={cash_flow ? `${cash_flow.savings_rate_pct.toFixed(1)}% savings rate` : "No cash flow data"}
+          rawValue={cash_flow?.monthly_surplus ?? 0}
+          accent={!cash_flow || cash_flow.monthly_surplus >= 0 ? "emerald" : "red"}
           trend={cash_flow ? (cash_flow.monthly_surplus >= 0 ? "up" : "down") : undefined}
+          trendLabel={cash_flow ? `${cash_flow.savings_rate_pct.toFixed(1)}% savings rate` : undefined}
+          icon={<TrendingUp className="h-4 w-4" />}
         />
         <StatCard
           label="Emergency Fund"
           value={cash_flow ? `${cash_flow.emergency_fund_months.toFixed(1)} mo` : "—"}
+          rawValue={cash_flow?.emergency_fund_months ?? 0}
+          accent={!cash_flow ? "amber" : cash_flow.emergency_fund_months >= 3 ? "emerald" : "amber"}
           sub={cash_flow ? (cash_flow.emergency_fund_months >= 3 ? "Adequate buffer" : "Build savings first") : "No data"}
+          icon={<ShieldCheck className="h-4 w-4" />}
         />
       </div>
 
@@ -522,8 +536,15 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* Pension projection */}
-      {pension && pension.has_data && <PensionCard projection={pension} />}
+      {/* Pension & Hishtalmut — split into separate cards */}
+      {pension?.has_data && (
+        <div className={`grid grid-cols-1 gap-4 ${pension.funds.some(f => f.asset_type === "study_fund") ? "lg:grid-cols-2" : ""}`}>
+          <PensionFundsCard projection={pension} />
+          {pension.funds.some(f => f.asset_type === "study_fund") && (
+            <HishtalmutCard projection={pension} />
+          )}
+        </div>
+      )}
 
       {/* Retirement readiness */}
       {retirement && <RetirementReadinessCard data={retirement} />}
@@ -940,28 +961,21 @@ function ActionPlanCard({
   );
 }
 
-function PensionCard({ projection }: { projection: PensionProjection }) {
+function PensionFundsCard({ projection }: { projection: PensionProjection }) {
   const fmt = (n: number) => formatCurrency(n, projection.currency);
   const retireIn = projection.years_to_retirement;
 
-  // Separate pension funds (ביטוח מנהלים / קרן פנסיה) from study funds (כה"ת)
-  // Pension funds → monthly income via stored makdam (מקדם) per fund, default 200
-  // Study funds → lump sum redeemable at age 67 (not a monthly pension)
   const pensionFunds = projection.funds.filter(f => f.asset_type === "pension_fund");
-  const studyProjected = projection.funds
-    .filter(f => f.asset_type === "study_fund")
-    .reduce((s, f) => s + f.projected_value, 0);
-  // Sum each pension fund's monthly estimate using its own makdam
+  if (pensionFunds.length === 0) return null;
+
+  const pensionProjected = pensionFunds.reduce((s, f) => s + f.projected_value, 0);
+  const pensionContribution = pensionFunds.reduce((s, f) => s + f.monthly_contribution, 0);
   const monthlyPensionEstimate = Math.round(
     pensionFunds.reduce((s, f) => s + f.projected_value / (f.makdam || 200), 0)
   );
-  const pensionProjected = pensionFunds.reduce((s, f) => s + f.projected_value, 0);
 
-  // Warn when any fund's net return rate exceeds 7% — likely historical gross, not realistic net
-  const highRateFunds = projection.funds.filter(f => f.annual_return_pct > 7);
-
-  // Dismiss key includes all high-rate fund names so alert re-appears if new funds are added
-  const dismissKey = `pension-rate-warning-v1-${highRateFunds.map(f => f.name).sort().join("|")}`;
+  const highRateFunds = pensionFunds.filter(f => f.annual_return_pct > 7);
+  const dismissKey = `pension-rate-warning-v2-${highRateFunds.map(f => f.name).sort().join("|")}`;
   const [alertDismissed, setAlertDismissed] = useState<boolean>(() => {
     try { return localStorage.getItem(dismissKey) === "1"; } catch { return false; }
   });
@@ -975,7 +989,7 @@ function PensionCard({ projection }: { projection: PensionProjection }) {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2">
           <PiggyBank className="h-4 w-4 text-primary" />
-          Pension &amp; Study Funds — Projection
+          Pension Funds — Monthly Income
           <Link href="/investments" className="ml-auto text-[11px] font-normal text-muted-foreground hover:text-foreground flex items-center gap-1">
             Edit rates <ExternalLink className="h-3 w-3" />
           </Link>
@@ -983,24 +997,20 @@ function PensionCard({ projection }: { projection: PensionProjection }) {
       </CardHeader>
       <CardContent>
         {highRateFunds.length > 0 && !alertDismissed && (
-          <div className="mb-4 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 px-3 py-2 flex items-start gap-2">
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-800 dark:text-amber-300 flex-1">
-              {highRateFunds.map(f => f.name).join(", ")} {highRateFunds.length === 1 ? "is" : "are"} using a return rate above 7% — this may be a historical gross rate, not a realistic net-of-fees planning rate. Israeli pension funds realistically return 4–6% net. <Link href="/investments" className="underline underline-offset-2">Edit the rate on the Investments page</Link> (pencil icon on each fund).
+          <div className="mb-4 rounded-md bg-amber-900/20 border border-amber-800/40 px-3 py-2 flex items-start gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-300 flex-1">
+              {highRateFunds.map(f => f.name).join(", ")} using a return rate above 7% — likely historical gross, not realistic net. Israeli pension funds: 4–6% net. <Link href="/investments" className="underline underline-offset-2">Edit rate →</Link>
             </p>
-            <button
-              onClick={dismissAlert}
-              className="text-[10px] text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 underline shrink-0 ml-1"
-              title="I understand — hide this warning"
-            >
+            <button onClick={dismissAlert} className="text-[10px] text-amber-400 hover:text-amber-200 underline shrink-0 ml-1">
               I understand
             </button>
           </div>
         )}
-        <div className="flex flex-wrap gap-8 mb-5">
+        <div className="flex flex-wrap gap-6 mb-5">
           <div>
             <p className="text-xs text-muted-foreground mb-1">Projected at age {projection.retirement_age}</p>
-            <p className="text-3xl font-bold tracking-tight">{fmt(projection.total_projected_value)}</p>
+            <p className="text-3xl font-bold tracking-tight">{fmt(pensionProjected)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">Years to retirement</p>
@@ -1008,50 +1018,107 @@ function PensionCard({ projection }: { projection: PensionProjection }) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">Monthly contribution</p>
-            <p className="text-2xl font-semibold">{fmt(projection.total_monthly_contribution)}</p>
+            <p className="text-2xl font-semibold">{fmt(pensionContribution)}</p>
           </div>
           {monthlyPensionEstimate > 0 && retireIn > 0 && (
             <div>
               <p className="text-xs text-muted-foreground mb-1">Est. monthly pension</p>
-              <p className="text-2xl font-semibold">{fmt(monthlyPensionEstimate)}</p>
+              <p className="text-2xl font-semibold text-cyber-emerald">{fmt(monthlyPensionEstimate)}</p>
               <p className="text-[10px] text-muted-foreground mt-0.5">
-                Using makdam (מקדם) {pensionFunds.length === 1 ? (pensionFunds[0].makdam || 200) : "per fund"} — edit in Investments
+                Via makdam {pensionFunds.length === 1 ? (pensionFunds[0].makdam || 200) : "per fund"} · pension funds only
               </p>
             </div>
           )}
-          {studyProjected > 0 && (
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Study funds (כה&quot;ת) at 67</p>
-              <p className="text-2xl font-semibold">{fmt(Math.round(studyProjected))}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Lump sum — not monthly income</p>
-            </div>
-          )}
         </div>
-        {projection.funds.length > 0 && (
-          <div className="space-y-2 border-t border-border pt-4">
-            {projection.funds.map((f, i) => (
-              <div key={i} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-medium truncate">{f.name}</span>
-                  <span className="text-xs text-muted-foreground capitalize shrink-0">{f.asset_type.replace(/_/g, " ")}</span>
-                </div>
-                <div className="text-right shrink-0 ml-4">
-                  <span className="font-semibold">{fmt(f.projected_value)}</span>
-                  <span className={`text-xs ml-2 ${f.annual_return_pct > 7 ? "text-amber-600 dark:text-amber-400 font-medium" : "text-muted-foreground"}`}>
-                    at {f.annual_return_pct}%{f.annual_return_pct > 7 ? " ⚠️" : ""} p.a.
-                  </span>
-                  {f.asset_type === "pension_fund" && (
-                    <span className="block text-[10px] text-muted-foreground">
-                      {fmt(Math.round(f.projected_value / (f.makdam || 200)))}/mo · מקדם {f.makdam || 200}
-                    </span>
-                  )}
-                </div>
+        <div className="space-y-2 border-t border-border pt-4">
+          {pensionFunds.map((f, i) => (
+            <div key={i} className="flex items-center justify-between text-sm">
+              <span className="font-medium truncate">{f.name}</span>
+              <div className="text-right shrink-0 ml-4">
+                <span className="font-semibold">{fmt(f.projected_value)}</span>
+                <span className={`text-xs ml-2 ${f.annual_return_pct > 7 ? "text-amber-400 font-medium" : "text-muted-foreground"}`}>
+                  at {f.annual_return_pct}%{f.annual_return_pct > 7 ? " ⚠️" : ""} p.a.
+                </span>
+                <span className="block text-[10px] text-muted-foreground">
+                  {fmt(Math.round(f.projected_value / (f.makdam || 200)))}/mo · מקדם {f.makdam || 200}
+                </span>
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          ))}
+        </div>
         <p className="text-[10px] text-muted-foreground mt-4">
-          Projection uses stored net return rate (gross rate minus fee on balance). Realistic planning rate for Israeli pension: 4–6%. Actual results may vary.
+          Projection uses net return rate (gross minus fee). Realistic planning rate: 4–6%.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function HishtalmutCard({ projection }: { projection: PensionProjection }) {
+  const fmt = (n: number) => formatCurrency(n, projection.currency);
+
+  const studyFunds = projection.funds.filter(f => f.asset_type === "study_fund");
+  if (studyFunds.length === 0) return null;
+
+  const studyProjected = studyFunds.reduce((s, f) => s + f.projected_value, 0);
+  const studyCurrent = studyFunds.reduce((s, f) => s + f.current_balance, 0);
+  const studyContribution = studyFunds.reduce((s, f) => s + f.monthly_contribution, 0);
+  const highRateFunds = studyFunds.filter(f => f.annual_return_pct > 7);
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2">
+          <GraduationCap className="h-4 w-4 text-primary" />
+          Hishtalmut (כה&quot;ת) — Lump Sum
+          <Link href="/investments" className="ml-auto text-[11px] font-normal text-muted-foreground hover:text-foreground flex items-center gap-1">
+            Edit rates <ExternalLink className="h-3 w-3" />
+          </Link>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-4 rounded-md bg-blue-500/5 border border-blue-500/20 px-3 py-2 flex items-start gap-2">
+          <AlertCircle className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-blue-300">
+            Hishtalmut is a <strong>lump sum</strong> available after 6 years (or at age 67), tax-free. It is <strong>excluded from the monthly pension estimate</strong> — it is not converted via makdam.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-6 mb-5">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Projected at age {projection.retirement_age}</p>
+            <p className="text-3xl font-bold tracking-tight">{fmt(Math.round(studyProjected))}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Lump sum — not monthly income</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Current balance</p>
+            <p className="text-2xl font-semibold">{fmt(Math.round(studyCurrent))}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Monthly contribution</p>
+            <p className="text-2xl font-semibold">{fmt(studyContribution)}</p>
+          </div>
+        </div>
+        <div className="space-y-2 border-t border-border pt-4">
+          {studyFunds.map((f, i) => (
+            <div key={i} className="flex items-center justify-between text-sm">
+              <span className="font-medium truncate">{f.name}</span>
+              <div className="text-right shrink-0 ml-4">
+                <span className="font-semibold">{fmt(f.projected_value)}</span>
+                <span className={`text-xs ml-2 ${f.annual_return_pct > 7 ? "text-amber-400 font-medium" : "text-muted-foreground"}`}>
+                  at {f.annual_return_pct}%{f.annual_return_pct > 7 ? " ⚠️" : ""} p.a.
+                </span>
+                <span className="block text-[10px] text-muted-foreground">Lump sum · no makdam</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        {highRateFunds.length > 0 && (
+          <p className="text-[10px] text-amber-400 mt-3">
+            ⚠️ {highRateFunds.map(f => f.name).join(", ")} using rate above 7% — may be historical gross. <Link href="/investments" className="underline">Edit →</Link>
+          </p>
+        )}
+        <p className="text-[10px] text-muted-foreground mt-3">
+          Tax-free after 6 years · Available as lump sum or for study expenses
         </p>
       </CardContent>
     </Card>
@@ -1172,29 +1239,3 @@ function RetirementReadinessCard({ data }: { data: RetirementReadiness }) {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  sub,
-  trend,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-  trend?: "up" | "down" | "flat";
-}) {
-  return (
-    <Card>
-      <CardContent className="pt-5">
-        <p className="text-xs font-medium text-muted-foreground mb-3">{label}</p>
-        <div className="flex items-end gap-2">
-          <span className="text-2xl font-bold tracking-tight">{value}</span>
-          {trend === "up" && <TrendingUp className="h-4 w-4 text-green-500 mb-1" />}
-          {trend === "down" && <TrendingDown className="h-4 w-4 text-red-500 mb-1" />}
-          {trend === "flat" && <Minus className="h-4 w-4 text-muted-foreground mb-1" />}
-        </div>
-        <p className="text-xs text-muted-foreground mt-1">{sub}</p>
-      </CardContent>
-    </Card>
-  );
-}
