@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { formatPercent, formatCurrency } from "@/lib/utils";
 import { ScanSearch, RefreshCw, Info, TrendingUp, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, Search, Zap, Bot } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { AIDisclaimer } from "@/components/ui/ai-disclaimer";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -234,6 +235,8 @@ export default function MarketScanPage() {
           </Button>
         </div>
       </div>
+
+      <AIDisclaimer compact />
 
       {/* Ticker search */}
       <Card>

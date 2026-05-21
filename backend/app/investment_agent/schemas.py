@@ -44,3 +44,7 @@ class AgentReport(BaseModel):
     capital_thresholds: list[CapitalThresholdPlan]
     risk_warnings: list[str]
     no_data: bool = False
+    disclaimer: str = (
+        "AI-generated output for educational and analytical purposes only. Not financial advice. "
+        "Always conduct your own research and consult a licensed financial professional before investing."
+    )

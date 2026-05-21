@@ -9,6 +9,7 @@ import {
   Sparkles, RefreshCw, X, ArrowRight, AlertTriangle, Info, Zap,
 } from "lucide-react";
 import Link from "next/link";
+import { AIDisclaimer } from "@/components/ui/ai-disclaimer";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -187,6 +188,8 @@ export default function InsightsPage() {
           {refreshing ? "Analysing…" : "Refresh"}
         </Button>
       </div>
+
+      <AIDisclaimer compact />
 
       {/* Empty state */}
       {insights.length === 0 && (

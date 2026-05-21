@@ -105,7 +105,9 @@ def get_research(db: Session, investor_id: uuid.UUID) -> MarketResearchReport | 
         candidates_scored=len(candidates),
         disclaimer=raw.get(
             "disclaimer",
-            "This is for educational purposes only. Not financial advice. Always conduct your own research.",
+            "AI-generated market research for educational and analytical purposes only. Not financial advice. "
+            "AI outputs may be incomplete or inaccurate. Always conduct independent research and consult a "
+            "licensed financial professional before making any investment decision.",
         ),
         all_stock_candidates=candidates,
         crypto_candidates=crypto_candidates,

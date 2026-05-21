@@ -7,6 +7,7 @@ from pydantic import BaseModel
 class AnalysisReportOut(BaseModel):
     investor_id: uuid.UUID
     generated_at: datetime
+    disclaimer: str = ""
     summary: str
     financial_health: str
     risk_profile: str

@@ -1,8 +1,8 @@
 # TradeOps AI — Database Schema Reference
 
-**Version:** 0.95.0  
-**Last updated:** 2026-05-20  
-**Migration head:** 0039
+**Version:** 0.97.0  
+**Last updated:** 2026-05-21  
+**Migration head:** 0040
 
 All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete unless noted.
 
@@ -39,8 +39,12 @@ All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete
 25a. [paper_positions](#25a-paper_positions)
 25b. [paper_orders](#25b-paper_orders)
 25c. [market_research_reports](#25c-market_research_reports)
-26. [Relationships diagram](#26-relationships-diagram)
-27. [Migration history](#27-migration-history)
+26. [net_worth_snapshots](#26-net_worth_snapshots)
+27. [coach_insights](#27-coach_insights)
+28. [market_signals](#28-market_signals)
+29. [ai_usage_logs](#29-ai_usage_logs)
+30. [Relationships diagram](#30-relationships-diagram)
+31. [Migration history](#31-migration-history)
 
 ---
 
@@ -648,7 +652,49 @@ Persisted market research report snapshots (JSONB). Allows history browsing with
 
 ---
 
-## 26. Relationships diagram
+## 26. net_worth_snapshots
+
+Daily snapshot of an investor's complete net worth. Written by the `net_worth_snapshot` background job at 21:15 UTC.
+
+| Column | Type | Nullable | Notes |
+|--------|------|----------|-------|
+| id | UUID | NO | PK |
+| investor_id | UUID | NO | FK → investor_profiles (CASCADE) |
+| portfolio_value | FLOAT | NO | Total portfolio value in base currency |
+| financial_assets_value | FLOAT | NO | Sum of non-portfolio financial assets |
+| total_liabilities | FLOAT | NO | Sum of financial liabilities |
+| net_worth | FLOAT | NO | portfolio_value + financial_assets_value − total_liabilities |
+| currency | VARCHAR(3) | NO | Investor base currency |
+| snapshot_at | TIMESTAMPTZ | NO | UTC timestamp of snapshot |
+
+**Indexes:** `ix_nws_investor_id`, `ix_nws_snapshot_at`
+
+---
+
+## 27. coach_insights
+
+Persistent AI Coach insight records. Rules run daily at 07:45 UTC via `coach_refresh` job. Dismissed insights are suppressed for 7 days via `dedup_key`.
+
+| Column | Type | Nullable | Notes |
+|--------|------|----------|-------|
+| id | UUID | NO | PK |
+| investor_id | UUID | NO | FK → investor_profiles (CASCADE) |
+| insight_type | VARCHAR(50) | NO | e.g. `emergency_fund`, `idle_cash`, `goal_behind`, `portfolio_drift`, `tax_loss_harvest`, `paper_trading_milestone`, `high_interest_debt` |
+| dedup_key | VARCHAR(100) | NO | Unique key per insight category; prevents re-generating dismissed insights for 7 days |
+| severity | VARCHAR(20) | NO | `danger` \| `warning` \| `info` |
+| title | VARCHAR(255) | NO | Short headline |
+| message | TEXT | NO | Full insight text |
+| action_text | VARCHAR(255) | YES | Call-to-action label |
+| link | VARCHAR(255) | YES | Target URL for action |
+| is_dismissed | BOOLEAN | NO | Default false |
+| dismissed_at | TIMESTAMPTZ | YES | When user dismissed |
+| generated_at | TIMESTAMPTZ | NO | When insight was created |
+
+**Indexes:** `ix_ci_investor_id`, `ix_ci_dedup_key`
+
+---
+
+## 30. Relationships diagram
 
 ```
 users
@@ -667,6 +713,8 @@ users
         │     ├── paper_positions (1:N)
         │     └── paper_orders (1:N)
         ├── market_research_reports (1:N)
+        ├── net_worth_snapshots (1:N)
+        ├── coach_insights (1:N)
         ├── investment_accounts (1:N)
         │     └── investment_holdings (1:N)
         ├── holding_transactions (1:N)
@@ -725,7 +773,7 @@ Tracks every Claude API call for cost attribution and admin reporting.
 
 ---
 
-## 27. Migration history
+## 31. Migration history
 
 | Migration | Description |
 |-----------|-------------|
@@ -763,3 +811,4 @@ Tracks every Claude API call for cost attribution and admin reporting.
 | 0037 | fx_rate_history table (from_currency, to_currency, date, rate, source) — daily FX closing rate store with unique constraint per pair+date |
 | 0038 | paper_trading_v2: cash_balance on paper_portfolios; strategy_template_id and risk_model_id made nullable; new paper_positions table (WACC positions) and paper_orders table (trade history) |
 | 0039 | market_research_reports table — JSONB persistence of deep market research reports for history browsing |
+| 0040 | net_worth_snapshots table (daily net worth history: portfolio_value, financial_assets_value, total_liabilities, net_worth, currency, snapshot_at) + coach_insights table (AI Coach persistent insights: insight_type, dedup_key, severity, title, message, action_text, link, is_dismissed, generated_at) |

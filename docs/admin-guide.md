@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.95.0  
-**Last updated:** 2026-05-20
+**Version:** 0.97.0  
+**Last updated:** 2026-05-21
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
@@ -164,6 +164,7 @@ Migrations also run automatically on every container start.
 | 0037 | fx_rate_history table (daily FX closing rates, unique per pair+date) |
 | 0038 | paper_trading_v2: cash_balance on paper_portfolios; strategy/risk_model FKs nullable; paper_positions + paper_orders tables |
 | 0039 | market_research_reports table (JSONB report persistence for history browsing) |
+| 0040 | net_worth_snapshots table (daily portfolio + asset + liability snapshots for Net Worth dashboard) + coach_insights table (persistent AI Coach insights with dedup_key suppression) |
 
 ### Creating a new migration
 
@@ -703,6 +704,9 @@ kubectl describe ingress tradeops
 | Live Trading Gateway Validation | `live_trading/schemas.py` + `live_trading/router.py` | `gateway_url` validated on all write paths: must use `http`/`https` scheme and hostname must be `localhost` or `127.0.0.1`. Prevents SSRF via user-supplied gateway URLs. |
 | Audit Event Index | Migration 0036 | `ix_audit_events_investor_profile_id` index on `audit_events` table. Required for efficient per-investor audit log queries at scale. |
 | Pct Field Constraints | Migration 0036 | `CHECK` constraints: `investable_capital_pct` (0–100) on `financial_profiles`, `max_trade_size_pct` (0–100) on `risk_models`. |
+| Net Worth Dashboard | `net_worth/` + migration 0040 | `GET /investors/{id}/net-worth` — aggregates portfolio value + financial assets − liabilities + FI projection (binary search, 4% SWR, 7% real return). `GET /investors/{id}/net-worth/history` — 12-month trend from `net_worth_snapshots`. Daily snapshot at 21:15 UTC. Frontend: 4 stat cards, line chart, FI date, assets/liabilities breakdown. |
+| Tax Year Summary | `tax_summary/` | `GET /investors/{id}/tax-summary?year=YYYY` — WACC-method cost basis per ticker; realized gains/losses per sell transaction; long/short-term (≥365 days) classification; dividend tracking; estimated 25% flat tax (illustrative). Available years auto-detected from `holding_transactions`. Disclaimer clearly shown — not a substitute for professional tax preparation. |
+| AI Coach | `coach/` + migration 0040 | `GET /investors/{id}/coach` — returns active (non-dismissed) insights. `POST /coach/refresh` — runs 7 rule functions + optional Claude Haiku enrichment. `DELETE /coach/{id}` — dismiss insight (suppressed for 7 days via `dedup_key`). Rules: emergency fund, idle cash, goal behind, portfolio drift, tax-loss harvest, paper trading milestone, high-interest debt. Daily refresh at 07:45 UTC via `coach_refresh` worker. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.
