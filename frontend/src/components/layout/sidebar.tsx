@@ -132,11 +132,11 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
 
   return (
     <>
-      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
+      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
         {sections.map((section, i) => (
           <div key={i}>
             {section.label && (
-              <p className="px-3 mb-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              <p className="px-3 mb-1.5 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">
                 {section.label}
               </p>
             )}
@@ -149,13 +149,22 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
                       href={item.href}
                       onClick={onNav}
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                        "group flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] transition-all duration-150",
                         active
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          ? [
+                              "bg-cyber-cyan/10 text-cyber-cyan font-medium",
+                              "border border-cyber-cyan/20",
+                              "shadow-[0_0_12px_hsl(199_95%_52%/0.08)]",
+                            ]
+                          : "text-muted-foreground hover:bg-cyber-rule/60 hover:text-foreground border border-transparent"
                       )}
                     >
-                      <item.icon className="h-4 w-4 shrink-0" />
+                      <item.icon
+                        className={cn(
+                          "h-3.5 w-3.5 shrink-0 transition-colors",
+                          active ? "text-cyber-cyan" : "text-muted-foreground/70 group-hover:text-foreground"
+                        )}
+                      />
                       {item.label}
                     </Link>
                   </li>
@@ -166,36 +175,37 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         ))}
       </nav>
 
-      <div className="border-t border-border p-3 shrink-0 space-y-0.5">
+      {/* Admin + actions */}
+      <div className="border-t border-cyber-rule/60 p-2 shrink-0 space-y-0.5">
         {isAdmin && (
           <Link
             href="/admin"
             onClick={onNav}
             className={cn(
-              "flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+              "flex w-full items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] transition-all duration-150 border",
               pathname === "/admin"
-                ? "bg-primary/10 text-primary font-medium"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "bg-cyber-purple/10 text-cyber-purple border-cyber-purple/20"
+                : "text-muted-foreground hover:bg-cyber-rule/60 hover:text-foreground border-transparent"
             )}
           >
-            <ShieldCheck className="h-4 w-4" />
+            <ShieldCheck className="h-3.5 w-3.5" />
             Admin Panel
           </Link>
         )}
       </div>
-      <div className="border-t border-border p-3 shrink-0 space-y-0.5">
+      <div className="border-t border-cyber-rule/60 p-2 shrink-0 space-y-0.5">
         <button
           onClick={handleSwitchProfile}
-          className="flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className="flex w-full items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] text-muted-foreground hover:bg-cyber-rule/60 hover:text-foreground transition-all duration-150 border border-transparent"
         >
-          <Users className="h-4 w-4" />
+          <Users className="h-3.5 w-3.5" />
           Switch profile
         </button>
         <button
           onClick={handleSignOut}
-          className="flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className="flex w-full items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] text-muted-foreground hover:bg-cyber-red/10 hover:text-cyber-red transition-all duration-150 border border-transparent hover:border-cyber-red/20"
         >
-          <LogOut className="h-4 w-4" />
+          <LogOut className="h-3.5 w-3.5" />
           Sign out
         </button>
       </div>
@@ -205,56 +215,91 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
 
 export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  // Close on route change
   const pathname = usePathname();
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:fixed lg:left-0 lg:top-0 lg:h-screen lg:w-60 lg:border-r lg:border-border lg:bg-card lg:flex lg:flex-col lg:z-40">
-        <div className="h-14 flex items-center px-6 border-b border-border shrink-0">
-          <span className="text-sm font-semibold tracking-tight">TradeOps AI</span>
+      <aside className="hidden lg:fixed lg:left-0 lg:top-0 lg:h-screen lg:w-56 lg:flex lg:flex-col lg:z-40"
+        style={{
+          background: "linear-gradient(180deg, hsl(220 35% 6%) 0%, hsl(222 38% 5%) 100%)",
+          borderRight: "1px solid hsl(217 30% 12%)",
+        }}
+      >
+        {/* Logo */}
+        <div className="h-14 flex items-center px-5 shrink-0"
+          style={{ borderBottom: "1px solid hsl(217 30% 10%)" }}
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-cyber-cyan to-cyber-blue flex items-center justify-center shadow-glow-cyan">
+              <BarChart2 className="h-3.5 w-3.5 text-cyber-navy" />
+            </div>
+            <span className="text-sm font-bold tracking-tight text-foreground">
+              TradeOps <span className="text-cyber-cyan">AI</span>
+            </span>
+          </div>
         </div>
         <SidebarContent />
       </aside>
 
       {/* Mobile top bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-card border-b border-border flex items-center px-4 z-40">
+      <div
+        className="lg:hidden fixed top-0 left-0 right-0 h-14 flex items-center px-4 z-40"
+        style={{
+          background: "hsl(220 35% 6%)",
+          borderBottom: "1px solid hsl(217 30% 10%)",
+        }}
+      >
         <button
           onClick={() => setMobileOpen(true)}
-          className="p-2 rounded-md text-muted-foreground hover:bg-muted transition-colors"
+          className="p-2 rounded-md text-muted-foreground hover:bg-cyber-rule/60 transition-colors"
           aria-label="Open navigation"
         >
           <Menu className="h-5 w-5" />
         </button>
-        <span className="ml-3 text-sm font-semibold tracking-tight">TradeOps AI</span>
+        <div className="ml-3 flex items-center gap-2">
+          <div className="w-5 h-5 rounded bg-gradient-to-br from-cyber-cyan to-cyber-blue flex items-center justify-center shadow-glow-cyan">
+            <BarChart2 className="h-3 w-3 text-cyber-navy" />
+          </div>
+          <span className="text-sm font-bold tracking-tight">
+            TradeOps <span className="text-cyber-cyan">AI</span>
+          </span>
+        </div>
       </div>
 
-      {/* Mobile drawer overlay */}
+      {/* Mobile drawer */}
       {mobileOpen && (
-        <div
-          className="lg:hidden fixed inset-0 z-50 flex"
-          onClick={() => setMobileOpen(false)}
-        >
+        <div className="lg:hidden fixed inset-0 z-50 flex" onClick={() => setMobileOpen(false)}>
           <div
-            className="bg-card w-72 h-full flex flex-col border-r border-border shadow-2xl"
+            className="w-64 h-full flex flex-col shadow-2xl"
+            style={{
+              background: "linear-gradient(180deg, hsl(220 35% 6%) 0%, hsl(222 38% 5%) 100%)",
+              borderRight: "1px solid hsl(217 30% 12%)",
+            }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="h-14 flex items-center justify-between px-6 border-b border-border shrink-0">
-              <span className="text-sm font-semibold tracking-tight">TradeOps AI</span>
+            <div className="h-14 flex items-center justify-between px-5 shrink-0"
+              style={{ borderBottom: "1px solid hsl(217 30% 10%)" }}
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded bg-gradient-to-br from-cyber-cyan to-cyber-blue flex items-center justify-center shadow-glow-cyan">
+                  <BarChart2 className="h-3 w-3 text-cyber-navy" />
+                </div>
+                <span className="text-sm font-bold tracking-tight">
+                  TradeOps <span className="text-cyber-cyan">AI</span>
+                </span>
+              </div>
               <button
                 onClick={() => setMobileOpen(false)}
-                className="p-1.5 rounded-md text-muted-foreground hover:bg-muted transition-colors"
+                className="p-1.5 rounded-md text-muted-foreground hover:bg-cyber-rule/60 transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
             <SidebarContent onNav={() => setMobileOpen(false)} />
           </div>
-          {/* Dimmed backdrop */}
-          <div className="flex-1 bg-black/40" />
+          <div className="flex-1 bg-black/60 backdrop-blur-sm" />
         </div>
       )}
     </>

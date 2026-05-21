@@ -3,15 +3,20 @@ import { type ButtonHTMLAttributes, forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyber-cyan/60 disabled:pointer-events-none disabled:opacity-40",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        outline: "border border-border bg-transparent hover:bg-muted text-foreground",
-        ghost: "hover:bg-muted text-foreground",
-        destructive: "bg-red-500 text-white hover:bg-red-600",
-        secondary: "bg-muted text-foreground hover:bg-muted/80",
+        default:
+          "bg-cyber-cyan text-cyber-navy font-semibold hover:bg-cyber-cyan/85 shadow-glow-cyan hover:shadow-[0_0_16px_hsl(199_95%_52%/0.3)]",
+        outline:
+          "border border-cyber-rule bg-transparent hover:bg-cyber-rule/60 hover:border-cyber-cyan/30 text-foreground",
+        ghost:
+          "hover:bg-cyber-rule/60 text-foreground",
+        destructive:
+          "bg-cyber-red/10 border border-cyber-red/30 text-cyber-red hover:bg-cyber-red/20",
+        secondary:
+          "bg-cyber-panel border border-cyber-rule text-foreground hover:border-cyber-cyan/20 hover:bg-cyber-rule/80",
       },
       size: {
         default: "h-9 px-4 py-2",

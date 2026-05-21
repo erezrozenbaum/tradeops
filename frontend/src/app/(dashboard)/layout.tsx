@@ -7,13 +7,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen bg-background">
       <AuthFetchPatch />
       <Sidebar />
-      {/* pt-14 for mobile top bar; lg:ml-60 for desktop sidebar; lg:pt-0 resets mobile padding */}
-      <main className="flex-1 flex flex-col min-h-screen pt-14 lg:ml-60 lg:pt-0">
+      {/* pt-14 mobile top bar; lg:ml-56 matches sidebar width; lg:pt-0 resets */}
+      <main className="flex-1 flex flex-col min-h-screen pt-14 lg:ml-56 lg:pt-0">
         <div className="flex-1">{children}</div>
-        <footer className="border-t border-border px-6 py-3 text-center text-xs text-muted-foreground lg:ml-0">
-          TradeOps AI is not a licensed financial advisor &mdash; for educational and analytical use only &mdash; use at your own risk &mdash;{" "}
-          <a href="/help#disclaimer" className="underline underline-offset-2 hover:text-foreground transition-colors">
-            Full disclaimer
+        <footer
+          className="px-6 py-2.5 text-center text-[11px] text-muted-foreground/50 tracking-wide"
+          style={{ borderTop: "1px solid hsl(217 30% 10%)" }}
+        >
+          TradeOps AI — educational &amp; analytical platform only &mdash; not financial advice &mdash;{" "}
+          <a href="/help#disclaimer" className="underline underline-offset-2 hover:text-muted-foreground transition-colors">
+            full disclaimer
           </a>
         </footer>
       </main>
