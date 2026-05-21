@@ -40,6 +40,8 @@ def _register_jobs() -> None:
     from app.workers.jobs.research_prewarm import prewarm_market_research
     from app.workers.jobs.sentiment_worker import run_sentiment_signals
     from app.workers.jobs.fx_history_sync import sync_fx_history
+    from app.workers.jobs.net_worth_snapshot import write_net_worth_snapshots
+    from app.workers.jobs.coach_refresh import refresh_all_coach_insights
 
     _scheduler.add_job(
         refresh_all_prices,
@@ -124,6 +126,20 @@ def _register_jobs() -> None:
         sync_fx_history,
         CronTrigger(hour=21, minute=30),   # after snapshot_writer (21:00)
         id="fx_history_sync",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+    _scheduler.add_job(
+        write_net_worth_snapshots,
+        CronTrigger(hour=21, minute=15),   # after snapshot_writer (21:00)
+        id="net_worth_snapshot",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+    _scheduler.add_job(
+        refresh_all_coach_insights,
+        CronTrigger(hour=7, minute=45),    # after goal_evaluation + proactive_insights
+        id="coach_refresh",
         replace_existing=True,
         misfire_grace_time=3600,
     )

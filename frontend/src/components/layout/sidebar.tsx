@@ -38,6 +38,9 @@ import {
   Coins,
   Flame,
   Globe,
+  PiggyBank,
+  Receipt,
+  Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +55,7 @@ const sections = [
       { label: "Family", href: "/family", icon: Users },
       { label: "Financial", href: "/financial", icon: Wallet },
       { label: "Goals", href: "/goals", icon: Target },
+      { label: "Net Worth", href: "/net-worth", icon: PiggyBank },
     ],
   },
   {
@@ -76,6 +80,7 @@ const sections = [
       { label: "PDF Import", href: "/pdf-import", icon: FileUp },
       { label: "Crypto Staking", href: "/crypto-staking", icon: Coins },
       { label: "FX Impact", href: "/fx-impact", icon: Globe },
+      { label: "Tax Summary", href: "/tax-summary", icon: Receipt },
     ],
   },
   {
@@ -88,6 +93,7 @@ const sections = [
       { label: "AI Report", href: "/reports", icon: Sparkles },
       { label: "News Feed", href: "/news", icon: Newspaper },
       { label: "Pairs Trading", href: "/pairs-trading", icon: ArrowLeftRight },
+      { label: "AI Coach", href: "/insights", icon: Brain },
     ],
   },
   {

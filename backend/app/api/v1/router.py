@@ -48,6 +48,9 @@ from app.pdf_import.router import router as pdf_import_router
 from app.crypto_staking.router import router as crypto_staking_router
 from app.live_trading.router import router as live_trading_router
 from app.fx_impact.router import router as fx_impact_router
+from app.net_worth.router import router as net_worth_router
+from app.tax_summary.router import router as tax_summary_router
+from app.coach.router import router as coach_router
 
 api_router = APIRouter()
 
@@ -105,3 +108,6 @@ api_router.include_router(pdf_import_router, prefix="/investors/{investor_id}/pd
 api_router.include_router(crypto_staking_router, prefix="/investors/{investor_id}/crypto-staking", tags=["crypto-staking"], dependencies=_own)
 api_router.include_router(live_trading_router, prefix="/investors/{investor_id}/live-trading", tags=["live-trading"], dependencies=_own)
 api_router.include_router(fx_impact_router, prefix="/investors/{investor_id}", tags=["fx-impact"], dependencies=_own)
+api_router.include_router(net_worth_router, prefix="/investors/{investor_id}/net-worth", tags=["net-worth"], dependencies=_own)
+api_router.include_router(tax_summary_router, prefix="/investors/{investor_id}/tax-summary", tags=["tax-summary"], dependencies=_own)
+api_router.include_router(coach_router, prefix="/investors/{investor_id}/coach", tags=["coach"], dependencies=_own)

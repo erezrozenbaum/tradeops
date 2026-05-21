@@ -10,6 +10,39 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.96.0] — 2026-05-21
+
+### Feature — Net Worth Dashboard (TASK 61)
+
+- Migration 0040 (partial): new `net_worth_snapshots` table — captures portfolio value + financial assets + liabilities daily.
+- `models/net_worth.py` (NEW): `NetWorthSnapshot` ORM model.
+- `net_worth/service.py` (NEW): `get_summary()` aggregates portfolio snapshot + `FinancialAsset` + `FinancialLiability`; `get_history()` returns 12-month trend; `save_snapshot()` writes daily; FI projection via 4% rule binary search.
+- `net_worth/router.py` (NEW): `GET /investors/{id}/net-worth` (summary + FI projection), `GET /investors/{id}/net-worth/history`.
+- `workers/jobs/net_worth_snapshot.py` (NEW): daily job at 21:15 UTC.
+- `frontend/net-worth/page.tsx` (NEW): 4 summary cards (Net Worth, Total Assets, Portfolio, Liabilities), 12-month trend line chart, expandable assets/liabilities breakdown tables, FI projection card.
+
+### Feature — Tax Year Summary (TASK 61)
+
+- `tax_summary/service.py` (NEW): WACC-method realized gain computation from `HoldingTransactions`; groups by tax year; estimates 25% flat tax (Israeli default); supports dividends; `available_years` auto-detected.
+- `tax_summary/router.py` (NEW): `GET /investors/{id}/tax-summary?year=YYYY`.
+- `frontend/tax-summary/page.tsx` (NEW): year selector, 4 summary cards (Gains, Losses, Net P&L, Est. Tax), realized transactions table with Long/Short term badge, dividend section (collapsible), disclaimer banner.
+
+### Feature — AI Coach / Proactive Insights (TASK 61)
+
+- Migration 0040 (partial): new `coach_insights` table — persistent insights with dedup, dismiss, and 7-day cooldown.
+- `models/coach_insight.py` (NEW): `CoachInsight` ORM model.
+- `coach/service.py` (NEW): 7 rule-based checks (emergency fund, idle cash, goal-behind-schedule, portfolio drift/concentration, tax-loss harvesting, paper trading milestone, high-interest debt); optional AI narrative layer via Claude Haiku; dedup prevents spam; dismiss persists 7 days.
+- `coach/router.py` (NEW): `GET /coach` (active insights), `POST /coach/refresh` (run analysis), `DELETE /coach/{id}` (dismiss).
+- `workers/jobs/coach_refresh.py` (NEW): daily job at 07:45 UTC (after goal_evaluation + proactive_insights).
+- `frontend/insights/page.tsx` (NEW): severity-grouped cards (danger/warning/info), dismiss button, Refresh button, action CTA with link.
+
+### Infrastructure
+
+- All 3 new routers registered in `api/v1/router.py`.
+- Sidebar: Net Worth (Personal section), Tax Summary (Portfolio section), AI Coach (Intelligence section).
+
+---
+
 ## [0.95.0] — 2026-05-20
 
 ### Feature — Market Research History
