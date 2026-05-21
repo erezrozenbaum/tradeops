@@ -89,6 +89,8 @@ export default function LiveTradingPage() {
   const [ackConfirmation, setAckConfirmation] = useState("");
   const [ackLoading, setAckLoading] = useState(false);
   const [ackError, setAckError] = useState<string | null>(null);
+  const [ackChecks, setAckChecks] = useState([false, false, false, false, false]);
+  const allAckChecked = ackChecks.every(Boolean);
 
   // Activate
   const [activating, setActivating] = useState(false);
@@ -374,8 +376,36 @@ export default function LiveTradingPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Type <strong className="text-foreground">I UNDERSTAND</strong> to confirm you acknowledge
-              that orders placed here use real money and you may lose your invested capital.
+              Before activating live trading, confirm each of the following statements by ticking all boxes:
+            </p>
+            <ul className="space-y-2.5">
+              {[
+                "I understand that live trading uses real money and I may lose some or all of my invested capital.",
+                "I understand that TradeOps AI is not a licensed financial advisor and does not provide financial advice.",
+                "I have reviewed and accepted full responsibility for all orders I place in this session.",
+                "I understand that no simulation, backtest, or AI output guarantees future results.",
+                "I am not relying on this platform as a substitute for independent financial or legal advice.",
+              ].map((label, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id={`ack-check-${i}`}
+                    checked={ackChecks[i]}
+                    onChange={e => {
+                      const next = [...ackChecks];
+                      next[i] = e.target.checked;
+                      setAckChecks(next);
+                    }}
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border border-input accent-amber-600 cursor-pointer"
+                  />
+                  <label htmlFor={`ack-check-${i}`} className="text-sm text-muted-foreground cursor-pointer select-none">
+                    {label}
+                  </label>
+                </li>
+              ))}
+            </ul>
+            <p className="text-sm text-muted-foreground">
+              Type <strong className="text-foreground">I UNDERSTAND</strong> to complete acknowledgment:
             </p>
             <div className="flex gap-3">
               <input
@@ -386,7 +416,7 @@ export default function LiveTradingPage() {
               />
               <Button
                 size="sm"
-                disabled={ackConfirmation !== "I UNDERSTAND" || ackLoading || !ibkrAccountId}
+                disabled={ackConfirmation !== "I UNDERSTAND" || !allAckChecked || ackLoading || !ibkrAccountId}
                 onClick={acknowledge}
                 className="bg-amber-600 hover:bg-amber-700 text-white"
               >

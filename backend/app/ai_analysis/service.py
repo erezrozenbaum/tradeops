@@ -66,5 +66,10 @@ def generate(db: Session, investor_id: uuid.UUID) -> dict | None:
     return {
         "investor_id": investor_id,
         "generated_at": datetime.now(timezone.utc),
+        "disclaimer": (
+            "AI-generated report for educational and analytical purposes only. Not financial advice. "
+            "AI outputs may be incomplete or inaccurate. Always verify independently and consult a "
+            "licensed financial professional before making any investment decision."
+        ),
         **report,
     }

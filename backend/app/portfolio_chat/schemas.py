@@ -8,3 +8,4 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     reply: str
     data: dict | None = None
+    disclaimer: str = "AI-generated — for educational purposes only. Not financial advice."

@@ -1,7 +1,7 @@
 # TradeOps AI — Architecture
 
-**Version:** 0.95.0  
-**Last updated:** 2026-05-20
+**Version:** 0.97.0  
+**Last updated:** 2026-05-21
 
 ---
 
@@ -157,6 +157,18 @@ backend/app/
 ├── market_signals/             # Daily news sentiment + whale mention monitor (Phase 11)
 │   └── router.py               # GET /investors/{id}/market-signals
 │
+├── net_worth/                  # Net worth dashboard: portfolio + assets − liabilities, FI projection
+│   ├── service.py              # get_summary, get_history, save_snapshot; FI projection (binary search, 4% SWR)
+│   └── router.py               # GET /investors/{id}/net-worth, GET /investors/{id}/net-worth/history
+│
+├── tax_summary/                # Tax year summary: realized gains/losses, WACC cost basis, est. 25% tax
+│   ├── service.py              # WACC per-ticker cost tracking, long/short-term classification
+│   └── router.py               # GET /investors/{id}/tax-summary?year=YYYY
+│
+├── coach/                      # AI Coach: persistent proactive insights with dedup and dismiss
+│   ├── service.py              # 7 rule functions + AI enrichment + dedup_key suppression
+│   └── router.py               # GET /investors/{id}/coach, POST /coach/refresh, DELETE /coach/{id}
+│
 ├── pension_simulation/         # Standalone pension projector
 ├── debt_planner/               # Debt payoff planner (avalanche/snowball)
 ├── watchlist/                  # Per-investor ticker watchlist
@@ -261,6 +273,9 @@ All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`.
 | `/investors/{id}/portfolio/resilience` | resilience | resilience |
 | `/investors/{id}/live-trading` | live_trading | live-trading |
 | `/investors/{id}/fx-impact` | fx_impact | fx-impact |
+| `/investors/{id}/net-worth` | net_worth | net-worth |
+| `/investors/{id}/tax-summary` | tax_summary | tax-summary |
+| `/investors/{id}/coach` | coach | coach |
 | `/market` | market_data | market-data (REST + SSE) |
 | `/investors/{id}/accounts` | holdings | holdings |
 | `/investors/{id}/accounts/{id}/holdings` | holdings | holdings |
@@ -323,6 +338,9 @@ Managed by Alembic. Migrations in `backend/alembic/versions/`.
 | `0035` | live_trading_sessions table (gateway_url, session_token, status, order log) |
 | `0036` | audit_events index on investor_profile_id; CHECK constraints on investable_capital_pct, max_trade_size_pct |
 | `0037` | fx_rate_history table (from_currency, to_currency, date, rate, source) — daily FX rate store |
+| `0038` | paper_trading_v2: cash_balance + new paper_positions + paper_orders tables |
+| `0039` | market_research_reports table (JSONB persistence) |
+| `0040` | net_worth_snapshots + coach_insights tables |
 
 ### Core tables
 
@@ -393,6 +411,9 @@ frontend/src/
 │   │   ├── audit/page.tsx          # Audit event log
 │   │   ├── admin/page.tsx          # Admin panel: users, profiles, AI cost, live trading queue (admin role required)
 │   │   ├── fx-impact/page.tsx      # FX Impact: asset P&L vs currency P&L breakdown
+│   │   ├── net-worth/page.tsx      # Net Worth dashboard: balance sheet, 12-month trend, FI projection
+│   │   ├── tax-summary/page.tsx    # Tax Year Summary: realized gains/losses, WACC cost basis, est. tax
+│   │   ├── insights/page.tsx       # AI Coach: proactive insights with severity grouping + dismiss
 │   │   └── settings/page.tsx       # Account and platform info
 │   └── page.tsx                    # Root redirect → /dashboard
 ├── components/ui/                  # Shared UI primitives (Card, Badge, Button, etc.)
@@ -611,6 +632,7 @@ Six features call the Anthropic Claude API. All require `ANTHROPIC_API_KEY`. All
 | AI Agent | `investment_agent/` | `claude-sonnet-4-6` | `GET /investors/{id}/agent` |
 | Portfolio Chat | `portfolio_chat/` | `claude-haiku-4-5-20251001` | `POST /investors/{id}/chat` |
 | Market Signals | `market_signals/` (worker) | `claude-haiku-4-5-20251001` | background job 20:15 UTC |
+| AI Coach | `coach/` | `claude-haiku-4-5-20251001` (optional enrichment) | `GET /investors/{id}/coach` |
 
 ### AI cost tracking
 
@@ -679,6 +701,10 @@ The sections above describe the baseline architecture at v0.29.0. All additions 
 | `weekly_digest` | Friday 18:00 UTC | AI-generated HTML digest email (v0.63) |
 | `market_prewarm` | Every 30 min | Keeps live market signal cache warm |
 | `research_prewarm` | Every 6 hours | Keeps market research screener cache warm |
+| `sentiment_signals` | Daily 20:15 UTC | News sentiment + whale mention signals per holding |
+| `fx_history_sync` | Daily 21:30 UTC | Syncs yesterday's FX rates for all active currency pairs |
+| `net_worth_snapshot` | Daily 21:15 UTC | Writes daily net worth snapshot for all investors |
+| `coach_refresh` | Daily 07:45 UTC | Refreshes AI Coach insights for all investors |
 
 ### API endpoints added (v0.30–v0.63)
 

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, AlertTriangle, Clock, Info, RefreshCw, Sparkles, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { AIDisclaimer } from "@/components/ui/ai-disclaimer";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -131,6 +132,8 @@ export default function ReportsPage() {
           {generating ? "Generating…" : report ? "Regenerate" : "Generate report"}
         </Button>
       </div>
+
+      <AIDisclaimer />
 
       {/* Error */}
       {error && (

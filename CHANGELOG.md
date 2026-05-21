@@ -10,6 +10,26 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.97.0] — 2026-05-21
+
+### Disclaimer Strategy — Multi-Layer
+
+- `LEGAL_DISCLAIMER.md` (NEW): 10-section legal disclaimer covering no financial advice, educational use, risk disclosure, AI limitations, third-party data, tax, brokerage integration, live trading risk, jurisdiction, and OSS warranty.
+- `README.md`: redesigned with badges, feature tables, architecture diagram, safety principles, and `[!WARNING]` disclaimer block linking to `LEGAL_DISCLAIMER.md`.
+- `frontend/components/ui/ai-disclaimer.tsx` (NEW): reusable `AIDisclaimer` component — full (amber bordered banner) and compact (single-line) variants.
+- `frontend/app/(dashboard)/layout.tsx`: global footer on all dashboard pages — "not financial advice · educational and analytical use only".
+- AI disclaimer banner added to 6 AI pages: `reports`, `recommendations`, `market-research`, `agent`, `market-scan` (compact), `insights` (compact).
+- Backend inline disclaimers: stronger default disclaimer text on `investment_recommendations` and `market_research` services; `disclaimer` field added to `AnalysisReportOut`, `AgentReport`, and `ChatResponse` schemas.
+- Live trading acknowledgment gate enhanced: 5-checkbox multi-point risk acknowledgment now required before the "I UNDERSTAND" confirmation text field is actionable.
+
+### Docs
+
+- `docs/schema.md`: updated to v0.97.0; added tables 26 (`net_worth_snapshots`) and 27 (`coach_insights`); updated relationships diagram; added migration 0040 to history.
+- `docs/architecture.md`: updated to v0.97.0; added `net_worth/`, `tax_summary/`, `coach/` modules; added new API routes; updated workers table with all 14 current jobs; added new frontend pages.
+- `docs/admin-guide.md`: updated to v0.97.0; added feature entries for Net Worth Dashboard, Tax Year Summary, and AI Coach; added migration 0040 entry.
+
+---
+
 ## [0.96.0] — 2026-05-21
 
 ### Feature — Net Worth Dashboard (TASK 61)

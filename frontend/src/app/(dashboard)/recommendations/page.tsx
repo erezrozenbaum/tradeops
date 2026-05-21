@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { AIDisclaimer } from "@/components/ui/ai-disclaimer";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -327,6 +328,8 @@ export default function RecommendationsPage() {
           {loading ? "Analysing…" : report ? "Regenerate" : "Generate"}
         </Button>
       </div>
+
+      <AIDisclaimer />
 
       {error && (
         <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { AIDisclaimer } from "@/components/ui/ai-disclaimer";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -199,6 +200,8 @@ export default function AgentPage() {
           )}
         </button>
       </div>
+
+      <AIDisclaimer />
 
       {/* Stale cache notice */}
       {showStale && !loading && (

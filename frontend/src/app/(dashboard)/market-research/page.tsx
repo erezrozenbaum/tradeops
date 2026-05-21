@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { AIDisclaimer } from "@/components/ui/ai-disclaimer";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -664,6 +665,8 @@ export default function MarketResearchPage() {
           {loading ? "Analysing…" : report ? "Refresh" : "Run analysis"}
         </Button>
       </div>
+
+      <AIDisclaimer />
 
       {/* Error */}
       {error && (
