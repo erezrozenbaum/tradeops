@@ -1,5 +1,4 @@
 """Debt payoff planner — avalanche (highest rate first) or snowball (lowest balance first)."""
-import uuid
 from datetime import date, timedelta
 from typing import Literal
 

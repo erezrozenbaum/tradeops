@@ -26,7 +26,6 @@ def get_market_signals(
     from app.models.investor_profile import InvestorProfile
     from app.models.market_signal import MarketSignal
     from app.portfolio_analysis.service import get_portfolio
-    from app.risk_modeling.service import get_latest as get_latest_risk_model
     from app.market_signals.guard import compute_trend_direction, build_connected_insight
     from sqlalchemy import and_
 
@@ -175,7 +174,6 @@ def dismiss_signal(
 ):
     """Mark a signal as dismissed so it no longer appears in the monitor."""
     from app.models.market_signal import MarketSignal
-    from sqlalchemy import and_
 
     signal = db.get(MarketSignal, signal_id)
     if not signal or signal.investor_id != investor_id:

@@ -91,9 +91,9 @@ def _build_ai_prompt(result: ResilienceResult) -> str:
 
     if not result.tier3_breach:
         prompt += (
-            f"Their liquid assets fully cover the scenario with no need to touch locked funds. "
-            f"Provide a concise (2–3 sentence) encouraging but honest recommendation: "
-            f"what they are doing right and what buffer they should consider maintaining."
+            "Their liquid assets fully cover the scenario with no need to touch locked funds. "
+            "Provide a concise (2–3 sentence) encouraging but honest recommendation: "
+            "what they are doing right and what buffer they should consider maintaining."
         )
     else:
         prompt += (

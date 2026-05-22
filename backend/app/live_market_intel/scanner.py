@@ -110,14 +110,6 @@ def get_opportunity_signals(
         log.debug("Returning %d cached market signals", len(cached))
         return cached
 
-    # Build allowed risk set
-    allowed_risk: set[str] = {"low", "moderate", "high", "very_high"}
-    if risk_model:
-        if risk_model.high_risk_pct == 0 and risk_model.growth_pct == 0:
-            allowed_risk = {"low"}
-        elif risk_model.high_risk_pct == 0:
-            allowed_risk = {"low", "moderate"}
-
     catalog_by_ticker = {i.ticker: i for i in CATALOG}
     stock_catalog = [i for i in CATALOG if i.asset_type != "crypto"]
     crypto_catalog = [i for i in CATALOG if i.asset_type == "crypto"]

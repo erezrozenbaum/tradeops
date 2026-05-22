@@ -1,11 +1,8 @@
 """Tests for Daily Action Feed engine (pure logic — no DB, no external calls)."""
 import uuid
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
 
-import pytest
 
-from app.action_feed.engine import build_action_feed
 from app.action_feed.schemas import ActionItem, DailyActionFeed
 
 

@@ -1,7 +1,6 @@
 import uuid
 from unittest.mock import MagicMock
 
-import pytest
 
 from app.models.investor_profile import ExperienceLevel, InvestorProfile
 from app.models.risk_model import RiskModel

@@ -2,7 +2,7 @@
 import logging
 import time
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 
 import yfinance as yf
 from sqlalchemy.orm import Session

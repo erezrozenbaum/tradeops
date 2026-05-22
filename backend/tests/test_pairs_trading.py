@@ -1,8 +1,6 @@
 """Tests for Statistical Arbitrage Pairs Trading engine — pure math, no HTTP/DB."""
-import math
 
 import numpy as np
-import pytest
 
 from app.pairs_trading.engine import _adf0, _determine_signal, _ols
 from app.pairs_trading.schemas import PairAnalysis

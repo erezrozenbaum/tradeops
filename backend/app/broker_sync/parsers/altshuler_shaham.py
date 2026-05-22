@@ -24,7 +24,6 @@ from app.broker_sync.schemas import BrokerImportRow
 _COL_ALIASES: dict[str, str] = {
     # name
     'שם ני"ע': "name",
-    "שם ני\"ע": "name",
     "שם נ\"ע": "name",
     "שם": "name",
     "name": "name",

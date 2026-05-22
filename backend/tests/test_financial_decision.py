@@ -1,6 +1,5 @@
 from types import SimpleNamespace
 
-import pytest
 
 from app.financial_decision.engine import evaluate
 

@@ -1,7 +1,5 @@
 """Tests for live trading gates and order risk validation."""
-import math
 import uuid
-from datetime import datetime, timezone, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest

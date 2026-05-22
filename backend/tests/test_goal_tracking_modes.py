@@ -2,7 +2,6 @@
 import uuid
 from types import SimpleNamespace
 
-import pytest
 
 from app.goals_analysis.engine import analyze
 

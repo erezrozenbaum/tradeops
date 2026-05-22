@@ -1,8 +1,6 @@
 """Tests for IBKR REST API connector — no actual HTTP calls."""
-import json
 from unittest.mock import MagicMock, patch
 
-import pytest
 import httpx
 
 from app.broker_sync.ibkr_rest import fetch_positions, _ASSET_TYPE_MAP

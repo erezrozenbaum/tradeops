@@ -2,7 +2,6 @@
 import uuid
 from types import SimpleNamespace
 
-import pytest
 
 from app.portfolio_analysis.rebalance_engine import compute_rebalance
 

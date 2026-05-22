@@ -58,7 +58,6 @@ def _fetch_closes(ticker: str, lookback_days: int) -> list[float] | None:
 
 def _ols(y: np.ndarray, x: np.ndarray) -> tuple[float, float]:
     """OLS: y = beta*x + alpha. Returns (beta, alpha)."""
-    n = len(y)
     x_mean, y_mean = x.mean(), y.mean()
     beta = float(np.dot(x - x_mean, y - y_mean) / np.dot(x - x_mean, x - x_mean))
     alpha = float(y_mean - beta * x_mean)

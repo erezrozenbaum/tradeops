@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.models.financial_profile import FinancialLiability, FinancialProfile
+from app.models.financial_profile import FinancialProfile
 from app.models.investor_profile import InvestorProfile
 from pydantic import BaseModel
 
@@ -80,7 +80,7 @@ def get_notifications(db: Session, investor_id: uuid.UUID) -> list[AppNotificati
     # --- Stale prices ---
     try:
         from app.models.price_snapshot import PriceSnapshot
-        from app.models.investment_account import InvestmentAccount, InvestmentHolding
+        from app.models.investment_account import InvestmentAccount
         accounts = db.query(InvestmentAccount).filter(InvestmentAccount.investor_id == investor_id).all()
         tickers = {h.ticker for acc in accounts for h in acc.holdings if h.ticker}
         stale = []

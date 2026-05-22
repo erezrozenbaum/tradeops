@@ -18,7 +18,6 @@ def get_retirement_readiness(investor_id: uuid.UUID, db: Session = Depends(get_d
     """
     from app.models.investor_profile import InvestorProfile
     from app.models.investment_account import InvestmentAccount
-    from app.portfolio_analysis import service as portfolio_service
     from app.portfolio_analysis import pension_projection
     from app.currency_engine.rates import convert as fx_convert
     from app.scenario_analysis.engine import _monte_carlo

@@ -4,7 +4,6 @@ The lazy portfolio is 60% VT (global total market) / 40% AGG (US bonds).
 fetch_lazy_returns() is the only function that calls yfinance (Docker-only).
 build_comparison() is pure Python — no external deps, fully testable.
 """
-import math
 import time
 import logging
 import uuid

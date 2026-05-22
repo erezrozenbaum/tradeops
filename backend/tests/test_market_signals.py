@@ -1,5 +1,4 @@
 """Tests for market_signals guard and score logic (pure functions — no DB, no Claude)."""
-import pytest
 
 from app.market_signals.guard import (
     evaluate_signal,

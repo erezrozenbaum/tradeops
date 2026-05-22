@@ -31,7 +31,7 @@ def _project_pension_balance(
         fv += pmt * ((1 + r) ** months - 1) / r
     return max(fv, current_balance)  # never project below starting balance
 
-from app.models.investment_account import InvestmentAccount, InvestmentHolding
+from app.models.investment_account import InvestmentAccount
 from app.portfolio_analysis.schemas import (
     AccountAnalysis,
     HoldingAnalysis,

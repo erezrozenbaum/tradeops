@@ -1,11 +1,10 @@
 """Tests for Crypto Staking service — pure logic, no DB."""
 import uuid
-from unittest.mock import MagicMock, patch
 
 import pytest
 
 from app.crypto_staking.schemas import EnableStakingRequest, StakingPosition, StakingReport
-from app.crypto_staking.service import _tax_note, build_staking_report
+from app.crypto_staking.service import _tax_note
 
 
 class TestTaxNote:

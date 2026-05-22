@@ -1,5 +1,4 @@
 """Tests for the paper trading engine (pure, no DB)."""
-import pytest
 
 from app.models.strategy_template import StrategyType
 from app.paper_trading.engine import TickResult, simulate_tick

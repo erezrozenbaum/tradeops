@@ -176,9 +176,6 @@ def generate(db: Session, investor_id: uuid.UUID) -> RiskModel | None:
 
     age, age_tier = _get_age_tier(investor.date_of_birth)
 
-    # Age < 18 overrides the stored is_minor flag
-    effective_is_minor = investor.is_minor or age_tier == "minor"
-
     manual_assets = sum(a.current_value for a in fp.assets)
     total_liabilities = sum(l.outstanding_balance for l in fp.liabilities)
 

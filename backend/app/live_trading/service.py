@@ -10,7 +10,6 @@ from app.live_trading.schemas import AcknowledgeRiskRequest, OrderRequest
 from app.market_data import service as market_data_svc
 from app.models.investor_profile import InvestorProfile
 from app.models.live_trading import LiveOrder, LiveTradingSession
-from app.risk_modeling import service as rm_service
 
 
 # ── Session management ────────────────────────────────────────────────────────
@@ -20,7 +19,7 @@ def get_active_session(db: Session, investor_id: uuid.UUID) -> LiveTradingSessio
         db.query(LiveTradingSession)
         .filter(
             LiveTradingSession.investor_id == investor_id,
-            LiveTradingSession.is_active == True,
+            LiveTradingSession.is_active,
         )
         .first()
     )

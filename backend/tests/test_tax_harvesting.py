@@ -1,9 +1,8 @@
 """Tests for tax-loss harvesting service (pure logic — no DB, no yfinance)."""
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date
 from types import SimpleNamespace
 
-import pytest
 
 from app.tax_harvesting.service import (
     _suggest_replacement,

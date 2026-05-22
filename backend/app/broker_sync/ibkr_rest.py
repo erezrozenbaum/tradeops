@@ -26,7 +26,6 @@ Key fields mapped:
 from __future__ import annotations
 
 import logging
-import ssl
 
 import httpx
 

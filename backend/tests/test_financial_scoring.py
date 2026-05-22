@@ -1,8 +1,6 @@
-import pytest
 
 from app.models.financial_profile import IncomeTrend, JobStability
 from app.financial_scoring.engine import calculate_stability_score
-from app.financial_scoring.schemas import FinancialScoringInput
 from tests.conftest import make_input
 
 

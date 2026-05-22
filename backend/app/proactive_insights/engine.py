@@ -129,7 +129,6 @@ def detect_drift(db, investor_id: uuid.UUID) -> ProactiveInsightsReport:
     for ticker, (name, val) in ticker_values.items():
         pct = val / total_value * 100
         if pct >= CONCENTRATION_THRESHOLD_PCT:
-            trim_pct = pct - CONCENTRATION_THRESHOLD_PCT * 0.8  # trim to ~80% of threshold
             events.append(DriftEvent(
                 event_id=f"concentration_{ticker}",
                 event_type="concentration",

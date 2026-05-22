@@ -1,9 +1,7 @@
 """Unit tests for market_scanner.engine — no DB required."""
 import uuid
 from types import SimpleNamespace
-from datetime import date
 
-import pytest
 
 from app.market_scanner.engine import scan, _risk_alignment_score, _diversification_score, _horizon_score
 

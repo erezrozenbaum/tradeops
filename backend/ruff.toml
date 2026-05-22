@@ -1,0 +1,9 @@
+[lint]
+# F821 — SQLAlchemy relationship() uses string forward refs that ruff can't resolve
+# E741 — loop variables named `l` for "liability" are acceptable in financial domain code
+# E402 — some modules defer imports intentionally to avoid circular deps
+ignore = ["F821", "E741", "E402"]
+
+[lint.per-file-ignores]
+# test files: unused pytest imports, helper imports that may not be called in every test
+"tests/**" = ["F401"]

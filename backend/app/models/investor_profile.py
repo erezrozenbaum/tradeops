@@ -1,7 +1,6 @@
 import enum
 import uuid
-from datetime import date, datetime
-from typing import Any
+from datetime import date
 
 from sqlalchemy import Boolean, Date, Enum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID

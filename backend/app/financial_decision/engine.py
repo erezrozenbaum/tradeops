@@ -32,7 +32,6 @@ def evaluate(
         )
 
     fp = financial_profile
-    total_liabilities = sum(l.outstanding_balance for l in fp.liabilities)
     total_monthly_debt = sum(l.monthly_payment for l in fp.liabilities)
     debt_to_income_pct = (
         (total_monthly_debt / fp.monthly_income * 100) if fp.monthly_income > 0 else 0.0

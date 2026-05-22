@@ -7,7 +7,6 @@ import pytest
 
 from app.scenario_analysis.engine import compute, _apply_scenario, _tier_values
 from app.scenario_analysis.scenarios import SCENARIOS, Scenario
-from app.scenario_analysis.schemas import ScenarioImpact, HoldingImpact
 
 INVESTOR_ID = uuid.uuid4()
 NOW = datetime.now(timezone.utc)

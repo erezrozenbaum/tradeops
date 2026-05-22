@@ -1,6 +1,5 @@
 import asyncio
 import json
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -50,7 +49,6 @@ async def price_stream(
 
     async def _fetch_prices() -> dict:
         loop = asyncio.get_event_loop()
-        result = {}
 
         def _sync_fetch():
             db = SessionLocal()

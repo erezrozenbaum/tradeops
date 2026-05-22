@@ -1,9 +1,8 @@
 """Tests for AI analysis module (pure logic — no DB, no real API calls)."""
-from datetime import date, datetime, timezone
+from datetime import date
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 from app.ai_analysis.analyzer import _age_from_dob, build_context, generate_report
 

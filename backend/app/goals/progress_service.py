@@ -1,7 +1,6 @@
 import uuid
 
 from sqlalchemy.orm import Session
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.models.goal_progress_log import GoalProgressLog
 from app.schemas.goal_progress_log import GoalProgressLogCreate

@@ -281,7 +281,6 @@ def _rule_paper_trading_milestone(db: Session, investor_id: uuid.UUID) -> list[I
         if live:
             return []
 
-        cutoff = date.today() - timedelta(days=30)
         portfolios = db.query(PaperPortfolio).filter(
             PaperPortfolio.investor_id == investor_id,
             PaperPortfolio.status == PortfolioStatus.active,

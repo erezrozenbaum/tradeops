@@ -1,11 +1,9 @@
 """Tests for PDF import module — pure logic, no AI/HTTP calls."""
-import io
 import json
 from unittest.mock import MagicMock, patch
 
-import pytest
 
-from app.pdf_import.extractor import _truncate_text, _extract_text_from_pdf, parse_pdf_statement
+from app.pdf_import.extractor import _truncate_text, parse_pdf_statement
 from app.pdf_import.schemas import ParsedHolding, PDFImportResult
 
 

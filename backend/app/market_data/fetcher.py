@@ -99,18 +99,6 @@ _COINGECKO_ID_MAP: dict[str, str] = {
     "chainlink": "chainlink",
     "link": "chainlink",
     "link-usd": "chainlink",
-    # Solana
-    "solana": "solana",
-    "sol": "solana",
-    "sol-usd": "solana",
-    # BNB / Binance Coin
-    "binancecoin": "binancecoin",
-    "bnb": "binancecoin",
-    "bnb-usd": "binancecoin",
-    # Cardano
-    "cardano": "cardano",
-    "ada": "cardano",
-    "ada-usd": "cardano",
 }
 
 # Maps user-entered strings to normalized fetchable tickers for non-crypto assets.

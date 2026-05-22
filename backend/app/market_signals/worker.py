@@ -12,7 +12,7 @@ Skipped entirely if ANTHROPIC_API_KEY is not set.
 """
 import json
 import logging
-from datetime import date, datetime, timezone
+from datetime import date
 
 log = logging.getLogger(__name__)
 
@@ -93,7 +93,7 @@ def run_daily_sentiment() -> None:
     from app.models.investment_account import InvestmentAccount
     from app.models.market_signal import MarketSignal
     from app.market_signals.guard import (
-        evaluate_signal, compute_composite_score, compute_trend_direction,
+        evaluate_signal, compute_composite_score,
     )
     from app.portfolio_analysis.service import get_portfolio
     from app.risk_modeling.service import get_latest as get_latest_risk_model

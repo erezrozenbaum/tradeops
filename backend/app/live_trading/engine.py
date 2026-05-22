@@ -10,7 +10,7 @@ Five hard gates — ALL must pass before any order is submitted:
 """
 import math
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -99,7 +99,7 @@ def _gate_acknowledgment(db: Session, investor_id: uuid.UUID) -> GateStatus:
         db.query(LiveTradingSession)
         .filter(
             LiveTradingSession.investor_id == investor_id,
-            LiveTradingSession.acknowledged_risk == True,
+            LiveTradingSession.acknowledged_risk,
         )
         .first()
     )

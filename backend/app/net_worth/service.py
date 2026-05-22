@@ -209,7 +209,6 @@ def _compute_fi_projection(fp, portfolio_value: float, financial_assets: float) 
         if r == 0:
             years_to_fi = (fv_target - pv) / pmt if pmt > 0 else None
         else:
-            import math
             try:
                 # Binary search for n
                 lo, hi = 0.0, 200.0

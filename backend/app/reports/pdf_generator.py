@@ -332,8 +332,7 @@ def _risk(story: list, stress: Any, s: dict):
             _pct(sc.impact_pct),
             sc.estimated_recovery or "—",
         ])
-    extra_s = [
-        ("ALIGN", (1, 1), (2, -1), "RIGHT"),
+    extra_s = [("ALIGN", (1, 1), (2, -1), "RIGHT")] + [
         ("TEXTCOLOR", (1, i), (2, i), _RED) for i in range(1, len(rows))
     ]
     story.append(_table(rows, [6*cm, 3.5*cm, 3*cm, 3*cm], extra_s))
@@ -405,8 +404,7 @@ def _tax(story: list, tax: Any, s: dict):
                 _pct(op.unrealized_loss_pct),
                 _money(op.estimated_tax_saving, ccy),
             ])
-        extra_h = [
-            ("ALIGN",  (2, 1), (6, -1), "RIGHT"),
+        extra_h = [("ALIGN", (2, 1), (6, -1), "RIGHT")] + [
             ("TEXTCOLOR", (4, i), (5, i), _RED) for i in range(1, len(rows))
         ]
         story.append(_table(rows, [4*cm, 1.8*cm, 2*cm, 1.5*cm, 2*cm, 1.8*cm, 2.3*cm], extra_h))

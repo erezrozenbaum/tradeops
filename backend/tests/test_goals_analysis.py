@@ -3,7 +3,6 @@ import uuid
 from datetime import date, timedelta
 from types import SimpleNamespace
 
-import pytest
 
 from app.goals_analysis.engine import analyze
 

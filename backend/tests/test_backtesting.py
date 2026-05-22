@@ -1,7 +1,6 @@
 import uuid
 from unittest.mock import MagicMock
 
-import pytest
 
 from app.backtesting.engine import BacktestResult, run_backtest, _STRATEGY_PARAMS
 from app.models.strategy_template import StrategyTemplate, StrategyType

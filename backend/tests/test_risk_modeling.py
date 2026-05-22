@@ -1,4 +1,3 @@
-import pytest
 
 from app.models.investor_profile import ExperienceLevel
 from app.risk_modeling.service import _compute_allocation, _MINOR_ALLOCATION

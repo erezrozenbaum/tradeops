@@ -22,7 +22,6 @@ def _pay_frequency(ticker_info: dict) -> str:
     freq = ticker_info.get("dividendRate", 0)
     trailing = ticker_info.get("trailingAnnualDividendRate", 0) or 0
     if freq and trailing:
-        ratio = (freq / trailing) if trailing else 0
         # yfinance dividendRate is the full-year figure; trailingAnnualDividendRate ≈ same
         # Frequency is implied by payouts: check lastDividendDate cadence is unavailable via info
         # Use explicit field if present
