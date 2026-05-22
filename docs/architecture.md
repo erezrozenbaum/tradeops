@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 0.99.3  
+**Version:** 1.0.0  
 **Last updated:** 2026-05-22
 
 ---
@@ -95,8 +95,10 @@ flowchart TD
 
 ```
 backend/app/
-├── main.py                     # FastAPI app factory, CORS, lifespan
+├── main.py                     # FastAPI app factory, CORS, lifespan, telemetry setup
 ├── core/config.py              # Settings from environment variables
+├── core/tracing.py             # Langfuse AI observability wrapper (trace_ai_call)
+├── core/telemetry.py           # OpenTelemetry + Prometheus instrumentation
 ├── db/
 │   ├── base.py                 # SQLAlchemy declarative base
 │   └── session.py              # DB session dependency
@@ -818,6 +820,43 @@ Service worker at `public/sw.js`. API routes = network-only. Navigation = networ
 ### AI chat (v0.63)
 
 In-memory 5-turn conversation history per investor. Context includes live portfolio, risk model, and goals analysis. Replies grounded in real data — never invents figures.
+
+## Observability stack (v1.0.0)
+
+### Langfuse — AI tracing
+
+All 11 AI callers are instrumented via `core/tracing.py`. When `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are set:
+
+- Every AI call creates a Langfuse trace with: feature name, model, truncated input context, raw output (first 4000 chars), input/output token counts, investor ID, and error state if the call fails.
+- If keys are absent, `trace_ai_call()` is a transparent no-op — no behaviour changes, no import failures.
+- Instrumented features: `ai_report`, `market_research`, `investment_recommendations`, `ai_agent`, `portfolio_chat`, `proactive_insights`, `ai_coach`, `pdf_import`, `market_signals`, `weekly_digest`.
+
+### Prometheus + Grafana
+
+- FastAPI is instrumented with `prometheus-fastapi-instrumentator` — exposes `/metrics` (excluded from schema docs).
+- Metrics captured: request rate, latency histogram (p50/p95/p99), error rate, in-progress count, per-endpoint breakdown, HTTP status codes.
+- Prometheus scrapes `backend:8000/metrics` every 15s (see `infra/prometheus/prometheus.yml`).
+- Grafana at port 3001 is pre-provisioned with the Prometheus datasource and a TradeOps backend dashboard (`infra/grafana/dashboards/tradeops.json`).
+- Optional OTLP gRPC export: set `OTEL_EXPORTER_OTLP_ENDPOINT` to forward traces to any OTLP-compatible collector.
+
+### Great Expectations — data quality
+
+- `app/data_quality/suites.py` defines 5 expectation suites: `holdings`, `fx_rates`, `price_snapshots`, `portfolio_snapshots`, `transactions`.
+- `app/data_quality/runner.py` runs suites against live DB data using pandas; logs violations; writes `data_quality_failure` audit events for failures.
+- Daily job `data_quality_check` runs at 02:00 UTC; results surfaced in the admin audit log.
+- Degrades gracefully: if `great_expectations` or `pandas` are not installed, all checks are skipped silently.
+
+### Migration safety CI
+
+- `.github/workflows/ci.yml` includes a `migration-test` job that runs on every push:
+  1. Spins up a real Postgres 16 service container
+  2. Runs `alembic upgrade head`
+  3. Validates table count ≥ 20
+  4. Runs `alembic downgrade -1` (rollback test)
+  5. Re-runs `alembic upgrade head` (round-trip verification)
+- `backend-docker` image push is gated on `migration-test` passing.
+
+---
 
 ## Known gaps (current)
 

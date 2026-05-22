@@ -28,12 +28,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="TradeOps AI",
-    version="0.1.0",
+    version="1.0.0",
     redirect_slashes=False,
     lifespan=lifespan,
     docs_url="/docs" if not settings.is_production else None,
     redoc_url="/redoc" if not settings.is_production else None,
 )
+
+from app.core.telemetry import setup_telemetry  # noqa: E402
+setup_telemetry(app)
 
 app.add_middleware(
     CORSMiddleware,

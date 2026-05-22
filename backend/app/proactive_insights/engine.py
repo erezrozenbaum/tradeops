@@ -240,18 +240,27 @@ def generate_insights(db, investor_id: uuid.UUID, api_key: str) -> ProactiveInsi
         ],
     }
 
+    from app.core.tracing import trace_ai_call
+
     try:
         client = anthropic.Anthropic(api_key=api_key)
-        msg = client.messages.create(
+        with trace_ai_call(
+            "proactive_insights",
             model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
-            system=_SYSTEM_PROMPT,
-            messages=[{
-                "role": "user",
-                "content": f"Generate insights for these drift events:\n\n{json.dumps(context, indent=2, default=str)}",
-            }],
-        )
-        raw = msg.content[0].text.strip()
+            input_data={"drift_events_count": len(report.drift_events)},
+        ) as span:
+            msg = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=1024,
+                system=_SYSTEM_PROMPT,
+                messages=[{
+                    "role": "user",
+                    "content": f"Generate insights for these drift events:\n\n{json.dumps(context, indent=2, default=str)}",
+                }],
+            )
+            raw = msg.content[0].text.strip()
+            span.set_output(raw)
+            span.set_tokens(msg.usage.input_tokens, msg.usage.output_tokens)
         items = json.loads(raw)
         insights = [
             InsightResult(event_id=i["event_id"], insight=i.get("insight", ""), action=i.get("action", ""))

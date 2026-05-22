@@ -215,31 +215,42 @@ def generate_research(
     investor_context: dict,
     api_key: str,
     crypto_candidates: list[StockFundamentals] | None = None,
+    investor_id: str | None = None,
 ) -> tuple[dict, int, int]:
+    from app.core.tracing import trace_ai_call
+
     client = anthropic.Anthropic(api_key=api_key)
     context = _build_context(candidates, sector_performance, investor_context, crypto_candidates)
     context_json = json.dumps(context, indent=2, default=str)
 
-    message = client.messages.create(
+    with trace_ai_call(
+        "market_research",
         model="claude-sonnet-4-6",
-        max_tokens=8096,
-        system=_SYSTEM_PROMPT,
-        messages=[
-            {
-                "role": "user",
-                "content": (
-                    "Analyse the following screened universe and produce a deep market research brief "
-                    "for this investor. Use only the data provided — reference actual numbers in every thesis.\n\n"
-                    f"```json\n{context_json}\n```"
-                ),
-            }
-        ],
-    )
+        input_data={"investor": investor_context, "candidate_count": len(candidates)},
+        investor_id=investor_id,
+    ) as span:
+        message = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=8096,
+            system=_SYSTEM_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "Analyse the following screened universe and produce a deep market research brief "
+                        "for this investor. Use only the data provided — reference actual numbers in every thesis.\n\n"
+                        f"```json\n{context_json}\n```"
+                    ),
+                }
+            ],
+        )
+        in_tok = message.usage.input_tokens
+        out_tok = message.usage.output_tokens
+        raw = message.content[0].text.strip()
+        span.set_output(raw)
+        span.set_tokens(in_tok, out_tok)
 
-    in_tok = message.usage.input_tokens
-    out_tok = message.usage.output_tokens
-
-    raw = message.content[0].text.strip()
+    raw = raw
     if raw.startswith("```"):
         parts = raw.split("```", 2)
         raw = parts[1]

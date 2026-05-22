@@ -62,19 +62,29 @@ def _build_context(investor, portfolio_summary, goals_analysis) -> dict:
 
 
 def _call_ai(context: dict, api_key: str) -> dict:
+    from app.core.tracing import trace_ai_call
+
     client = anthropic.Anthropic(api_key=api_key)
-    msg = client.messages.create(
+    with trace_ai_call(
+        "weekly_digest",
         model="claude-haiku-4-5-20251001",
-        max_tokens=512,
-        system=_SYSTEM_PROMPT,
-        messages=[
-            {
-                "role": "user",
-                "content": f"Generate a weekly digest for:\n\n{json.dumps(context, indent=2, default=str)}",
-            }
-        ],
-    )
-    raw = msg.content[0].text.strip()
+        input_data=context,
+    ) as span:
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=512,
+            system=_SYSTEM_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Generate a weekly digest for:\n\n{json.dumps(context, indent=2, default=str)}",
+                }
+            ],
+        )
+        raw = msg.content[0].text.strip()
+        span.set_output(raw)
+        if msg.usage:
+            span.set_tokens(msg.usage.input_tokens, msg.usage.output_tokens)
     try:
         return json.loads(raw)
     except json.JSONDecodeError:

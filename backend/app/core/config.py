@@ -30,9 +30,25 @@ class Settings(BaseSettings):
     SMTP_PASS: str = ""
     ALERT_FROM_EMAIL: str = ""
 
+    # Langfuse — AI observability (all optional; tracing is silently disabled when unset)
+    LANGFUSE_PUBLIC_KEY: str = ""
+    LANGFUSE_SECRET_KEY: str = ""
+    LANGFUSE_HOST: str = "https://cloud.langfuse.com"
+
+    # OpenTelemetry OTLP gRPC endpoint (optional; leave empty to skip export)
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
+
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"
+
+    @property
+    def langfuse_enabled(self) -> bool:
+        return bool(self.LANGFUSE_PUBLIC_KEY and self.LANGFUSE_SECRET_KEY)
+
+    @property
+    def otel_enabled(self) -> bool:
+        return bool(self.OTEL_EXPORTER_OTLP_ENDPOINT)
 
 
 settings = Settings()

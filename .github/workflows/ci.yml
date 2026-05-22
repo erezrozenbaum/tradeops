@@ -73,11 +73,82 @@ jobs:
           SECRET_KEY: ci-test-secret-key-not-used-in-unit-tests
         run: python -m pytest tests/ -v
 
+  # ── Migration safety: upgrade + downgrade on real Postgres ───────────────
+  migration-test:
+    name: Migration Safety
+    runs-on: ubuntu-latest
+    needs: version
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: tradeops
+          POSTGRES_PASSWORD: tradeops
+          POSTGRES_DB: tradeops_migtest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tradeops"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Run alembic upgrade head
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://tradeops:tradeops@localhost:5432/tradeops_migtest
+        run: alembic upgrade head
+
+      - name: Verify schema (table count sanity check)
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://tradeops:tradeops@localhost:5432/tradeops_migtest
+        run: |
+          python - <<'EOF'
+          import os
+          from sqlalchemy import create_engine, text
+          engine = create_engine(os.environ["DATABASE_URL"])
+          with engine.connect() as conn:
+              result = conn.execute(text(
+                  "SELECT COUNT(*) FROM information_schema.tables "
+                  "WHERE table_schema = 'public'"
+              ))
+              count = result.scalar()
+              print(f"Tables after upgrade: {count}")
+              assert count >= 20, f"Expected >=20 tables, got {count}"
+          EOF
+
+      - name: Run alembic downgrade -1 (rollback test)
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://tradeops:tradeops@localhost:5432/tradeops_migtest
+        run: alembic downgrade -1
+
+      - name: Re-run alembic upgrade head (verify round-trip)
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://tradeops:tradeops@localhost:5432/tradeops_migtest
+        run: alembic upgrade head
+
   # ── Backend: build & push Docker image ───────────────────────────────────
   backend-docker:
     name: Backend Docker Image
     runs-on: ubuntu-latest
-    needs: [version, backend-test]
+    needs: [version, backend-test, migration-test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read

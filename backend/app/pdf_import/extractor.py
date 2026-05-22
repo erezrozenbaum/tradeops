@@ -93,20 +93,29 @@ def parse_pdf_statement(pdf_bytes: bytes) -> PDFImportResult:
 
     truncated = _truncate_text(raw_text)
 
-    client = anthropic.Anthropic()
-    message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=2048,
-        system=_SYSTEM_PROMPT,
-        messages=[
-            {
-                "role": "user",
-                "content": f"Please extract the holdings from this brokerage statement:\n\n{truncated}",
-            }
-        ],
-    )
+    from app.core.tracing import trace_ai_call
 
-    raw_response = message.content[0].text if message.content else ""
+    client = anthropic.Anthropic()
+    with trace_ai_call(
+        "pdf_import",
+        model="claude-haiku-4-5-20251001",
+        input_data={"text_length": len(truncated)},
+    ) as span:
+        message = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=2048,
+            system=_SYSTEM_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Please extract the holdings from this brokerage statement:\n\n{truncated}",
+                }
+            ],
+        )
+        raw_response = message.content[0].text if message.content else ""
+        span.set_output(raw_response[:2000])
+        if message.usage:
+            span.set_tokens(message.usage.input_tokens, message.usage.output_tokens)
 
     try:
         data = json.loads(raw_response)

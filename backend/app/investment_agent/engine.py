@@ -230,18 +230,28 @@ def run_agent(db: Session, investor_id: uuid.UUID) -> AgentReport:
             no_data=True,
         )
 
+    from app.core.tracing import trace_ai_call
+
     client = anthropic.Anthropic()
     user_msg = (
         "Analyse this investor's complete financial situation and generate a personalised investment action plan.\n\n"
         f"INVESTOR CONTEXT:\n{json.dumps(ctx, indent=2, default=str)}"
     )
 
-    response = client.messages.create(
+    with trace_ai_call(
+        "ai_agent",
         model="claude-sonnet-4-6",
-        max_tokens=3000,
-        system=_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_msg}],
-    )
+        input_data=ctx,
+        investor_id=str(investor_id),
+    ) as span:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=3000,
+            system=_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": user_msg}],
+        )
+        span.set_output(response.content[0].text[:4000])
+        span.set_tokens(response.usage.input_tokens, response.usage.output_tokens)
 
     log_ai_call(
         db=db,

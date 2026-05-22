@@ -1,0 +1,80 @@
+{
+  "title": "TradeOps Backend",
+  "uid": "tradeops-backend",
+  "version": 1,
+  "schemaVersion": 36,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request Rate (req/s)",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "sum(rate(http_requests_total{job=\"tradeops-backend\"}[1m]))",
+        "legendFormat": "req/s"
+      }]
+    },
+    {
+      "id": 2,
+      "title": "P95 Latency (ms)",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"tradeops-backend\"}[5m])) by (le)) * 1000",
+        "legendFormat": "p95 ms"
+      }]
+    },
+    {
+      "id": 3,
+      "title": "Error Rate (%)",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "sum(rate(http_requests_total{job=\"tradeops-backend\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"tradeops-backend\"}[5m])) * 100",
+        "legendFormat": "error %"
+      }]
+    },
+    {
+      "id": 4,
+      "title": "Requests In Progress",
+      "type": "stat",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "sum(http_requests_inprogress{job=\"tradeops-backend\"})",
+        "legendFormat": "in progress"
+      }]
+    },
+    {
+      "id": 5,
+      "title": "Request Rate by Endpoint",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 8 },
+      "targets": [{
+        "expr": "sum(rate(http_requests_total{job=\"tradeops-backend\"}[1m])) by (handler)",
+        "legendFormat": "{{handler}}"
+      }]
+    },
+    {
+      "id": 6,
+      "title": "Latency Heatmap by Endpoint",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"tradeops-backend\"}[5m])) by (le, handler)) * 1000",
+        "legendFormat": "p99 {{handler}} ms"
+      }]
+    },
+    {
+      "id": 7,
+      "title": "HTTP Status Code Breakdown",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "sum(rate(http_requests_total{job=\"tradeops-backend\"}[1m])) by (status)",
+        "legendFormat": "HTTP {{status}}"
+      }]
+    }
+  ]
+}

@@ -119,15 +119,25 @@ def chat(
 
     messages = list(history) + [{"role": "user", "content": message}]
 
+    from app.core.tracing import trace_ai_call
+
     try:
         client = anthropic.Anthropic(api_key=api_key)
-        response = client.messages.create(
+        with trace_ai_call(
+            "portfolio_chat",
             model="claude-haiku-4-5-20251001",
-            max_tokens=512,
-            system=system,
-            messages=messages,
-        )
-        reply = response.content[0].text.strip()
+            input_data={"message": message},
+            investor_id=str(investor_id),
+        ) as span:
+            response = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=512,
+                system=system,
+                messages=messages,
+            )
+            reply = response.content[0].text.strip()
+            span.set_output(reply)
+            span.set_tokens(response.usage.input_tokens, response.usage.output_tokens)
         return reply, None, response.usage.input_tokens, response.usage.output_tokens
     except Exception as exc:
         log.error("portfolio_chat: AI call failed: %s", exc)

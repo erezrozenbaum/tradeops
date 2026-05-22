@@ -10,6 +10,50 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [1.0.0] — 2026-05-22
+
+### Added
+
+**Langfuse AI Observability**
+- `backend/app/core/tracing.py` — `trace_ai_call()` context manager; lazy Langfuse client; transparent no-op when keys are absent
+- All 11 AI callers instrumented: `ai_report`, `market_research`, `investment_recommendations`, `ai_agent`, `portfolio_chat`, `proactive_insights`, `ai_coach`, `pdf_import`, `market_signals`, `weekly_digest`
+- Every trace records: feature name, model, input context (truncated), raw output, token counts, investor ID, error state
+- `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` added to config + `.env.example`
+- Structured output validation in `ai_analysis/analyzer.py` — `_validate_report()` ensures all required keys are present; missing keys filled with empty string instead of crashing
+
+**OpenTelemetry + Prometheus + Grafana**
+- `backend/app/core/telemetry.py` — Prometheus `/metrics` endpoint via `prometheus-fastapi-instrumentator`; optional OTLP gRPC trace export
+- FastAPI request instrumentation: rate, latency (p50/p95/p99), error rate, in-progress count, per-endpoint breakdown
+- SQLAlchemy query instrumentation when OTLP endpoint is configured
+- Prometheus service added to `infra/docker-compose.yml` (port 9090, 30-day retention)
+- Grafana service added to `infra/docker-compose.yml` (port 3001); pre-provisioned with Prometheus datasource and TradeOps backend dashboard
+- `infra/prometheus/prometheus.yml` — scrape config for `backend:8000/metrics` every 15s
+- `infra/grafana/provisioning/` — datasource + dashboard provisioning configs
+- `infra/grafana/dashboards/tradeops.json` — pre-built dashboard: request rate, p95 latency, error %, in-progress, endpoint breakdown, status code timeline
+- `OTEL_EXPORTER_OTLP_ENDPOINT` added to config + `.env.example`
+- `app.version` updated to `1.0.0` in FastAPI app
+
+**Great Expectations Data Quality**
+- `backend/app/data_quality/suites.py` — 5 expectation suites: `holdings`, `fx_rates`, `price_snapshots`, `portfolio_snapshots`, `transactions`
+- `backend/app/data_quality/runner.py` — pandas-backed validator; logs violations; writes audit events for failures
+- `backend/app/workers/jobs/data_quality_check.py` — daily job at 02:00 UTC
+- Scheduler registered as `data_quality_check` job
+
+**Migration Safety CI**
+- `.github/workflows/ci.yml` — new `migration-test` job: spins up real Postgres 16, runs `alembic upgrade head`, validates table count ≥ 20, runs `alembic downgrade -1`, re-runs `alembic upgrade head` (round-trip test)
+- `backend-docker` now depends on `migration-test` (migrations must pass before image is pushed)
+
+### Dependencies Added
+- `langfuse>=2.0.0`
+- `opentelemetry-sdk>=1.24.0`
+- `opentelemetry-instrumentation-fastapi>=0.45b0`
+- `opentelemetry-instrumentation-sqlalchemy>=0.45b0`
+- `opentelemetry-exporter-otlp-proto-grpc>=1.24.0`
+- `prometheus-fastapi-instrumentator>=7.0.0`
+- `great-expectations>=0.18.0`
+
+---
+
 ## [0.99.3] — 2026-05-22
 
 ### Fix — Paper Trading Currency Bug + Retirement Readiness Formula

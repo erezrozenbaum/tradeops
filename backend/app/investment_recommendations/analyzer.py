@@ -152,29 +152,43 @@ def _build_catalog_summary() -> list[dict]:
     ]
 
 
-def generate_recommendations(context: dict, api_key: str) -> tuple[dict, int, int]:
+def generate_recommendations(
+    context: dict,
+    api_key: str,
+    investor_id: str | None = None,
+) -> tuple[dict, int, int]:
+    from app.core.tracing import trace_ai_call
+
     client = anthropic.Anthropic(api_key=api_key)
     context_json = json.dumps(context, indent=2, default=str)
 
-    message = client.messages.create(
+    with trace_ai_call(
+        "investment_recommendations",
         model="claude-sonnet-4-6",
-        max_tokens=3500,
-        system=_SYSTEM_PROMPT,
-        messages=[
-            {
-                "role": "user",
-                "content": (
-                    "Generate personalised investment recommendations for the following investor.\n\n"
-                    f"```json\n{context_json}\n```"
-                ),
-            }
-        ],
-    )
+        input_data=context,
+        investor_id=investor_id,
+    ) as span:
+        message = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=3500,
+            system=_SYSTEM_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "Generate personalised investment recommendations for the following investor.\n\n"
+                        f"```json\n{context_json}\n```"
+                    ),
+                }
+            ],
+        )
+        in_tok = message.usage.input_tokens
+        out_tok = message.usage.output_tokens
+        raw = message.content[0].text.strip()
+        span.set_output(raw)
+        span.set_tokens(in_tok, out_tok)
 
-    in_tok = message.usage.input_tokens
-    out_tok = message.usage.output_tokens
-
-    raw = message.content[0].text.strip()
+    raw = raw
     if raw.startswith("```"):
         parts = raw.split("```", 2)
         raw = parts[1]

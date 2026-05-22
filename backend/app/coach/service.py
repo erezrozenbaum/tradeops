@@ -407,17 +407,25 @@ def _enrich_with_ai(candidates: list[InsightCandidate], api_key: str) -> list[In
     import json
     try:
         import anthropic
+        from app.core.tracing import trace_ai_call
         payload = [
             {"dedup_key": c.dedup_key, "title": c.title, "message": c.message}
             for c in candidates
         ]
         client = anthropic.Anthropic(api_key=api_key)
-        msg = client.messages.create(
+        with trace_ai_call(
+            "ai_coach",
             model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
-            system=_AI_SYSTEM,
-            messages=[{"role": "user", "content": json.dumps(payload)}],
-        )
+            input_data={"candidate_count": len(candidates)},
+        ) as span:
+            msg = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=1024,
+                system=_AI_SYSTEM,
+                messages=[{"role": "user", "content": json.dumps(payload)}],
+            )
+            span.set_output(msg.content[0].text[:2000])
+            span.set_tokens(msg.usage.input_tokens, msg.usage.output_tokens)
         items = json.loads(msg.content[0].text.strip())
         enriched = {i["dedup_key"]: i for i in items}
         result = []

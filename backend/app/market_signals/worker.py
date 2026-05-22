@@ -70,15 +70,23 @@ def _call_claude(
             f'"rationale": "...", "whale_entities": []}}'
         )
 
+        from app.core.tracing import trace_ai_call
         client = anthropic.Anthropic(api_key=api_key)
-        msg = client.messages.create(
+        with trace_ai_call(
+            "market_signals",
             model=_HAIKU_MODEL,
-            max_tokens=400,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        input_tokens = msg.usage.input_tokens if msg.usage else 0
-        output_tokens = msg.usage.output_tokens if msg.usage else 0
-        raw = msg.content[0].text.strip() if msg.content else ""
+            input_data={"ticker": ticker, "headline_count": len(headlines)},
+        ) as span:
+            msg = client.messages.create(
+                model=_HAIKU_MODEL,
+                max_tokens=400,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            input_tokens = msg.usage.input_tokens if msg.usage else 0
+            output_tokens = msg.usage.output_tokens if msg.usage else 0
+            raw = msg.content[0].text.strip() if msg.content else ""
+            span.set_output(raw)
+            span.set_tokens(input_tokens, output_tokens)
         return json.loads(raw), input_tokens, output_tokens
     except Exception as exc:
         log.warning("[signal_worker] Claude call failed for %s: %s", ticker, exc)

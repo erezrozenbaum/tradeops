@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.99.3  
+**Version:** 1.0.0  
 **Last updated:** 2026-05-22
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -83,6 +83,10 @@ REDIS_URL=redis://redis:6379/0
 | `ALLOWED_ORIGINS` | Production | Comma-separated list of allowed CORS origins. Default `http://localhost:3000`. Set to your production URL in deployment. |
 | `AI_MONTHLY_BUDGET_USD` | No | Rolling 30-day AI spend cap per investor in USD. `0` = unlimited (default). Set e.g. `5.0` to cap at $5/investor/month. |
 | `REDIS_URL` | No | Redis connection string for distributed rate limiting. Example: `redis://redis:6379/0`. Falls back to in-memory if unset (safe for single-instance dev). |
+| `LANGFUSE_PUBLIC_KEY` | No | Langfuse public key. When set together with `LANGFUSE_SECRET_KEY`, all AI calls are traced. Leave blank to disable. |
+| `LANGFUSE_SECRET_KEY` | No | Langfuse secret key. |
+| `LANGFUSE_HOST` | No | Langfuse host. Defaults to `https://cloud.langfuse.com`. Override for self-hosted instances. |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | No | OTLP gRPC endpoint for distributed trace export (e.g. `http://otel-collector:4317`). Leave blank to disable. |
 
 ---
 
@@ -108,6 +112,8 @@ First cold start takes 2–3 minutes while npm downloads packages.
 | Backend API | http://localhost:8000 |
 | Swagger UI | http://localhost:8000/docs |
 | ReDoc | http://localhost:8000/redoc |
+| Prometheus | http://localhost:9090 |
+| Grafana | http://localhost:3001 (admin / tradeops) |
 
 ---
 
@@ -321,7 +327,7 @@ docker compose -f infra/docker-compose.yml logs -f frontend     # frontend only
 
 ### Background workers (APScheduler)
 
-The backend runs 13 scheduled jobs:
+The backend runs 14 scheduled jobs:
 
 | Job | Schedule | Description |
 |-----|----------|-------------|
@@ -338,6 +344,7 @@ The backend runs 13 scheduled jobs:
 | `net_worth_snapshot` | Daily 21:15 UTC | Writes daily net worth snapshot for all investors |
 | `weekly_digest` | Friday 18:00 UTC | AI-generated HTML digest email to opted-in investors |
 | `coach_refresh` | Daily 07:45 UTC | Refreshes AI Coach insights for all investors |
+| `data_quality_check` | Daily 02:00 UTC | Great Expectations validation suites across financial tables |
 
 ### Audit log
 
@@ -719,6 +726,10 @@ kubectl describe ingress tradeops
 | Ruff Code Quality | `backend/ruff.toml` + 25+ files | Python linting with `ruff.toml` config. Fixed real syntax bug in `pdf_generator.py` (stress-test list comprehension was invalid Python). Removed duplicate dict entries in market data fetcher and broker parser. Applied in v0.99.2. |
 | Paper Trading Currency Fix | `paper_trading/service.py` + `router.py` | Market prices are now FX-converted to portfolio currency before deducting cash. `PaperPosition.currency` set to portfolio currency. New `reprice_positions()` fetches live prices and recomputes value. New endpoint: `POST /{id}/reprice`. Applied in v0.99.3. |
 | Retirement Readiness Formula Fix | `retirement_readiness/engine.py` + `router.py` + `schemas.py` | Pension funds now compute monthly income via makdam (`projected / makdam`), not SWR. Hishtalmut + portfolio remain under 4% SWR. New schema fields: `pension_monthly_income`, `hishtalmut_projected`. Dashboard card shows both sources separately. Applied in v0.99.3. |
+| Langfuse AI Observability | `core/tracing.py` | `trace_ai_call()` context manager. All 11 AI callers instrumented. Records feature, model, input (truncated), output, token counts, investor ID. No-op when keys absent. Set `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY`. Applied in v1.0.0. |
+| Prometheus + Grafana | `core/telemetry.py` + `infra/` | Prometheus at :9090 scrapes `/metrics` (request rate, latency p50/p95/p99, error rate, in-progress). Grafana at :3001 with pre-provisioned TradeOps dashboard. Optional OTLP export via `OTEL_EXPORTER_OTLP_ENDPOINT`. Applied in v1.0.0. |
+| Great Expectations | `data_quality/` | 5 expectation suites: holdings, fx_rates, price_snapshots, portfolio_snapshots, transactions. Daily job at 02:00 UTC. Violations → audit events. Applied in v1.0.0. |
+| Migration Safety CI | `.github/workflows/ci.yml` | `migration-test` job: real Postgres 16, upgrade head, table count check, downgrade -1, round-trip. Backend Docker image gated on this job. Applied in v1.0.0. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.

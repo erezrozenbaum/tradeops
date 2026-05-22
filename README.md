@@ -4,7 +4,7 @@
 
 **Personal Financial Intelligence Platform**
 
-[![Version](https://img.shields.io/badge/version-0.97.0-blue?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue?style=flat-square)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org)
@@ -184,6 +184,16 @@ Risk-Controlled Live Execution (gated, opt-in)
 | **Mobile-first UI** | Responsive sidebar, touch-friendly layouts |
 | **Kubernetes / Helm** | Production-hardened chart with NetworkPolicy, PDB, securityContext |
 
+### Observability & Data Integrity *(v1.0.0)*
+
+| Feature | Description |
+|---|---|
+| **Langfuse AI tracing** | Every AI call traced: feature, model, tokens, input/output. Full prompt history, replay, and quality scoring. Optional — no-op when keys absent. |
+| **Prometheus metrics** | `/metrics` endpoint: request rate, p50/p95/p99 latency, error rate, in-progress count, per-endpoint breakdown |
+| **Grafana dashboard** | Pre-provisioned at `:3001` — wired to Prometheus with TradeOps backend dashboard out of the box |
+| **Great Expectations** | 5 data quality suites validate financial tables daily: no negative quantities, positive FX rates and prices, valid currency codes, portfolio snapshot integrity |
+| **Migration safety CI** | Every PR runs Alembic upgrade + table count check + downgrade round-trip against a real Postgres container |
+
 ---
 
 ## Architecture
@@ -200,8 +210,8 @@ Risk-Controlled Live Execution (gated, opt-in)
 │  ┌────────────────┐  ┌─────────────────┐  ┌──────────────┐  │
 │  │ Deterministic  │  │   AI Layer      │  │  Workers     │  │
 │  │ Risk Engine    │  │  Claude API     │  │  APScheduler │  │
-│  │ Score · Rebal  │  │  (decision-     │  │  14 daily    │  │
-│  │ Gate · Backtest│  │   support only) │  │  jobs        │  │
+│  │ Score · Rebal  │  │  (traced via    │  │  14 daily    │  │
+│  │ Gate · Backtest│  │   Langfuse)     │  │  jobs        │  │
 │  └────────────────┘  └─────────────────┘  └──────────────┘  │
 │                  │ SQLAlchemy ORM                            │
 └──────────────────┼──────────────────────────────────────────┘

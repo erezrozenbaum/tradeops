@@ -228,30 +228,59 @@ def _sanitize_strings(obj):
     return obj
 
 
-def generate_report(context: dict, api_key: str) -> tuple[dict, int, int]:
+_REPORT_KEYS = (
+    "summary", "financial_health", "risk_profile", "portfolio_analysis",
+    "goals_progress", "strategy_analysis", "backtest_insights",
+    "paper_trading_performance", "recommendations",
+)
+
+_REPORT_FALLBACK = {k: "" for k in _REPORT_KEYS}
+_REPORT_FALLBACK["summary"] = "Unable to generate report at this time. Please try again."
+
+
+def _validate_report(data: dict) -> dict:
+    """Ensure all required keys are present; fill missing ones with empty string."""
+    return {k: data.get(k, "") for k in _REPORT_KEYS}
+
+
+def generate_report(
+    context: dict,
+    api_key: str,
+    investor_id: str | None = None,
+) -> tuple[dict, int, int]:
     """Returns (report_dict, input_tokens, output_tokens)."""
+    from app.core.tracing import trace_ai_call
+
     client = anthropic.Anthropic(api_key=api_key)
     context_json = json.dumps(_sanitize_strings(context), indent=2, default=str)
 
-    message = client.messages.create(
+    with trace_ai_call(
+        "ai_report",
         model=_SONNET_MODEL,
-        max_tokens=2048,
-        system=_SYSTEM_PROMPT,
-        messages=[
-            {
-                "role": "user",
-                "content": (
-                    "Generate a financial analysis report for the following investor data:\n\n"
-                    f"```json\n{context_json}\n```"
-                ),
-            }
-        ],
-    )
+        input_data=context,
+        investor_id=investor_id,
+    ) as span:
+        message = client.messages.create(
+            model=_SONNET_MODEL,
+            max_tokens=2048,
+            system=_SYSTEM_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "Generate a financial analysis report for the following investor data:\n\n"
+                        f"```json\n{context_json}\n```"
+                    ),
+                }
+            ],
+        )
 
-    input_tokens = message.usage.input_tokens if message.usage else 0
-    output_tokens = message.usage.output_tokens if message.usage else 0
+        input_tokens = message.usage.input_tokens if message.usage else 0
+        output_tokens = message.usage.output_tokens if message.usage else 0
+        raw = message.content[0].text.strip()
+        span.set_output(raw)
+        span.set_tokens(input_tokens, output_tokens)
 
-    raw = message.content[0].text.strip()
     if raw.startswith("```"):
         parts = raw.split("```", 2)
         raw = parts[1]
@@ -262,16 +291,7 @@ def generate_report(context: dict, api_key: str) -> tuple[dict, int, int]:
             raw = raw[:-3].strip()
 
     try:
-        return json.loads(raw), input_tokens, output_tokens
+        parsed = json.loads(raw)
+        return _validate_report(parsed), input_tokens, output_tokens
     except json.JSONDecodeError:
-        return {
-            "summary": "Unable to generate report at this time. Please try again.",
-            "financial_health": "",
-            "risk_profile": "",
-            "portfolio_analysis": "",
-            "goals_progress": "",
-            "strategy_analysis": "",
-            "backtest_insights": "",
-            "paper_trading_performance": "",
-            "recommendations": "",
-        }, input_tokens, output_tokens
+        return _REPORT_FALLBACK, input_tokens, output_tokens
