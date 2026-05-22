@@ -52,12 +52,22 @@ def get_retirement_readiness(investor_id: uuid.UUID, db: Session = Depends(get_d
         return fx_convert(db, amount, from_ccy, to_ccy)
 
     pension_result = pension_projection.project(age, accounts, currency, _convert)
-    pension_projected = pension_result["total_projected_value"]
     years_to_retirement = pension_result["years_to_retirement"]
 
-    # Portfolio Monte Carlo P50 — NON-pension holdings only.
-    # Pension/study fund accounts are already fully projected via pension_projection,
-    # so including them here would double-count the same assets.
+    # Split pension funds (monthly income via makdam) from hishtalmut (lump sum via SWR)
+    pension_projected = 0.0      # pension_fund type only
+    pension_monthly_income = 0.0 # sum(projected / makdam) for pension_fund only
+    hishtalmut_projected = 0.0   # study_fund type only
+
+    for f in pension_result["funds"]:
+        if f["asset_type"] == "pension_fund":
+            pension_projected += f["projected_value"]
+            makdam = f["makdam"] or 200
+            pension_monthly_income += f["projected_value"] / makdam
+        elif f["asset_type"] == "study_fund":
+            hishtalmut_projected += f["projected_value"]
+
+    # Portfolio Monte Carlo P50 — NON-pension holdings only (no double-counting)
     _PENSION_TYPES = {"pension_fund", "study_fund"}
     non_pension_value = 0.0
     for acc in accounts:
@@ -72,7 +82,9 @@ def get_retirement_readiness(investor_id: uuid.UUID, db: Session = Depends(get_d
 
     return compute_score(
         investor_id=investor_id,
-        pension_projected=pension_projected,
+        pension_projected=round(pension_projected, 2),
+        pension_monthly_income=round(pension_monthly_income, 2),
+        hishtalmut_projected=round(hishtalmut_projected, 2),
         portfolio_mc_p50=portfolio_mc_p50,
         monthly_expenses=monthly_expenses,
         years_to_retirement=years_to_retirement,

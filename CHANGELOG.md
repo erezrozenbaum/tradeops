@@ -10,6 +10,77 @@ Versions are assigned retroactively to match the git commit history.
 
 ---
 
+## [0.99.3] — 2026-05-22
+
+### Fix — Paper Trading Currency Bug + Retirement Readiness Formula
+
+**Paper Trading — currency fix:**
+- `service.py`: market price is now FX-converted to portfolio currency before deducting from `cash_balance`. Previously, USD prices were directly used against an ILS balance without conversion.
+- `PaperPosition.currency` is now set to `portfolio.currency` instead of hardcoded `"USD"`.
+- New `reprice_positions()` function: fetches live market prices for all held positions, FX-converts each to portfolio currency, recomputes `current_value` and `total_return_pct`.
+- New endpoint: `POST /investors/{id}/paper-portfolios/{portfolio_id}/reprice` — triggers live repricing on demand.
+
+**Retirement Readiness — formula fix:**
+- Root cause: pension projected value was being passed to the 4% SWR formula as investable corpus, producing a grossly underestimated monthly income (~16,956 ILS/mo instead of ~28,801 ILS/mo for a typical Israeli pension fund).
+- Fix: pension funds (type `pension_fund`) now compute monthly income via the **makdam** coefficient: `monthly_income = projected_value / makdam`. Makdam defaults to 200 when not set; actual value sourced from `holding.makdam`.
+- Hishtalmut (`study_fund`) and investment portfolio remain as investable corpus with 4% SWR applied.
+- New schema fields on `ReadinessScore`: `pension_monthly_income` (makdam-derived), `hishtalmut_projected` (lump-sum corpus).
+- Dashboard `RetirementReadinessCard` updated: shows pension makdam income (cyber-emerald) and SWR income (hishtalmut + portfolio) as separate lines; breakdown tiles distinguish `hishtalmut_projected`.
+
+---
+
+## [0.99.2] — 2026-05-22
+
+### Code Quality + Security — Ruff + Trivy Scan
+
+**Ruff (Python linter):**
+- `backend/ruff.toml` (NEW): ignores F821 (SQLAlchemy forward refs), E741 (short variable names), E402 (deferred imports); test files suppress F401.
+- Real bug fix in `app/reports/pdf_generator.py`: invalid Python syntax in list comprehension for stress-test table styles — would crash any PDF export covering a stress-test section.
+- Removed duplicate CoinGecko entries in `market_data/fetcher.py` (solana, bnb/binancecoin, cardano appeared twice).
+- Removed duplicate Hebrew key in `broker_sync/parsers/altshuler_shaham.py`.
+- Removed unused imports across 25+ backend files.
+
+**Trivy (CVE scanner):**
+- Next.js upgraded: `"next": "14.2.3"` → `"14.2.25"` — fixes **CVE-2025-29927** (critical: authentication bypass in Next.js middleware for routes prefixed with `/_next`).
+- `eslint-config-next` upgraded to match.
+- `frontend/package-lock.json` regenerated to match updated `package.json` (fixes CI `npm ci` failing on lock-file mismatch).
+
+---
+
+## [0.99.1] — 2026-05-22
+
+### Security — Docker Hardening (Semgrep Findings)
+
+- `backend/Dockerfile`: non-root `appuser` (appgroup) created before `CMD` — backend process no longer runs as root inside the container.
+- `infra/docker-compose.yml`: `security_opt: no-new-privileges:true` added to `db`, `redis`, and `frontend` services.
+- `infra/docker-compose.yml`: `read_only: true` + `tmpfs` mounts for all runtime-writable paths:
+  - `db`: `/tmp`, `/var/run/postgresql`
+  - `redis`: `/tmp`, `/data`
+  - `frontend`: `/tmp`, `/root/.npm`
+
+---
+
+## [0.99.0] — 2026-05-22
+
+### UI — GlowChart + StatCard Wired Into Pages; Pension/Hishtalmut Split
+
+- `GlowChart` and `StatCard` primitives from v0.98.0 now applied to dashboard, stress-test, and retirement readiness pages.
+- Retirement readiness UI: pension fund and hishtalmut projected values shown as separate line items in the breakdown panel.
+- Dashboard stat cards updated to use `StatCard` with cyber-emerald, amber, violet, and cyan glow variants.
+
+---
+
+## [0.98.0] — 2026-05-22
+
+### UI Primitives — Grafana Dark Theme + Component Overhaul
+
+- `frontend/src/components/ui/glow-chart.tsx` (NEW): Recharts wrapper with SVG neon-glow filter defs, pulse animation on active data points, and consistent chart area styling.
+- `frontend/src/components/ui/stat-card.tsx` (NEW): gradient stat card with optional glow border — variants: `emerald` (cyber green), `amber`, `violet`, `cyan`. Replaces ad-hoc inline card styling.
+- Global dark theme tokens updated to Grafana-inspired palette: deep navy (`#0a0e1a`) background, surface layers, neon accent borders.
+- Consistent `border/background` card system applied across dashboard, investments, and performance pages.
+
+---
+
 ## [0.97.0] — 2026-05-21
 
 ### Disclaimer Strategy — Multi-Layer

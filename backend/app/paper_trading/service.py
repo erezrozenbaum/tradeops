@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.audit import service as audit
+from app.currency_engine.rates import convert as fx_convert
 from app.market_data import service as market_data
 from app.models.investor_profile import InvestorProfile
 from app.models.paper_trade import (
@@ -92,7 +93,7 @@ def place_order(
 
     symbol = symbol.upper()
 
-    # Resolve execution price
+    # Resolve execution price — always in portfolio currency
     if price_per_share is None:
         snapshot = market_data.get_or_fetch(db, symbol)
         if snapshot is None:
@@ -101,6 +102,14 @@ def place_order(
                 detail=f"Could not fetch live price for {symbol}. Enter price manually.",
             )
         price_per_share = snapshot.price
+        if snapshot.currency.upper() != portfolio.currency.upper():
+            try:
+                price_per_share = fx_convert(db, price_per_share, snapshot.currency, portfolio.currency)
+            except Exception:
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Could not convert {symbol} price from {snapshot.currency} to {portfolio.currency}.",
+                )
 
     total_value = round(quantity * price_per_share, 6)
 
@@ -185,7 +194,7 @@ def _apply_buy(
             symbol=symbol,
             quantity=quantity,
             avg_cost_per_share=price,
-            currency="USD",  # market data prices are in the ticker's native currency
+            currency=portfolio.currency,
         ))
 
 
@@ -236,6 +245,41 @@ def _get_position(db: Session, portfolio_id: uuid.UUID, symbol: str) -> PaperPos
         )
         .first()
     )
+
+
+def reprice_positions(
+    db: Session,
+    investor_id: uuid.UUID,
+    portfolio_id: uuid.UUID,
+) -> PaperPortfolio | None:
+    """Fetch live market prices for all held positions and recompute portfolio value."""
+    portfolio = _get_owned(db, investor_id, portfolio_id)
+    if not portfolio or portfolio.status != PortfolioStatus.active:
+        return portfolio
+
+    positions = db.query(PaperPosition).filter(PaperPosition.portfolio_id == portfolio_id).all()
+    positions_value = 0.0
+    for pos in positions:
+        snapshot = market_data.get_or_fetch(db, pos.symbol)
+        if snapshot is None:
+            positions_value += pos.avg_cost_per_share * pos.quantity
+            continue
+        price = snapshot.price
+        if snapshot.currency.upper() != portfolio.currency.upper():
+            try:
+                price = fx_convert(db, price, snapshot.currency, portfolio.currency)
+            except Exception:
+                price = pos.avg_cost_per_share
+        positions_value += price * pos.quantity
+
+    portfolio.current_value = round(portfolio.cash_balance + positions_value, 6)
+    if portfolio.initial_capital > 0:
+        portfolio.total_return_pct = round(
+            (portfolio.current_value - portfolio.initial_capital) / portfolio.initial_capital * 100, 4
+        )
+    db.commit()
+    db.refresh(portfolio)
+    return portfolio
 
 
 def advance_tick(

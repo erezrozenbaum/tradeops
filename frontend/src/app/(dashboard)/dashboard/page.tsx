@@ -71,10 +71,12 @@ interface RetirementReadiness {
   score: number;
   verdict: string;
   projected_monthly_income: number;
+  pension_monthly_income: number;
   monthly_expenses: number;
   gap_monthly: number;
   total_at_retirement: number;
   pension_projected: number;
+  hishtalmut_projected: number;
   portfolio_mc_p50: number;
   years_to_retirement: number;
   years_to_close_gap: number | null;
@@ -1165,11 +1167,16 @@ function RetirementReadinessCard({ data }: { data: RetirementReadiness }) {
           </div>
 
           {/* Key metrics */}
-          <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Projected monthly income</p>
+              <p className="text-xs text-muted-foreground mb-1">Total projected income</p>
               <p className="text-xl font-semibold">{fmt(data.projected_monthly_income)}</p>
-              <p className="text-[10px] text-muted-foreground">at {data.swr_pct}% SWR</p>
+              <p className="text-[10px] text-muted-foreground">pension + portfolio</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Pension (via makdam)</p>
+              <p className="text-xl font-semibold text-cyber-emerald">{fmt(data.pension_monthly_income)}</p>
+              <p className="text-[10px] text-muted-foreground">monthly pension only</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Monthly expenses (target)</p>
@@ -1211,14 +1218,17 @@ function RetirementReadinessCard({ data }: { data: RetirementReadiness }) {
           <div className="bg-muted/40 rounded-lg p-3">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Pension projected</p>
             <p className="font-semibold">{fmt(data.pension_projected)}</p>
+            <p className="text-[9px] text-muted-foreground">monthly income via makdam</p>
+          </div>
+          <div className="bg-muted/40 rounded-lg p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Hishtalmut projected</p>
+            <p className="font-semibold">{fmt(data.hishtalmut_projected)}</p>
+            <p className="text-[9px] text-muted-foreground">lump sum · {data.swr_pct}% SWR applied</p>
           </div>
           <div className="bg-muted/40 rounded-lg p-3">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Portfolio MC P50</p>
             <p className="font-semibold">{fmt(data.portfolio_mc_p50)}</p>
-          </div>
-          <div className="bg-muted/40 rounded-lg p-3">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Years to retirement</p>
-            <p className="font-semibold">{data.years_to_retirement.toFixed(1)}</p>
+            <p className="text-[9px] text-muted-foreground">Years to retirement: {data.years_to_retirement.toFixed(1)}</p>
           </div>
         </div>
 

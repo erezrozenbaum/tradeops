@@ -76,6 +76,19 @@ def place_order(
     )
 
 
+@router.post("/{portfolio_id}/reprice", response_model=PaperPortfolioOut)
+def reprice_positions(
+    investor_id: uuid.UUID,
+    portfolio_id: uuid.UUID,
+    db: Session = Depends(get_db),
+):
+    """Fetch live market prices for all positions and recompute portfolio value."""
+    portfolio = service.reprice_positions(db, investor_id=investor_id, portfolio_id=portfolio_id)
+    if portfolio is None:
+        raise HTTPException(status_code=404, detail="Paper portfolio not found.")
+    return portfolio
+
+
 @router.post("/{portfolio_id}/tick", response_model=PaperPortfolioOut)
 def advance_tick(
     investor_id: uuid.UUID,

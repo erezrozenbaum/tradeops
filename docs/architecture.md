@@ -1,7 +1,7 @@
 # TradeOps AI — Architecture
 
-**Version:** 0.97.0  
-**Last updated:** 2026-05-21
+**Version:** 0.99.3  
+**Last updated:** 2026-05-22
 
 ---
 
@@ -24,6 +24,63 @@ PostgreSQL 16            Redis 7
 
 All services run as Docker containers orchestrated by Docker Compose (local) or Helm/Kubernetes (production).  
 CI (GitHub Actions) runs backend tests and builds both Docker images on every push to `main`.
+
+### System architecture diagram
+
+```mermaid
+flowchart TD
+    subgraph Client["Browser / PWA"]
+        UI["Next.js 14 App Router\n(Tailwind + Recharts)"]
+    end
+
+    subgraph Gateway["Next.js API Layer"]
+        RH["Route Handlers\n(AI routes — timeout + retry)"]
+        PX["Proxy Rewrite\n(/api/* → backend)"]
+    end
+
+    subgraph Backend["FastAPI (Python 3.11)"]
+        API["api/v1/router.py\n(40+ investor-scoped routes)"]
+        AUTH["auth/\n(JWT httpOnly cookie, JTI blacklist)"]
+        ENG["Domain engines\n(pure functions, no DB)"]
+        SVC["Services\n(DB + engine + FX)"]
+        WRK["APScheduler workers\n(13 background jobs)"]
+    end
+
+    subgraph Data["Data layer"]
+        PG["PostgreSQL 16\n(Alembic migrations 0001–0040)"]
+        RD["Redis 7\n(rate limit + JTI blacklist)"]
+        PS["price_snapshots\n(24h TTL)"]
+        FX["currency_rates\n(4h TTL)"]
+    end
+
+    subgraph External["External APIs"]
+        AV["Alpha Vantage\n(live prices)"]
+        YF["yfinance\n(history + dividends)"]
+        AI["Anthropic Claude API\n(Sonnet + Haiku)"]
+        ER["open.er-api.com\n(FX rates)"]
+        IB["IBKR Client Portal Gateway\n(live trading — gated)"]
+    end
+
+    UI -->|REST/JSON + SSE| RH
+    UI -->|cookie-attached fetch| PX
+    RH -->|server-side fetch + cookie| API
+    PX -->|proxy| API
+    API --> AUTH
+    AUTH --> RD
+    API --> SVC
+    SVC --> ENG
+    SVC --> PG
+    SVC --> FX
+    SVC --> PS
+    WRK --> PG
+    WRK --> AI
+    WRK --> YF
+    ENG --> AI
+    PS --> AV
+    FX --> ER
+    SVC --> YF
+    API --> IB
+```
 
 ### Next.js proxy
 
@@ -63,9 +120,9 @@ backend/app/
 │   └── router.py
 │
 ├── paper_trading/
-│   ├── engine.py               # Monthly tick simulation
-│   ├── service.py
-│   └── router.py
+│   ├── engine.py               # Monthly tick simulation (strategy-template mode)
+│   ├── service.py              # place_order (WACC), reprice_positions (live FX-aware repricing)
+│   └── router.py               # POST /orders, DELETE /{id}, POST /{id}/reprice
 │
 ├── ai_analysis/
 │   ├── analyzer.py             # Claude API integration
@@ -180,7 +237,7 @@ backend/app/
 ├── portfolio_correlation/      # 90-day Pearson correlation matrix
 ├── holdings_news/              # Latest news articles per held ticker
 ├── reports/                    # PDF report export (monthly/quarterly)
-├── retirement_readiness/       # 0–100 readiness score (MC P50 + 4% SWR)
+├── retirement_readiness/       # 0–100 readiness score: pension via makdam + hishtalmut/portfolio via 4% SWR
 ├── portfolio_chat/             # Natural language Q&A with 5-turn context
 ├── family_portfolio/           # Household consolidated view
 ├── liquidity_runway/           # Tiered liquidation model
@@ -606,10 +663,12 @@ Location: `backend/app/paper_trading/`
 **Free-form mode (v0.94+, primary):**
 - User sets starting virtual cash (any amount, any currency) — no risk model required
 - `POST /orders` — buy or sell any ticker; price auto-fetched from live market data cache
+- **Currency-safe (v0.99.3):** market price FX-converted to portfolio currency before deducting cash; position `currency` stored as portfolio currency
 - Buy: validates `cash_balance ≥ total_cost`; updates position using WACC average cost
 - Sell: validates position quantity; deletes position row when fully closed
 - `portfolio.current_value = cash_balance + Σ(position.qty × avg_cost)`
 - `DELETE /{portfolio_id}` — hard delete with cascade to positions + orders + ticks
+- `POST /{id}/reprice` — fetches live prices for all positions, FX-converts each to portfolio currency, recomputes `current_value` and `total_return_pct`
 
 **Strategy simulation mode (legacy, optional):**
 - Requires a linked strategy template
@@ -764,7 +823,6 @@ In-memory 5-turn conversation history per investor. Context includes live portfo
 
 - **No real live trading** — intentionally disabled by default. Requires 5-gate readiness check: paper track record (Sharpe > 0.5, ≥30 days), risk acknowledgment, admin approval, order risk limits, and active IBKR connection. Kill switch halts session and cancels all open orders immediately.
 - **No tax engine** — tax-loss harvesting is analysis-only (candidates + estimated saving). Actual tax calculations are country-specific and not implemented.
-- **FX historical rates** — `currency_rates` table holds only the current rate per pair. Historical FX rates are not stored, which limits P&L attribution decomposition into FX vs asset components.
 - **Refresh token rotation** — the current auth uses a single 7-day access token with JTI blacklist on logout. Short-lived access tokens with rotating refresh tokens are not implemented; the 7-day window is acceptable given server-side revocation via the blacklist.
 
 > **What is implemented** (common misconceptions):

@@ -11,15 +11,21 @@ _GROWTH_RATE = 0.07  # 7% assumed annual portfolio growth for years_to_close_gap
 
 def compute_score(
     investor_id: uuid.UUID,
-    pension_projected: float,
+    pension_projected: float,        # pension_fund type total (used via makdam)
+    pension_monthly_income: float,   # pre-computed: sum(projected / makdam) for pension_fund only
+    hishtalmut_projected: float,     # study_fund type total (lump sum — apply SWR)
     portfolio_mc_p50: float,
     monthly_expenses: float,
     years_to_retirement: float,
     currency: str,
 ) -> ReadinessScore:
-    total_at_retirement = pension_projected + portfolio_mc_p50
+    # Pension funds pay monthly via makdam — do NOT apply SWR to them.
+    # Hishtalmut + investment portfolio are investable corpus — apply SWR.
+    investable_corpus = hishtalmut_projected + portfolio_mc_p50
+    swr_monthly = (investable_corpus * _SWR) / 12.0
+    projected_monthly_income = pension_monthly_income + swr_monthly
 
-    projected_monthly_income = (total_at_retirement * _SWR) / 12.0
+    total_at_retirement = pension_projected + hishtalmut_projected + portfolio_mc_p50
     gap_monthly = projected_monthly_income - monthly_expenses
 
     # Score 0-100 based on income coverage ratio
@@ -66,10 +72,12 @@ def compute_score(
         score=score,
         verdict=verdict,
         projected_monthly_income=round(projected_monthly_income, 2),
+        pension_monthly_income=round(pension_monthly_income, 2),
         monthly_expenses=round(monthly_expenses, 2),
         gap_monthly=round(gap_monthly, 2),
         total_at_retirement=round(total_at_retirement, 2),
         pension_projected=round(pension_projected, 2),
+        hishtalmut_projected=round(hishtalmut_projected, 2),
         portfolio_mc_p50=round(portfolio_mc_p50, 2),
         years_to_retirement=round(years_to_retirement, 1),
         years_to_close_gap=years_to_close_gap,

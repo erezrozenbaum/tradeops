@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 0.97.0  
-**Last updated:** 2026-05-21
+**Version:** 0.99.3  
+**Last updated:** 2026-05-22
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
@@ -121,7 +121,7 @@ docker compose -f infra/docker-compose.yml exec backend alembic upgrade head
 
 Migrations also run automatically on every container start.
 
-### Migration history (36 migrations as of v0.90.0)
+### Migration history (40 migrations as of v0.97.0)
 
 | # | Description |
 |---|-------------|
@@ -321,17 +321,23 @@ docker compose -f infra/docker-compose.yml logs -f frontend     # frontend only
 
 ### Background workers (APScheduler)
 
-The backend runs 7 scheduled jobs:
+The backend runs 13 scheduled jobs:
 
 | Job | Schedule | Description |
 |-----|----------|-------------|
-| `price_refresh` | Every 30 min | Refreshes live prices for all held tickers via yfinance |
+| `price_refresh` | Daily 20:00 UTC | Refreshes live prices for all held tickers via yfinance |
 | `snapshot_writer` | Daily 21:00 UTC | Captures portfolio snapshot for performance tracking |
-| `price_alert_checker` | Every 15 min | Evaluates price alerts and sends email notifications |
-| `goal_evaluation` | Daily | Evaluates goal progress |
-| `notification_alerts` | Every 30 min | Generates risk/goal notifications |
-| `market_prewarm` | Every 30 min | Pre-warms market scan cache |
-| `research_prewarm` | Every 6 hours | Pre-warms market research cache |
+| `price_alert_checker` | Daily 20:30 UTC | Evaluates price alerts and sends email notifications |
+| `goal_evaluation` | Daily 07:00 UTC | Evaluates goal progress and updates status |
+| `notification_alerts` | Daily 08:30 UTC | Sends alert email digest if SMTP configured |
+| `broker_auto_sync` | Daily 09:00 UTC | Re-imports from auto-sync enabled broker accounts |
+| `market_prewarm` | Every 30 min | Pre-warms live market signal cache |
+| `research_prewarm` | Every 6 hours | Pre-warms market research screener cache |
+| `sentiment_signals` | Daily 20:15 UTC | News sentiment + whale mention signals per held ticker |
+| `fx_history_sync` | Daily 21:30 UTC | Syncs yesterday's FX rates for all active currency pairs |
+| `net_worth_snapshot` | Daily 21:15 UTC | Writes daily net worth snapshot for all investors |
+| `weekly_digest` | Friday 18:00 UTC | AI-generated HTML digest email to opted-in investors |
+| `coach_refresh` | Daily 07:45 UTC | Refreshes AI Coach insights for all investors |
 
 ### Audit log
 
@@ -707,6 +713,12 @@ kubectl describe ingress tradeops
 | Net Worth Dashboard | `net_worth/` + migration 0040 | `GET /investors/{id}/net-worth` — aggregates portfolio value + financial assets − liabilities + FI projection (binary search, 4% SWR, 7% real return). `GET /investors/{id}/net-worth/history` — 12-month trend from `net_worth_snapshots`. Daily snapshot at 21:15 UTC. Frontend: 4 stat cards, line chart, FI date, assets/liabilities breakdown. |
 | Tax Year Summary | `tax_summary/` | `GET /investors/{id}/tax-summary?year=YYYY` — WACC-method cost basis per ticker; realized gains/losses per sell transaction; long/short-term (≥365 days) classification; dividend tracking; estimated 25% flat tax (illustrative). Available years auto-detected from `holding_transactions`. Disclaimer clearly shown — not a substitute for professional tax preparation. |
 | AI Coach | `coach/` + migration 0040 | `GET /investors/{id}/coach` — returns active (non-dismissed) insights. `POST /coach/refresh` — runs 7 rule functions + optional Claude Haiku enrichment. `DELETE /coach/{id}` — dismiss insight (suppressed for 7 days via `dedup_key`). Rules: emergency fund, idle cash, goal behind, portfolio drift, tax-loss harvest, paper trading milestone, high-interest debt. Daily refresh at 07:45 UTC via `coach_refresh` worker. |
+
+| Docker Hardening | `backend/Dockerfile` + `infra/docker-compose.yml` | Backend runs as non-root `appuser`. All services have `no-new-privileges`, `read_only`, and `tmpfs` for writable paths. Applied in v0.99.1. |
+| Next.js CVE Fix | `frontend/package.json` | Upgraded from Next.js 14.2.3 → 14.2.25. Fixes CVE-2025-29927 (critical auth bypass in middleware). `package-lock.json` regenerated for CI compatibility. Applied in v0.99.2. |
+| Ruff Code Quality | `backend/ruff.toml` + 25+ files | Python linting with `ruff.toml` config. Fixed real syntax bug in `pdf_generator.py` (stress-test list comprehension was invalid Python). Removed duplicate dict entries in market data fetcher and broker parser. Applied in v0.99.2. |
+| Paper Trading Currency Fix | `paper_trading/service.py` + `router.py` | Market prices are now FX-converted to portfolio currency before deducting cash. `PaperPosition.currency` set to portfolio currency. New `reprice_positions()` fetches live prices and recomputes value. New endpoint: `POST /{id}/reprice`. Applied in v0.99.3. |
+| Retirement Readiness Formula Fix | `retirement_readiness/engine.py` + `router.py` + `schemas.py` | Pension funds now compute monthly income via makdam (`projected / makdam`), not SWR. Hishtalmut + portfolio remain under 4% SWR. New schema fields: `pension_monthly_income`, `hishtalmut_projected`. Dashboard card shows both sources separately. Applied in v0.99.3. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.
