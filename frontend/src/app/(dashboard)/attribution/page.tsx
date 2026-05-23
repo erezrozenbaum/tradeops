@@ -11,6 +11,7 @@ interface AttributionFactor {
   value_change: number;
   pct_of_total_change: number | null;
   description: string;
+  is_estimate: boolean;
 }
 
 interface ConfidenceLayer {
@@ -48,6 +49,9 @@ const FACTOR_COLORS: Record<string, string> = {
   savings_contribution: "#22d3ee",
   market_return: "#22c55e",
   fees_drag: "#ef4444",
+  behavioral_drag: "#f97316",
+  fx_drag: "#a855f7",
+  concentration_cost: "#ec4899",
 };
 
 function ConfidenceDot({ score }: { score: number }) {
@@ -154,33 +158,37 @@ export default function AttributionPage() {
             />
           </div>
 
-          {/* Attribution factors */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              {totalPositive ? <TrendingUp className="h-4 w-4 text-cyber-green" /> : <TrendingDown className="h-4 w-4 text-cyber-red" />}
-              What Drove the Change
-            </h2>
-            {data.factors.map(f => {
+          {/* Attribution factors — core */}
+          {(() => {
+            const coreFactors = data.factors.filter(f => !f.is_estimate);
+            const estimateFactors = data.factors.filter(f => f.is_estimate);
+            const coreAbs = coreFactors.reduce((s, x) => s + Math.abs(x.value_change), 0);
+            const estimateAbs = estimateFactors.reduce((s, x) => s + Math.abs(x.value_change), 0);
+
+            const currency = data.currency;
+            function FactorCard({ f, totalAbs }: { f: AttributionFactor; totalAbs: number }) {
               const barColor = FACTOR_COLORS[f.factor] || "#6b7280";
               const isNegative = f.value_change < 0;
-              const totalAbs = data.factors.reduce((s, x) => s + Math.abs(x.value_change), 0);
               const barWidth = totalAbs > 0 ? (Math.abs(f.value_change) / totalAbs) * 100 : 0;
-
               return (
                 <GlowCard key={f.factor} className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-foreground">{f.label}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-foreground">{f.label}</span>
+                      {f.is_estimate && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted/40 text-muted-foreground border border-border font-medium">
+                          Estimate
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-3">
                       {f.pct_of_total_change !== null && (
                         <span className="text-xs text-muted-foreground">
                           {f.pct_of_total_change >= 0 ? "+" : ""}{f.pct_of_total_change}% of change
                         </span>
                       )}
-                      <span
-                        className="text-sm font-bold"
-                        style={{ color: isNegative ? "#ef4444" : barColor }}
-                      >
-                        {isNegative ? "" : "+"}{f.value_change.toLocaleString(undefined, { maximumFractionDigits: 0 })} {data.currency}
+                      <span className="text-sm font-bold" style={{ color: isNegative ? "#ef4444" : barColor }}>
+                        {isNegative ? "" : "+"}{f.value_change.toLocaleString(undefined, { maximumFractionDigits: 0 })} {currency}
                       </span>
                     </div>
                   </div>
@@ -193,8 +201,33 @@ export default function AttributionPage() {
                   <p className="text-xs text-muted-foreground">{f.description}</p>
                 </GlowCard>
               );
-            })}
-          </div>
+            }
+
+            return (
+              <>
+                <div className="space-y-3">
+                  <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    {totalPositive ? <TrendingUp className="h-4 w-4 text-cyber-green" /> : <TrendingDown className="h-4 w-4 text-cyber-red" />}
+                    What Drove the Change
+                  </h2>
+                  {coreFactors.map(f => <FactorCard key={f.factor} f={f} totalAbs={coreAbs} />)}
+                </div>
+
+                {estimateFactors.length > 0 && (
+                  <div className="space-y-3">
+                    <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                      Extended Estimates
+                      <span className="text-[11px] font-normal text-muted-foreground">
+                        — illustrative only, not financial advice
+                      </span>
+                    </h2>
+                    {estimateFactors.map(f => <FactorCard key={f.factor} f={f} totalAbs={estimateAbs} />)}
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {/* Confidence layers */}
           <GlowCard className="p-5 space-y-4">

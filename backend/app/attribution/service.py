@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import uuid
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
@@ -11,6 +14,81 @@ from app.attribution.schemas import (
 from app.models.holding_transaction import HoldingTransaction
 from app.models.portfolio_snapshot import PortfolioSnapshot
 from app.models.price_snapshot import PriceSnapshot
+
+
+# ─── Extended estimate helpers ────────────────────────────────────────────────
+
+def _behavioral_drag(txns: list[HoldingTransaction], period_start: datetime) -> float | None:
+    """
+    Fees from buy-sell pairs where the holding lasted < 30 days.
+    Returns a negative number (drag on returns) or None if no data.
+    """
+    since_date = period_start.date()
+    period_txns = [t for t in txns if t.transaction_date >= since_date]
+    if not period_txns:
+        return None
+
+    buys_by_ticker: dict[str, list[HoldingTransaction]] = defaultdict(list)
+    short_term_fees = 0.0
+    found_any = False
+
+    for t in sorted(period_txns, key=lambda x: x.transaction_date):
+        if t.transaction_type == "buy" and t.ticker:
+            buys_by_ticker[t.ticker].append(t)
+        elif t.transaction_type == "sell" and t.ticker:
+            prior = buys_by_ticker.get(t.ticker, [])
+            if prior:
+                buy = prior.pop(0)  # FIFO match
+                holding_days = (t.transaction_date - buy.transaction_date).days
+                if holding_days < 30:
+                    short_term_fees += t.fees + buy.fees
+                    found_any = True
+
+    if not found_any:
+        return None
+    return -round(short_term_fees, 2)
+
+
+def _fx_drag(db: Session, investor_id: uuid.UUID) -> float | None:
+    """
+    Total FX P&L from the fx_impact engine.
+    Negative = currency headwind (FX drag), positive = FX tailwind.
+    Returns None if insufficient FX data.
+    """
+    try:
+        from app.fx_impact.engine import compute as compute_fx_impact
+        result = compute_fx_impact(db, investor_id)
+        if result.holdings_missing_fx_data == len(result.holdings):
+            return None
+        return round(result.total_fx_pnl, 2) if result.total_fx_pnl != 0.0 else None
+    except Exception:
+        return None
+
+
+def _concentration_cost(db: Session, investor_id: uuid.UUID) -> float | None:
+    """
+    Sum of unrealized losses from the top-3 holdings by cost basis.
+    Represents the P&L drag attributable to concentration in specific positions.
+    Returns a negative number (loss) or None if no loss data.
+    """
+    try:
+        from app.fx_impact.engine import compute as compute_fx_impact
+        result = compute_fx_impact(db, investor_id)
+
+        # Holdings with full P&L data, sorted by cost_basis_base descending
+        scored = [
+            h for h in result.holdings
+            if h.cost_basis_base is not None and h.total_pnl is not None
+        ]
+        if not scored:
+            return None
+
+        top3 = sorted(scored, key=lambda h: h.cost_basis_base or 0.0, reverse=True)[:3]
+        concentration_loss = sum(h.total_pnl for h in top3 if h.total_pnl < 0)
+
+        return round(concentration_loss, 2) if concentration_loss < 0 else None
+    except Exception:
+        return None
 
 _PERIOD_DAYS = {"ytd": None, "1y": 365, "6m": 180, "3m": 90}
 
@@ -99,6 +177,49 @@ def compute_attribution(
             value_change=-round(fees, 2),
             pct_of_total_change=_pct(-fees),
             description="Total transaction fees paid during the period.",
+        ))
+
+    # --- Extended estimate factors (supplementary — not additive to total_change) ---
+    behav_drag = _behavioral_drag(txns, start)
+    if behav_drag is not None:
+        factors.append(AttributionFactor(
+            factor="behavioral_drag",
+            label="Behavioral Drag",
+            value_change=behav_drag,
+            pct_of_total_change=_pct(behav_drag),
+            description=(
+                "Illustrative estimate of fees attributable to short-term trades (< 30-day round-trips). "
+                "A sub-component of total fees — shown separately to highlight behavioral cost."
+            ),
+            is_estimate=True,
+        ))
+
+    fx_drag_val = _fx_drag(db, investor_id)
+    if fx_drag_val is not None:
+        factors.append(AttributionFactor(
+            factor="fx_drag",
+            label="FX Impact" if fx_drag_val >= 0 else "FX Drag",
+            value_change=fx_drag_val,
+            pct_of_total_change=_pct(fx_drag_val),
+            description=(
+                "Illustrative estimate of currency movement P&L across cross-currency holdings. "
+                "Positive = FX tailwind (holding currency strengthened); negative = FX headwind."
+            ),
+            is_estimate=True,
+        ))
+
+    conc_cost = _concentration_cost(db, investor_id)
+    if conc_cost is not None:
+        factors.append(AttributionFactor(
+            factor="concentration_cost",
+            label="Concentration Cost",
+            value_change=conc_cost,
+            pct_of_total_change=_pct(conc_cost),
+            description=(
+                "Illustrative estimate of unrealized losses from the top-3 most concentrated holdings. "
+                "Highlights the P&L risk of position concentration."
+            ),
+            is_estimate=True,
         ))
 
     # --- Confidence layers ---

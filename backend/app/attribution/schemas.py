@@ -6,11 +6,12 @@ from pydantic import BaseModel
 
 
 class AttributionFactor(BaseModel):
-    factor: str  # savings_contribution | market_return | fees_drag
+    factor: str  # savings_contribution | market_return | fees_drag | behavioral_drag | fx_drag | concentration_cost
     label: str
     value_change: float
     pct_of_total_change: Optional[float]
     description: str
+    is_estimate: bool = False  # True for supplementary illustrative estimates
 
 
 class ConfidenceLayer(BaseModel):

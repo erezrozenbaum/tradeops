@@ -8,6 +8,15 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [2.4.0] — 2026-05-23
+
+### Added
+- **Behavioral Drag** attribution factor (illustrative estimate): fees attributed to short-term buy-sell round-trips (< 30-day holding period) — sub-component of total fees highlighted separately
+- **FX Drag / FX Impact** attribution factor (illustrative estimate): total currency movement P&L across cross-currency holdings, computed from `purchase_fx_rate` vs current rate via the existing FX Impact engine
+- **Concentration Cost** attribution factor (illustrative estimate): sum of unrealized losses from the top-3 most concentrated holdings — highlights position concentration risk
+- All 3 new factors are labeled `is_estimate: true` in the API response; the frontend renders them in a separate "Extended Estimates" section with an "Estimate" badge and a "not financial advice" disclaimer
+- No schema changes — extends `app/attribution/service.py` and `app/attribution/schemas.py` only
+
 ## [2.3.0] — 2026-05-23
 
 ### Added

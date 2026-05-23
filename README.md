@@ -288,6 +288,7 @@ TradeOps goes beyond recommendations to build longitudinal financial understandi
 | **Financial Twin** | 8-dimensional behavioral mirror (Stability, Discipline, Emotional Risk, Consistency, Resilience, Risk Alignment, Long-Term Discipline, Contribution Momentum); updated daily; SVG radar chart |
 | **Financial Health Radar** | 9-dimensional financial health score (Stability, Liquidity, Discipline, Diversification, Emotional Control, Contribution Consistency, Tax Efficiency, Risk Alignment, Resilience); co-computed with Twin |
 | **Behavioral Risk Warnings** | 7 deterministic detection rules (panic selling, performance chasing, revenge trading, overtrading spike, concentration addiction, risk creep, strategy abandonment); active/resolved event tracking; daily background scan |
+| **Extended Attribution** | 3 supplementary illustrative estimates added to the Attribution page: Behavioral Drag (short-term trade fees), FX Drag (currency movement P&L), Concentration Cost (losses from top-3 concentrated holdings) |
 
 These features share a common foundation: all significant decisions are recorded with deterministic inputs and AI outputs, making the entire decision history queryable, explainable, and auditable.
 
