@@ -32,7 +32,7 @@ def simulate_tick(
     monthly_mean = (1.0 + annual_mean) ** (1.0 / 12) - 1.0
     monthly_std = annual_std / math.sqrt(12) if annual_std > 0 else 0.0
 
-    rng = Random(seed)
+    rng = Random(seed)  # nosec B311 — seeded RNG for reproducible financial simulation, not cryptography
     value_before = max(current_value, 0.0)
     r = rng.gauss(monthly_mean, monthly_std) if monthly_std > 0 else 0.0
     value_after = round(value_before * (1.0 + r), 2)

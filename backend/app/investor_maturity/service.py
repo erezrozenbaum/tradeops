@@ -40,7 +40,6 @@ def _financial_stability_score(db: Session, investor_id: uuid.UUID) -> tuple[flo
     from app.financial_profiles.service import get_by_investor
     from app.financial_scoring.engine import calculate_stability_score
     from app.financial_scoring.schemas import FinancialScoringInput
-    from app.models.investment_account import InvestmentHolding, InvestmentAccount
 
     notes: list[str] = []
     fp = get_by_investor(db, investor_id)

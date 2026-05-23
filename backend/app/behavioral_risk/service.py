@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import NamedTuple
 
@@ -49,8 +48,8 @@ def _detect_panic_selling(txns: list[HoldingTransaction], now: datetime) -> _Det
         event_type="panic_selling",
         severity="high",
         description=(
-            f"3 or more sell transactions detected within a 3-day window in the last 14 days. "
-            f"Rapid sequential selling is a common indicator of panic-driven decision making."
+            "3 or more sell transactions detected within a 3-day window in the last 14 days. "
+            "Rapid sequential selling is a common indicator of panic-driven decision making."
         ),
         evidence={
             "sell_count_14d": len(recent_sells),
@@ -175,7 +174,6 @@ def _detect_performance_chasing(txns: list[HoldingTransaction], now: datetime) -
 
 def _detect_concentration_addiction(db: Session, investor_id: uuid.UUID) -> _Detection | None:
     from app.models.investment_account import InvestmentAccount, InvestmentHolding
-    from sqlalchemy.orm import joinedload
 
     accounts = (
         db.query(InvestmentAccount)

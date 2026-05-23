@@ -216,7 +216,6 @@ def create_simulation(
     data_snapshot = _load_data_snapshot(db, investor_id)
 
     is_mc = payload.scenario_type in _MONTE_CARLO
-    is_cf = payload.scenario_type in _COUNTERFACTUAL
     random_seed = random.randint(1, 2**31 - 1) if is_mc else None
 
     params = payload.parameters.model_dump(exclude_none=True)

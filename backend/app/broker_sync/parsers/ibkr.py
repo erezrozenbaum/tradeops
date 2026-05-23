@@ -4,7 +4,9 @@ Expected format: Flex Query Report exported from IBKR Account Management.
 Key XML element: <OpenPosition> with attributes:
   symbol, isin, description, position, costBasisPrice, markPrice, currency, assetCategory
 """
-import xml.etree.ElementTree as ET
+import defusedxml
+import defusedxml.ElementTree as ET
+import xml.etree.ElementTree as _StdET
 
 from app.broker_sync.schemas import BrokerImportRow
 
@@ -27,7 +29,7 @@ def parse(content: bytes, filename: str) -> tuple[list[BrokerImportRow], list[st
 
     try:
         root = ET.fromstring(content)
-    except ET.ParseError as exc:
+    except (_StdET.ParseError, defusedxml.DefusedXmlException, ValueError) as exc:
         return [], [f"Invalid XML: {exc}"]
 
     positions = list(root.iter("OpenPosition"))

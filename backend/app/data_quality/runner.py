@@ -36,7 +36,6 @@ def _ge_available() -> bool:
 
 def _run_suite(suite, df: "pandas.DataFrame") -> ValidationResult:
     """Validate a pandas DataFrame against a GE expectation suite."""
-    import great_expectations as gx
 
     result = ValidationResult(suite=suite.expectation_suite_name, success=True)
     for exp in suite.expectations:
@@ -77,7 +76,6 @@ def _run_suite(suite, df: "pandas.DataFrame") -> ValidationResult:
                     result.success = False
 
             elif exp_type == "expect_column_values_to_match_regex":
-                import re
                 pattern = kwargs.get("regex", "")
                 bad = df[col].dropna()[~df[col].dropna().str.match(pattern)]
                 if len(bad) > 0:

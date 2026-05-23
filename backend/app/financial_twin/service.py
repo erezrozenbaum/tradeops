@@ -118,7 +118,6 @@ def _risk_alignment(db: Session, investor_id: uuid.UUID) -> float:
         top = r.top_concern
         if top is None:
             return 95.0
-        from app.strategy_drift.schemas import DriftStatus
         worst = max((item.drift_pct for item in r.drift_items), default=0.0)
         if worst <= 3.0:
             return 90.0

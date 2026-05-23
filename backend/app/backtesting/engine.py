@@ -58,7 +58,7 @@ def run_backtest(
     monthly_mean = (1.0 + annual_mean) ** (1.0 / 12) - 1.0
     monthly_std = annual_std / math.sqrt(12) if annual_std > 0 else 0.0
 
-    rng = Random(seed)
+    rng = Random(seed)  # nosec B311 — seeded RNG for reproducible financial simulation, not cryptography
 
     portfolio = max(initial_capital, 0.0)
     peak = portfolio
