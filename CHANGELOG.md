@@ -8,6 +8,18 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [2.5.0] — 2026-05-23
+
+### Added
+- **Simulation Engine** (`POST /investors/{id}/simulations`, `GET /simulations`, `GET /simulations/{id}`, `POST /simulations/{id}/save`): run deterministic and Monte Carlo financial futures scenarios against the investor's live portfolio data
+- **`simulation_runs` and `simulation_comparison_sets` tables** (migration 0045): stores scenario type, parameters, frozen `data_snapshot`, `results` JSONB (trajectory + percentiles), `random_seed` for reproducibility, `is_saved` flag, and required disclaimer
+- **3 deterministic scenarios**: `debt_payoff` (net worth trajectory with accelerated debt payoff + freed-payment compounding), `savings_increase` (FV formula with extra monthly savings), `job_loss` (liquid savings drawdown under reduced/zero income)
+- **3 Monte Carlo scenarios** (1 000 seeded iterations, fully reproducible via `random_seed`): `market_crash` (compound growth + random crash events with configurable severity and frequency), `retirement` (compound growth with return variance), `custom` (user-defined return/volatility/contribution)
+- **All simulations**: deterministic p10 = p50 = p90; Monte Carlo outputs p10/p50/p90 percentile trajectory bands and `probability_positive` metric
+- **Required disclaimer** included on every simulation response: explicitly not financial advice or projection of future returns
+- **Financial Futures page** (`/futures`): scenario builder with per-type parameter inputs, SVG trajectory chart (p10/p50/p90 band for MC, single line for deterministic), summary stats, data snapshot panel, recent runs list, Save button
+- **14 new engine unit tests** covering reproducibility, directional correctness, edge cases (zero rate, no debt, full income loss)
+
 ## [2.4.0] — 2026-05-23
 
 ### Added

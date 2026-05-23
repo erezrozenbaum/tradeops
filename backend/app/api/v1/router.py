@@ -59,6 +59,7 @@ from app.attribution.router import router as attribution_router
 from app.investor_maturity.router import router as investor_maturity_router
 from app.financial_twin.router import router as financial_twin_router, health_router as financial_health_router
 from app.behavioral_risk.router import router as behavioral_risk_router
+from app.simulation.router import router as simulation_router
 
 api_router = APIRouter()
 
@@ -128,3 +129,4 @@ api_router.include_router(investor_maturity_router, prefix="/investors/{investor
 api_router.include_router(financial_twin_router, prefix="/investors/{investor_id}/twin", tags=["financial-twin"], dependencies=_own)
 api_router.include_router(financial_health_router, prefix="/investors/{investor_id}/health-radar", tags=["health-radar"], dependencies=_own)
 api_router.include_router(behavioral_risk_router, prefix="/investors/{investor_id}/behavioral-risk", tags=["behavioral-risk"], dependencies=_own)
+api_router.include_router(simulation_router, prefix="/investors/{investor_id}/simulations", tags=["simulations"], dependencies=_own)

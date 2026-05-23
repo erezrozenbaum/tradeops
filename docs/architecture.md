@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 2.1.0  
+**Version:** 2.5.0  
 **Last updated:** 2026-05-23
 
 ---
@@ -268,6 +268,12 @@ backend/app/
 │   ├── schemas.py              # BehavioralRiskEventResponse, BehavioralRiskListResponse, EVENT_TYPE_LABELS
 │   └── router.py               # GET /behavioral-risk, GET /{id}, POST /{id}/resolve, POST /detect
 │
+├── simulation/                 # Financial Futures simulation engine (v2.5.0)
+│   ├── engine.py               # Pure-math scenarios: run_debt_payoff, run_savings_increase, run_job_loss, run_market_crash, run_monte_carlo_growth; seeded RNG for reproducibility
+│   ├── service.py              # create_simulation(): loads data_snapshot, dispatches engine, persists result; list/get/save CRUD
+│   ├── schemas.py              # SimulationRunCreate, SimulationParameters, SimulationRunResponse, SimulationListResponse
+│   └── router.py               # POST /simulations, GET /simulations, GET /simulations/{id}, POST /simulations/{id}/save
+│
 ├── pension_simulation/         # Standalone pension projector
 ├── debt_planner/               # Debt payoff planner (avalanche/snowball)
 ├── watchlist/                  # Per-investor ticker watchlist
@@ -532,6 +538,7 @@ frontend/src/
 │   │   ├── twin/page.tsx           # Financial Twin: 8-sided SVG radar + dimension cards + trend arrows (v2.2.0)
 │   │   ├── health-radar/page.tsx   # Financial Health Radar: 9-sided SVG radar + score bar breakdown (v2.2.0)
 │   │   ├── behavioral-risk/page.tsx # Behavioral Risk: event cards, severity badges, resolve action, scan trigger (v2.3.0)
+│   │   ├── futures/page.tsx        # Financial Futures: scenario builder, SVG trajectory chart, p10/p50/p90 bands, save/history (v2.5.0)
 │   │   └── settings/page.tsx       # Account and platform info
 │   └── page.tsx                    # Root redirect → /dashboard
 ├── components/ui/                  # Shared UI primitives (Card, Badge, Button, etc.)

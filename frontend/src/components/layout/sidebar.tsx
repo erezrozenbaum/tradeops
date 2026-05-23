@@ -49,6 +49,7 @@ import {
   Trophy,
   Cpu,
   AlertTriangle,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -111,6 +112,7 @@ const sections = [
       { label: "Financial Twin", href: "/twin", icon: Cpu },
       { label: "Health Radar", href: "/health-radar", icon: Activity },
       { label: "Behavioral Risk", href: "/behavioral-risk", icon: AlertTriangle },
+      { label: "Financial Futures", href: "/futures", icon: Layers },
     ],
   },
   {

@@ -1,8 +1,8 @@
 # TradeOps AI — Database Schema Reference
 
-**Version:** 2.3.0  
+**Version:** 2.5.0  
 **Last updated:** 2026-05-23  
-**Migration head:** 0044
+**Migration head:** 0045
 
 All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete unless noted.
 
@@ -49,7 +49,9 @@ All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete
 33. [financial_twin_snapshots](#33-financial_twin_snapshots)
 34. [financial_health_scores](#34-financial_health_scores)
 35. [behavioral_risk_events](#35-behavioral_risk_events)
-36. [Migration history](#36-migration-history)
+36. [simulation_runs](#36-simulation_runs)
+37. [simulation_comparison_sets](#37-simulation_comparison_sets)
+38. [Migration history](#38-migration-history)
 
 ---
 
@@ -904,7 +906,48 @@ Indexes: `investor_id`, `detected_at`, `(investor_id, status)`.
 
 ---
 
-## 36. Migration history
+## 36. simulation_runs
+
+Stores each simulation scenario run. All inputs and results are persisted for reproducibility and audit.
+
+| Column | Type | Nullable | Notes |
+|--------|------|----------|-------|
+| id | UUID | NO | PK |
+| investor_id | UUID | NO | FK → investor_profiles CASCADE |
+| scenario_type | VARCHAR(30) | NO | debt_payoff \| savings_increase \| job_loss \| market_crash \| retirement \| custom |
+| scenario_name | VARCHAR(100) | NO | Human-readable label |
+| status | VARCHAR(20) | NO | completed; default: completed |
+| horizon_months | INTEGER | NO | Simulation horizon in months |
+| parameters | JSONB | NO | Input parameters used for this run |
+| data_snapshot | JSONB | NO | Frozen financial state at run time (portfolio_value, income, expenses, savings, debt) |
+| results | JSONB | NO | trajectory (p10/p50/p90 per month), final_p10/p50/p90, probability_positive, is_monte_carlo, iterations |
+| random_seed | INTEGER | YES | Set for Monte Carlo runs; null for deterministic |
+| is_saved | BOOLEAN | NO | User explicitly saved this run; default: false |
+| disclaimer | TEXT | NO | Required disclaimer included on every simulation |
+| computed_at | TIMESTAMPTZ | NO | When the run was computed |
+
+Indexes: `investor_id`, `computed_at`, `(investor_id, is_saved)`.
+
+---
+
+## 37. simulation_comparison_sets
+
+Groups of simulation run IDs for side-by-side comparison.
+
+| Column | Type | Nullable | Notes |
+|--------|------|----------|-------|
+| id | UUID | NO | PK |
+| investor_id | UUID | NO | FK → investor_profiles CASCADE |
+| name | VARCHAR(100) | NO | Comparison set label |
+| simulation_ids | JSONB | NO | Array of simulation_run UUIDs |
+| notes | TEXT | YES | Optional free-text notes |
+| created_at | TIMESTAMPTZ | NO | Creation timestamp |
+
+Indexes: `investor_id`.
+
+---
+
+## 38. Migration history
 
 | Migration | Description |
 |-----------|-------------|
@@ -947,3 +990,4 @@ Indexes: `investor_id`, `detected_at`, `(investor_id, status)`.
 | 0042 | investor_maturity_snapshots table — composite_score FLOAT, stage VARCHAR(30), component_scores JSONB (8 components), features_unlocked JSONB, notes JSONB; 3 indexes on investor_id, computed_at, stage |
 | 0043 | financial_twin_snapshots (8 FLOAT dimension columns + overall_score) and financial_health_scores (9 FLOAT dimension columns + overall_score); 2 indexes each on investor_id and computed_at |
 | 0044 | behavioral_risk_events table — event_type VARCHAR(50), severity VARCHAR(20), status VARCHAR(20) default active, detected_at TIMESTAMPTZ, resolved_at nullable, description TEXT, evidence JSONB, recommendation TEXT, decision_id nullable FK → recommendation_decisions SET NULL; 3 indexes |
+| 0045 | simulation_runs (scenario_type, parameters, data_snapshot, results JSONB, random_seed, is_saved, disclaimer; 3 indexes) + simulation_comparison_sets (simulation_ids JSONB array) |

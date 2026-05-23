@@ -26,6 +26,7 @@ from app.models.market_research import MarketResearchSnapshot
 from app.models.net_worth import NetWorthSnapshot
 from app.models.coach_insight import CoachInsight
 from app.models.recommendation_decision import RecommendationDecision
+from app.models.simulation_run import SimulationRun, SimulationComparisonSet
 
 __all__ = [
     "InvestorProfile",
@@ -69,4 +70,6 @@ __all__ = [
     "NetWorthSnapshot",
     "CoachInsight",
     "RecommendationDecision",
+    "SimulationRun",
+    "SimulationComparisonSet",
 ]
