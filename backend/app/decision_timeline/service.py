@@ -5,6 +5,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.decision_timeline.schemas import TimelineEvent, TimelinePage
+from app.models.behavioral_risk_event import BehavioralRiskEvent
 from app.models.holding_transaction import HoldingTransaction
 from app.models.portfolio_snapshot import PortfolioSnapshot
 from app.models.recommendation_decision import RecommendationDecision
@@ -184,6 +185,42 @@ def get_timeline(
                 metadata={
                     "transaction_type": t.transaction_type,
                     "fees": t.fees,
+                },
+                causal_note=None,
+            )
+        )
+
+    # --- Behavioral risk events ---
+    from app.behavioral_risk.schemas import EVENT_TYPE_LABELS as _RISK_LABELS
+    risk_events: list[BehavioralRiskEvent] = (
+        db.query(BehavioralRiskEvent)
+        .filter(
+            BehavioralRiskEvent.investor_id == investor_id,
+            BehavioralRiskEvent.detected_at >= since,
+        )
+        .order_by(BehavioralRiskEvent.detected_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    for re in risk_events:
+        label = _RISK_LABELS.get(re.event_type, re.event_type)
+        event_type_key = "behavioral_risk_resolved" if re.status == "resolved" else "behavioral_risk_detected"
+        events.append(
+            TimelineEvent(
+                event_id=str(re.id),
+                event_type=event_type_key,
+                occurred_at=re.detected_at,
+                title=f"Risk Alert: {label}",
+                description=re.description,
+                amount=None,
+                currency=None,
+                ticker=None,
+                metadata={
+                    "event_type": re.event_type,
+                    "severity": re.severity,
+                    "status": re.status,
+                    "resolved_at": re.resolved_at.isoformat() if re.resolved_at else None,
                 },
                 causal_note=None,
             )

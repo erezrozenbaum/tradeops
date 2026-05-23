@@ -287,6 +287,7 @@ TradeOps goes beyond recommendations to build longitudinal financial understandi
 | **Investor Maturity Engine** | Deterministic 4-stage scoring (Foundation → Discipline → Optimization → Advanced Cognition) across 8 weighted dimensions; unlocks features as the investor matures; refreshed weekly |
 | **Financial Twin** | 8-dimensional behavioral mirror (Stability, Discipline, Emotional Risk, Consistency, Resilience, Risk Alignment, Long-Term Discipline, Contribution Momentum); updated daily; SVG radar chart |
 | **Financial Health Radar** | 9-dimensional financial health score (Stability, Liquidity, Discipline, Diversification, Emotional Control, Contribution Consistency, Tax Efficiency, Risk Alignment, Resilience); co-computed with Twin |
+| **Behavioral Risk Warnings** | 7 deterministic detection rules (panic selling, performance chasing, revenge trading, overtrading spike, concentration addiction, risk creep, strategy abandonment); active/resolved event tracking; daily background scan |
 
 These features share a common foundation: all significant decisions are recorded with deterministic inputs and AI outputs, making the entire decision history queryable, explainable, and auditable.
 

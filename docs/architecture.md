@@ -263,6 +263,11 @@ backend/app/
 │   ├── schemas.py              # TwinSnapshot, TwinDimensions, HealthRadarSnapshot, HealthRadarDimensions
 │   └── router.py               # GET /twin, GET /twin/history, POST /twin/refresh; GET /health-radar
 │
+├── behavioral_risk/            # Behavioral risk detection — 7 deterministic rules (v2.3.0)
+│   ├── service.py              # detect_and_persist(): panic_selling, revenge_trading, overtrading_spike, performance_chasing, concentration_addiction, risk_creep, strategy_abandonment
+│   ├── schemas.py              # BehavioralRiskEventResponse, BehavioralRiskListResponse, EVENT_TYPE_LABELS
+│   └── router.py               # GET /behavioral-risk, GET /{id}, POST /{id}/resolve, POST /detect
+│
 ├── pension_simulation/         # Standalone pension projector
 ├── debt_planner/               # Debt payoff planner (avalanche/snowball)
 ├── watchlist/                  # Per-investor ticker watchlist
@@ -526,6 +531,7 @@ frontend/src/
 │   │   ├── maturity/page.tsx       # Investor Maturity: score arc, stage roadmap, component bars (v2.1.0)
 │   │   ├── twin/page.tsx           # Financial Twin: 8-sided SVG radar + dimension cards + trend arrows (v2.2.0)
 │   │   ├── health-radar/page.tsx   # Financial Health Radar: 9-sided SVG radar + score bar breakdown (v2.2.0)
+│   │   ├── behavioral-risk/page.tsx # Behavioral Risk: event cards, severity badges, resolve action, scan trigger (v2.3.0)
 │   │   └── settings/page.tsx       # Account and platform info
 │   └── page.tsx                    # Root redirect → /dashboard
 ├── components/ui/                  # Shared UI primitives (Card, Badge, Button, etc.)

@@ -48,6 +48,7 @@ import {
   Gauge,
   Trophy,
   Cpu,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -109,6 +110,7 @@ const sections = [
       { label: "Investor Maturity", href: "/maturity", icon: Trophy },
       { label: "Financial Twin", href: "/twin", icon: Cpu },
       { label: "Health Radar", href: "/health-radar", icon: Activity },
+      { label: "Behavioral Risk", href: "/behavioral-risk", icon: AlertTriangle },
     ],
   },
   {

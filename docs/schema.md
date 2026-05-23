@@ -1,8 +1,8 @@
 # TradeOps AI — Database Schema Reference
 
-**Version:** 2.2.0  
+**Version:** 2.3.0  
 **Last updated:** 2026-05-23  
-**Migration head:** 0043
+**Migration head:** 0044
 
 All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete unless noted.
 
@@ -48,7 +48,8 @@ All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete
 32. [investor_maturity_snapshots](#32-investor_maturity_snapshots)
 33. [financial_twin_snapshots](#33-financial_twin_snapshots)
 34. [financial_health_scores](#34-financial_health_scores)
-35. [Migration history](#35-migration-history)
+35. [behavioral_risk_events](#35-behavioral_risk_events)
+36. [Migration history](#36-migration-history)
 
 ---
 
@@ -881,7 +882,29 @@ Indexes: `investor_id`, `computed_at` (DESC).
 
 ---
 
-## 35. Migration history
+## 35. behavioral_risk_events
+
+Stores detected behavioral risk events per investor. One active record per event_type at most.
+
+| Column | Type | Nullable | Notes |
+|--------|------|----------|-------|
+| id | UUID | NO | PK |
+| investor_id | UUID | NO | FK → investor_profiles CASCADE |
+| event_type | VARCHAR(50) | NO | panic_selling \| performance_chasing \| revenge_trading \| overtrading_spike \| concentration_addiction \| risk_creep \| strategy_abandonment |
+| severity | VARCHAR(20) | NO | low \| medium \| high \| critical |
+| status | VARCHAR(20) | NO | active \| resolved \| acknowledged; default: active |
+| detected_at | TIMESTAMPTZ | NO | When the rule fired |
+| resolved_at | TIMESTAMPTZ | YES | Set when user resolves |
+| description | TEXT | NO | Human-readable explanation |
+| evidence | JSONB | NO | Supporting data (counts, ratios, tickers) |
+| recommendation | TEXT | NO | Suggested corrective action |
+| decision_id | UUID | YES | FK → recommendation_decisions SET NULL (causal link) |
+
+Indexes: `investor_id`, `detected_at`, `(investor_id, status)`.
+
+---
+
+## 36. Migration history
 
 | Migration | Description |
 |-----------|-------------|
@@ -923,3 +946,4 @@ Indexes: `investor_id`, `computed_at` (DESC).
 | 0041 | recommendation_decisions table — full decision provenance: frozen inputs (risk_model_snapshot, holdings_summary, fx_rate_snapshot, price_snapshot, market_signals_snapshot, rule_results as JSONB), AI layer (model_used, prompt_version, ai_input_summary, ai_output_summary, input/output_tokens), output (output_summary JSONB, recommendation_count, decision_hash VARCHAR(64)); 3 indexes on investor_id, triggered_at, decision_type |
 | 0042 | investor_maturity_snapshots table — composite_score FLOAT, stage VARCHAR(30), component_scores JSONB (8 components), features_unlocked JSONB, notes JSONB; 3 indexes on investor_id, computed_at, stage |
 | 0043 | financial_twin_snapshots (8 FLOAT dimension columns + overall_score) and financial_health_scores (9 FLOAT dimension columns + overall_score); 2 indexes each on investor_id and computed_at |
+| 0044 | behavioral_risk_events table — event_type VARCHAR(50), severity VARCHAR(20), status VARCHAR(20) default active, detected_at TIMESTAMPTZ, resolved_at nullable, description TEXT, evidence JSONB, recommendation TEXT, decision_id nullable FK → recommendation_decisions SET NULL; 3 indexes |

@@ -8,6 +8,15 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [2.3.0] — 2026-05-23
+
+### Added
+- **Behavioral Risk Detection** (`GET /investors/{id}/behavioral-risk`, `GET /behavioral-risk/{event_id}`, `POST /behavioral-risk/{event_id}/resolve`, `POST /behavioral-risk/detect`): 7 deterministic detection rules — Panic Selling, Performance Chasing, Revenge Trading, Overtrading Spike, Concentration Addiction, Risk Creep, Strategy Abandonment
+- **`behavioral_risk_events` table** (migration 0044): stores event_type, severity, status (active/resolved/acknowledged), description, evidence JSONB, recommendation; FK to recommendation_decisions for causal chain
+- **`detect_behavioral_risk_daily` background job** (04:00 UTC): sweeps all investors; idempotent — skips event types already active
+- **Behavioral Risk page** (`/behavioral-risk`): active/resolved/all tabs, severity-coded event cards, inline evidence metrics, recommendation panel, Resolve button per event, Run Scan on demand
+- **Timeline extended**: behavioral_risk_detected and behavioral_risk_resolved events now appear in the Financial Decision Timeline feed
+
 ## [2.2.0] — 2026-05-23
 
 ### Added

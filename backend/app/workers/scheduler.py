@@ -45,6 +45,7 @@ def _register_jobs() -> None:
     from app.workers.jobs.data_quality_check import run_data_quality_checks
     from app.workers.jobs.maturity_weekly import compute_all_maturity_scores
     from app.workers.jobs.twin_daily import compute_all_twin_scores
+    from app.workers.jobs.behavioral_risk_daily import detect_behavioral_risk_daily
 
     _scheduler.add_job(
         refresh_all_prices,
@@ -164,6 +165,13 @@ def _register_jobs() -> None:
         compute_all_twin_scores,
         CronTrigger(hour=3, minute=0),  # daily 03:00 UTC — after portfolio + net worth snapshots
         id="twin_daily",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+    _scheduler.add_job(
+        detect_behavioral_risk_daily,
+        CronTrigger(hour=4, minute=0),  # daily 04:00 UTC — after twin computation
+        id="behavioral_risk_daily",
         replace_existing=True,
         misfire_grace_time=3600,
     )
