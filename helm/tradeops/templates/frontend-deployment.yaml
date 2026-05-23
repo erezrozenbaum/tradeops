@@ -18,6 +18,9 @@ spec:
         app.kubernetes.io/component: frontend
     spec:
       serviceAccountName: {{ include "tradeops.serviceAccountName" . }}
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: frontend
           image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
@@ -26,6 +29,7 @@ spec:
             runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
             runAsUser: {{ .Values.securityContext.runAsUser }}
             allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 {{- toYaml .Values.securityContext.capabilities.drop | nindent 16 }}
@@ -50,5 +54,11 @@ spec:
               port: {{ .Values.frontend.port }}
             initialDelaySeconds: 10
             periodSeconds: 10
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           resources:
             {{- toYaml .Values.frontend.resources | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}

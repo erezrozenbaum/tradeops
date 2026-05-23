@@ -8,6 +8,19 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [2.7.1] — 2026-05-23
+
+### Security
+- **Next.js 14.2.25 → 14.2.35** — resolves GHSA-5j59-xgg2-r9c4 (DoS via Server Components incomplete fix) and GHSA-mwv6-3258-q52c (DoS via Server Components)
+- **starlette ≥1.0.1** — resolves PYSEC-2026-161 (SSRF via malformed HTTP headers, CVE score HIGH)
+- **idna ≥3.15** — resolves PYSEC-2024-114 (ReDoS in IDNA label validation)
+- **urllib3 ≥2.7.0** — resolves CVE-2025-50181 and CVE-2025-50182 (HTTP 1.1 request deserialization issues)
+- **defusedxml ≥0.7.1** (new dep) — replaced `xml.etree.ElementTree` in IBKR broker parser (B314/XXE injection prevention)
+- **great-expectations ≥1.17.0** — floor bumped from 0.18.0 to avoid transitive CVEs in ancient GE versions
+- **Helm KSV-0014** — added `readOnlyRootFilesystem: true` to all containers (backend, wait-for-postgres, wait-for-redis, frontend, postgres, redis) with `emptyDir` mounts for `/tmp`, `/var/run/postgresql`
+- **Helm KSV-0118** — added pod-level `securityContext.seccompProfile.type: RuntimeDefault` to backend-deployment, frontend-deployment, postgres-statefulset, redis-deployment
+- **Ruff** — removed unused imports and fixed bare f-strings across 7 backend modules
+
 ## [2.7.0] — 2026-05-23
 
 ### Added

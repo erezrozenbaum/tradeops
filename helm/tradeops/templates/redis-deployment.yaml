@@ -21,10 +21,20 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 999
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: redis
           image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
           imagePullPolicy: {{ .Values.imagePullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           ports:
             - containerPort: {{ .Values.redis.port }}
           livenessProbe:
@@ -37,6 +47,12 @@ spec:
               command: ["redis-cli", "ping"]
             initialDelaySeconds: 5
             periodSeconds: 5
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           resources:
             {{- toYaml .Values.redis.resources | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
 {{- end }}

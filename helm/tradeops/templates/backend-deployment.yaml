@@ -18,6 +18,9 @@ spec:
         app.kubernetes.io/component: backend
     spec:
       serviceAccountName: {{ include "tradeops.serviceAccountName" . }}
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       {{- if .Values.podAntiAffinity.enabled }}
       affinity:
         podAntiAffinity:
@@ -46,6 +49,7 @@ spec:
             runAsNonRoot: true
             runAsUser: 1000
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
@@ -64,6 +68,7 @@ spec:
             runAsNonRoot: true
             runAsUser: 1000
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
@@ -77,6 +82,7 @@ spec:
             runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
             runAsUser: {{ .Values.securityContext.runAsUser }}
             allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 {{- toYaml .Values.securityContext.capabilities.drop | nindent 16 }}
@@ -188,5 +194,11 @@ spec:
               port: {{ .Values.backend.port }}
             initialDelaySeconds: 10
             periodSeconds: 10
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
