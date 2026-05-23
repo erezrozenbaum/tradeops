@@ -272,6 +272,21 @@ Audit log  ← every significant action recorded with full context
 
 This architecture makes TradeOps auditable by design — not as an afterthought.
 
+### Explainable Financial Cognition (v1.5.0–v2.0.0)
+
+TradeOps goes beyond recommendations to build longitudinal financial understanding:
+
+| Feature | What it does |
+|---|---|
+| **Decision Provenance** | Every AI recommendation, coach insight, and rebalance is recorded with full frozen inputs — risk model snapshot, holdings, market signals, token counts |
+| **Decision Replay** | Re-run any past AI recommendation on its original frozen inputs to test non-determinism and counterfactual reasoning |
+| **Decision Timeline** | Unified chronological feed merging AI events and portfolio transactions; causal notes show portfolio impact in the 7 days following each decision |
+| **Strategy Drift Detection** | Compares actual portfolio tier allocation (low-risk / growth / high-risk) against risk model targets; alignment score 0–100 |
+| **Behavioral Intelligence** | Detects trading patterns (overtrading, long-term discipline, strategy follow-through) from 12 months of transaction history; behavioral score 0–100 |
+| **Performance Attribution** | Breaks portfolio value change into capital deployed, market return, and fees drag; multi-dimensional confidence score per attribution result |
+
+These features share a common foundation: all significant decisions are recorded with deterministic inputs and AI outputs, making the entire decision history queryable, explainable, and auditable.
+
 ---
 
 ## Quickstart

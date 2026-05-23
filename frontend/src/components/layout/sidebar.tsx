@@ -42,6 +42,10 @@ import {
   Receipt,
   Brain,
   GitBranch,
+  Clock,
+  Crosshair,
+  PieChart,
+  Gauge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -96,6 +100,10 @@ const sections = [
       { label: "Pairs Trading", href: "/pairs-trading", icon: ArrowLeftRight },
       { label: "AI Coach", href: "/insights", icon: Brain },
       { label: "Decision Provenance", href: "/decisions", icon: GitBranch },
+      { label: "Decision Timeline", href: "/timeline", icon: Clock },
+      { label: "Strategy Drift", href: "/strategy-drift", icon: Crosshair },
+      { label: "Behavioral Intel", href: "/behavioral", icon: Gauge },
+      { label: "Attribution", href: "/attribution", icon: PieChart },
     ],
   },
   {

@@ -8,6 +8,42 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-05-23
+
+### Added
+- **Performance Attribution** (`GET /investors/{id}/attribution?period=ytd|1y|6m|3m`): breaks down portfolio value change into capital deployed, market return, and fees drag with percentage contribution per factor
+- **Decision Confidence Layers**: multi-dimensional confidence scoring (snapshot recency, price freshness, historical data depth) attached to every attribution result; overall confidence score 0–1
+- **Attribution page** (`/attribution`): period selector, animated factor bars, confidence breakdown panel — new `GlowCard` UI primitive
+- `app/attribution/` module: `schemas.py`, `service.py`, `router.py`
+
+## [1.7.0] — 2026-05-23
+
+### Added
+- **Portfolio Behavioral Intelligence** (`GET /investors/{id}/behavioral-patterns`): analyzes 12 months of transactions to compute holding period stats (avg/median, short/medium/long-term distribution), monthly trade frequency, recommendation follow-through rate
+- Pattern detection: overtrading, short-term bias, long-term discipline, high strategy follow-through, low follow-through, high-frequency activity
+- Behavioral score 0–100 (higher = more disciplined)
+- **Behavioral Intel page** (`/behavioral`): score ring, holding period distribution, monthly activity chart, detected pattern cards with severity classification
+- `app/behavioral_patterns/` module: `schemas.py`, `service.py`, `router.py`
+
+## [1.6.0] — 2026-05-23
+
+### Added
+- **Financial Decision Timeline Engine** (`GET /investors/{id}/timeline?days=30&limit=50`): unified chronological feed merging AI recommendations, coach insights, rebalance events, and portfolio transactions
+- Causal notes: for each AI recommendation or rebalance event, the timeline automatically annotates portfolio value changes in the subsequent 7 days
+- **Timeline page** (`/timeline`): date-grouped timeline with event type filter tabs, time window selector (7/14/30/60/90 days), color-coded event cards with causal context
+- `app/decision_timeline/` module: `schemas.py`, `service.py`, `router.py`
+
+## [1.5.0] — 2026-05-23
+
+### Added
+- **Strategy Drift Detection** (`GET /investors/{id}/strategy-drift`): deterministic comparison of actual portfolio tier allocation vs. risk model targets (low-risk, growth, high-risk); normalizes to tradeable portion excluding locked assets (pension/study funds)
+- Drift status per tier: on_track (< 3%), minor_drift (3–8%), major_drift (> 8%)
+- Alignment score 0–100 derived from RMSE of drift across tiers
+- **Strategy Drift page** (`/strategy-drift`): alignment gauge, per-tier drift bars with target markers, summary and metadata
+- `app/strategy_drift/` module: `schemas.py`, `service.py`, `router.py`
+- Sidebar links: Decision Timeline, Strategy Drift, Behavioral Intel, Attribution (Intelligence section)
+- New `GlowCard` UI primitive (`frontend/src/components/ui/glow-card.tsx`)
+
 ## [1.4.0] — 2026-05-23
 
 ### Added

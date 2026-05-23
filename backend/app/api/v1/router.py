@@ -52,6 +52,10 @@ from app.net_worth.router import router as net_worth_router
 from app.tax_summary.router import router as tax_summary_router
 from app.coach.router import router as coach_router
 from app.provenance.router import router as provenance_router
+from app.strategy_drift.router import router as strategy_drift_router
+from app.decision_timeline.router import router as decision_timeline_router
+from app.behavioral_patterns.router import router as behavioral_patterns_router
+from app.attribution.router import router as attribution_router
 
 api_router = APIRouter()
 
@@ -113,3 +117,7 @@ api_router.include_router(net_worth_router, prefix="/investors/{investor_id}/net
 api_router.include_router(tax_summary_router, prefix="/investors/{investor_id}/tax-summary", tags=["tax-summary"], dependencies=_own)
 api_router.include_router(coach_router, prefix="/investors/{investor_id}/coach", tags=["coach"], dependencies=_own)
 api_router.include_router(provenance_router, prefix="/investors/{investor_id}/decisions", tags=["provenance"], dependencies=_own)
+api_router.include_router(strategy_drift_router, prefix="/investors/{investor_id}/strategy-drift", tags=["strategy-drift"], dependencies=_own)
+api_router.include_router(decision_timeline_router, prefix="/investors/{investor_id}/timeline", tags=["timeline"], dependencies=_own)
+api_router.include_router(behavioral_patterns_router, prefix="/investors/{investor_id}/behavioral-patterns", tags=["behavioral-patterns"], dependencies=_own)
+api_router.include_router(attribution_router, prefix="/investors/{investor_id}/attribution", tags=["attribution"], dependencies=_own)
