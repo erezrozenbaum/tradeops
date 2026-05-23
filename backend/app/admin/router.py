@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from app.admin.dependencies import require_admin
@@ -12,11 +12,19 @@ from app.admin.schemas import (
     AdminProfileOut, AdminStats, AdminUserOut, AssignProfile, RoleUpdate,
     AiUsageSummary, AiUsageFeatureRow, AiUsageUserRow,
     LiveTradingQueueEntry, LiveTradingGateOut,
+    SystemStatus, DataFreshnessItem, DataQualityStatus, BrokerSyncStatus,
 )
 from app.db.session import get_db
 from app.models.investor_profile import InvestorProfile
 from app.models.user import User
 from app.models.ai_usage_log import AiUsageLog
+from app.models.price_snapshot import PriceSnapshot
+from app.models.portfolio_snapshot import PortfolioSnapshot
+from app.models.net_worth import NetWorthSnapshot
+from app.models.fx_rate_history import FxRateHistory
+from app.models.audit_event import AuditEvent
+from app.models.coach_insight import CoachInsight
+from app.models.investment_account import InvestmentAccount
 
 router = APIRouter()
 
@@ -271,4 +279,110 @@ def revoke_live_trading(investor_id: uuid.UUID, db: Session = Depends(get_db), _
         event_type="live_trading.admin_revoked",
         description="Admin disabled live trading",
         investor_profile_id=investor_id,
+    )
+
+
+@router.get("/system-status", response_model=SystemStatus)
+def get_system_status(db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Return live operational status: migration head, worker freshness, DQ results, broker sync."""
+    now = datetime.now(timezone.utc)
+
+    def _freshness(last_at: datetime | None, stale_minutes: int) -> DataFreshnessItem:
+        if last_at is None:
+            return DataFreshnessItem(label="", last_at=None, minutes_ago=None, status="unknown")
+        if last_at.tzinfo is None:
+            last_at = last_at.replace(tzinfo=timezone.utc)
+        ago = int((now - last_at).total_seconds() / 60)
+        status = "ok" if ago <= stale_minutes else "stale"
+        return DataFreshnessItem(label="", last_at=last_at, minutes_ago=ago, status=status)
+
+    # Migration head
+    try:
+        row = db.execute(text("SELECT version_num FROM alembic_version LIMIT 1")).fetchone()
+        migration_head = row[0] if row else None
+    except Exception:
+        migration_head = None
+
+    # Price freshness (stale if >26h — runs at 20:00 UTC daily)
+    latest_price = db.query(func.max(PriceSnapshot.fetched_at)).scalar()
+    price_freshness = _freshness(latest_price, stale_minutes=26 * 60)
+    price_freshness.label = "Price snapshots"
+
+    # FX freshness (stale if >26h)
+    latest_fx_date = db.query(func.max(FxRateHistory.date)).scalar()
+    if latest_fx_date is not None:
+        from datetime import time as dtime
+        fx_dt = datetime.combine(latest_fx_date, dtime(21, 30)).replace(tzinfo=timezone.utc)
+        fx_freshness = _freshness(fx_dt, stale_minutes=26 * 60)
+    else:
+        fx_freshness = DataFreshnessItem(label="", last_at=None, minutes_ago=None, status="unknown")
+    fx_freshness.label = "FX rate history"
+
+    # Portfolio snapshots (stale if >26h)
+    latest_portfolio = db.query(func.max(PortfolioSnapshot.snapshot_at)).scalar()
+    portfolio_freshness = _freshness(latest_portfolio, stale_minutes=26 * 60)
+    portfolio_freshness.label = "Portfolio snapshots"
+
+    # Net worth snapshots (stale if >26h)
+    latest_nw = db.query(func.max(NetWorthSnapshot.snapshot_at)).scalar()
+    nw_freshness = _freshness(latest_nw, stale_minutes=26 * 60)
+    nw_freshness.label = "Net worth snapshots"
+
+    # Coach insights (stale if >26h — runs at 07:45 UTC)
+    latest_coach = db.query(func.max(CoachInsight.generated_at)).scalar()
+    coach_freshness = _freshness(latest_coach, stale_minutes=26 * 60)
+    coach_freshness.label = "Coach insights"
+
+    # Data quality — check audit_events for data_quality_failure events
+    cutoff_24h = now - timedelta(hours=24)
+    dq_failures_24h = (
+        db.query(func.count(AuditEvent.id))
+        .filter(
+            AuditEvent.event_type == "data_quality_failure",
+            AuditEvent.created_at >= cutoff_24h,
+        )
+        .scalar()
+    ) or 0
+    last_dq_failure = (
+        db.query(AuditEvent.created_at)
+        .filter(AuditEvent.event_type == "data_quality_failure")
+        .order_by(AuditEvent.created_at.desc())
+        .first()
+    )
+    dq_status = "failures" if dq_failures_24h > 0 else "clean"
+    data_quality = DataQualityStatus(
+        last_failure_at=last_dq_failure[0] if last_dq_failure else None,
+        failures_last_24h=dq_failures_24h,
+        status=dq_status,
+    )
+
+    # Broker sync
+    auto_sync_accounts = db.query(InvestmentAccount).filter(InvestmentAccount.auto_sync_enabled.is_(True)).all()
+    synced_today = sum(
+        1 for a in auto_sync_accounts
+        if a.last_synced_at and (now - (a.last_synced_at.replace(tzinfo=timezone.utc) if a.last_synced_at.tzinfo is None else a.last_synced_at)).total_seconds() < 86400
+    )
+    last_sync = max(
+        (a.last_synced_at for a in auto_sync_accounts if a.last_synced_at),
+        default=None,
+    )
+    if last_sync and last_sync.tzinfo is None:
+        last_sync = last_sync.replace(tzinfo=timezone.utc)
+    broker_sync = BrokerSyncStatus(
+        total_auto_sync_accounts=len(auto_sync_accounts),
+        synced_last_24h=synced_today,
+        last_sync_at=last_sync,
+    )
+
+    return SystemStatus(
+        migration_head=migration_head,
+        langfuse_enabled=settings.langfuse_enabled,
+        workers_enabled=bool(getattr(settings, "WORKERS_ENABLED", False)),
+        price_freshness=price_freshness,
+        fx_freshness=fx_freshness,
+        portfolio_snapshot=portfolio_freshness,
+        net_worth_snapshot=nw_freshness,
+        coach_insights=coach_freshness,
+        data_quality=data_quality,
+        broker_sync=broker_sync,
     )

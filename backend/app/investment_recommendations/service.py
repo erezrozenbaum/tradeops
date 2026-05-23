@@ -24,6 +24,7 @@ from app.live_market_intel import scanner as market_scanner
 from app.models.investment_account import InvestmentAccount
 from app.models.investor_profile import InvestorProfile
 from app.portfolio_analysis import rebalance_engine, service as portfolio_service
+from app.provenance import recorder as provenance
 from app.risk_modeling import service as rm_service
 from app.tax_rules.service import get_tax_context_for_investor
 
@@ -93,6 +94,28 @@ def get_recommendations(db: Session, investor_id: uuid.UUID) -> RecommendationRe
         input_tokens=in_tok,
         output_tokens=out_tok,
         investor_id=investor_id,
+    )
+
+    # Capture decision provenance before commit
+    recs_summary = raw.get("recommendations", [])
+    provenance.record_decision(
+        db,
+        investor_id=investor_id,
+        decision_type="ai_recommendation",
+        risk_model_snapshot=provenance.snapshot_risk_model(risk_model),
+        holdings_summary=provenance.snapshot_holdings(portfolio_summary),
+        market_signals_snapshot=provenance.snapshot_signals(live_signals),
+        model_used="claude-sonnet-4-6",
+        ai_input_summary=context[:1000] if isinstance(context, str) else None,
+        ai_output_summary=raw.get("overall_guidance", "")[:1000],
+        input_tokens=in_tok,
+        output_tokens=out_tok,
+        output_summary={
+            "overall_guidance": raw.get("overall_guidance", "")[:300],
+            "portfolio_actions": raw.get("portfolio_actions", [])[:3],
+            "recommendation_tickers": [r.get("ticker") for r in recs_summary[:6]],
+        },
+        recommendation_count=len(recs_summary),
     )
     db.commit()
 

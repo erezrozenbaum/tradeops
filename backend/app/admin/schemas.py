@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -86,3 +87,35 @@ class LiveTradingQueueEntry(BaseModel):
     gates: list[LiveTradingGateOut]
     gates_1_2_4_passed: bool
     live_trading_allowed: bool
+
+
+class DataFreshnessItem(BaseModel):
+    label: str
+    last_at: Optional[datetime]
+    minutes_ago: Optional[int]
+    status: str  # "ok" | "stale" | "unknown"
+
+
+class DataQualityStatus(BaseModel):
+    last_failure_at: Optional[datetime]
+    failures_last_24h: int
+    status: str  # "clean" | "failures" | "unknown"
+
+
+class BrokerSyncStatus(BaseModel):
+    total_auto_sync_accounts: int
+    synced_last_24h: int
+    last_sync_at: Optional[datetime]
+
+
+class SystemStatus(BaseModel):
+    migration_head: Optional[str]
+    langfuse_enabled: bool
+    workers_enabled: bool
+    price_freshness: DataFreshnessItem
+    fx_freshness: DataFreshnessItem
+    portfolio_snapshot: DataFreshnessItem
+    net_worth_snapshot: DataFreshnessItem
+    coach_insights: DataFreshnessItem
+    data_quality: DataQualityStatus
+    broker_sync: BrokerSyncStatus

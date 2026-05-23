@@ -8,6 +8,47 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-05-23
+
+### Added
+- **Decision Replay** — `POST /investors/{id}/decisions/{decision_id}/replay`: re-runs the AI recommendation engine using the exact frozen inputs (risk model, holdings, market signals) captured at the original decision time; returns original vs replayed output side-by-side with a diff note
+- Replay result recorded to `recommendation_decisions` as `ai_recommendation_replay` for full auditability
+- Replay UI in the Decision Provenance page: side-by-side original vs replayed tickers and guidance, token usage display, diff note
+
+## [1.3.0] — 2026-05-23
+
+### Added
+- **Decision Provenance page** (`/decisions`): timeline of all recommendation decisions with type filter (Recommendations / Coach / Rebalance); click any entry for full provenance detail
+- Detail panel shows: deterministic inputs (risk model snapshot, holdings, rules fired), AI context (model, tokens, input/output summary, market signals), metadata (decision ID, hash, portfolio snapshot ID)
+- **Sidebar link**: "Decision Provenance" under Intelligence section
+- Backend: `GET /investors/{id}/decisions` (list, filterable by type) and `GET /investors/{id}/decisions/{id}` (detail) — `app.provenance.router`
+
+## [1.2.0] — 2026-05-23
+
+### Added
+- **Migration 0041**: `recommendation_decisions` table — captures every recommendation event with full provenance: portfolio snapshot ID, risk model snapshot, holdings summary, FX rates, price snapshot, market signals, rule results, model used, prompt version, AI input/output summaries, token counts, output summary, decision hash
+- **`RecommendationDecision` SQLAlchemy model** (`app/models/recommendation_decision.py`)
+- **`app/provenance/recorder.py`**: `record_decision()` — fire-and-forget provenance capture; `snapshot_risk_model()`, `snapshot_holdings()`, `snapshot_signals()` helpers
+- Provenance wired into three pipelines:
+  - `investment_recommendations/service.py` — records `ai_recommendation` after every AI call
+  - `coach/service.py` — records `coach_insight` with which rules fired and what was produced
+  - `portfolio_analysis/router.py` — records `rebalance` with tier count and suggested trade count
+
+## [1.1.0] — 2026-05-23
+
+### Added
+- **Admin system status panel** — new `GET /admin/system-status` endpoint returning: migration head, Langfuse enabled/disabled, workers enabled/disabled, freshness of price snapshots / FX rates / portfolio snapshots / net worth snapshots / coach insights (minutes ago + ok/stale/unknown), data quality failures in last 24h, broker auto-sync coverage
+- System Status card added to admin page (`/admin`) — shows freshness grid with colour-coded status, data quality result, and broker sync count; renders above AI Cost
+
+## [1.0.1] — 2026-05-22
+
+### Fixed
+- `alembic/env.py` no longer imports `app.core.config.Settings`; reads `DATABASE_URL` directly from `os.environ` — removes the requirement for `SECRET_KEY` and other app credentials in the CI migration job environment
+
+### Changed
+- `docs/schema.md` version updated to 1.0.0 (was 0.97.0)
+- `README.md`: added **Trust & Safety Architecture** section documenting the deterministic-first enforcement chain, AI tracing, data quality validation, migration CI, audit logging, and all safety gates in one place
+
 ---
 
 ## [1.0.0] — 2026-05-22

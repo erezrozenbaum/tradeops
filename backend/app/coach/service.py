@@ -57,6 +57,24 @@ def refresh_insights(db: Session, investor_id: uuid.UUID, api_key: str | None = 
         candidates = _enrich_with_ai(candidates, api_key)
 
     _persist(db, investor_id, candidates)
+
+    # Capture provenance — which rules fired and what was produced
+    try:
+        from app.provenance import recorder as provenance
+        rule_results = {c.dedup_key: {"type": c.insight_type, "severity": c.severity} for c in candidates}
+        provenance.record_decision(
+            db,
+            investor_id=investor_id,
+            decision_type="coach_insight",
+            rule_results=rule_results,
+            model_used="claude-haiku-4-5-20251001" if api_key else None,
+            output_summary={"insights": [{"key": c.dedup_key, "title": c.title, "severity": c.severity} for c in candidates]},
+            recommendation_count=len(candidates),
+        )
+        db.commit()
+    except Exception:
+        log.debug("provenance recording failed for coach", exc_info=True)
+
     return get_insights(db, investor_id)
 
 

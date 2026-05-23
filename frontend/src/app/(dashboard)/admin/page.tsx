@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Users, UserCircle, Trash2, RefreshCw, Bot, ChevronDown, ChevronRight, Flame, CheckCircle2, XCircle } from "lucide-react";
+import { ShieldCheck, Users, UserCircle, Trash2, RefreshCw, Bot, ChevronDown, ChevronRight, Flame, CheckCircle2, XCircle, Activity, Database, Cpu, Wifi } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -45,6 +45,38 @@ interface LiveTradingQueueEntry {
   gates: LiveTradingGate[];
   gates_1_2_4_passed: boolean;
   live_trading_allowed: boolean;
+}
+
+interface DataFreshnessItem {
+  label: string;
+  last_at: string | null;
+  minutes_ago: number | null;
+  status: "ok" | "stale" | "unknown";
+}
+
+interface DataQualityStatus {
+  last_failure_at: string | null;
+  failures_last_24h: number;
+  status: "clean" | "failures" | "unknown";
+}
+
+interface BrokerSyncStatus {
+  total_auto_sync_accounts: number;
+  synced_last_24h: number;
+  last_sync_at: string | null;
+}
+
+interface SystemStatus {
+  migration_head: string | null;
+  langfuse_enabled: boolean;
+  workers_enabled: boolean;
+  price_freshness: DataFreshnessItem;
+  fx_freshness: DataFreshnessItem;
+  portfolio_snapshot: DataFreshnessItem;
+  net_worth_snapshot: DataFreshnessItem;
+  coach_insights: DataFreshnessItem;
+  data_quality: DataQualityStatus;
+  broker_sync: BrokerSyncStatus;
 }
 
 interface AiFeatureRow {
@@ -153,15 +185,17 @@ export default function AdminPage() {
   const [assignTarget, setAssignTarget] = useState<{ profileId: string; userId: string } | null>(null);
   const [liveQueue, setLiveQueue] = useState<LiveTradingQueueEntry[]>([]);
   const [expandedGates, setExpandedGates] = useState<string | null>(null);
+  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
 
   async function loadAll() {
     try {
-      const [sRes, uRes, pRes, aRes, lRes] = await Promise.all([
+      const [sRes, uRes, pRes, aRes, lRes, ssRes] = await Promise.all([
         fetch("/api/v1/admin/stats"),
         fetch("/api/v1/admin/users"),
         fetch("/api/v1/admin/profiles"),
         fetch(`/api/v1/admin/ai-usage?days=${aiDays}`),
         fetch("/api/v1/admin/live-trading/queue"),
+        fetch("/api/v1/admin/system-status"),
       ]);
       if (sRes.status === 403 || uRes.status === 403) {
         router.push("/dashboard");
@@ -172,6 +206,7 @@ export default function AdminPage() {
       setProfiles(await pRes.json());
       if (aRes.ok) setAiUsage(await aRes.json());
       if (lRes.ok) setLiveQueue(await lRes.json());
+      if (ssRes.ok) setSystemStatus(await ssRes.json());
     } catch {
       setError("Failed to load admin data");
     } finally {
@@ -250,6 +285,119 @@ export default function AdminPage() {
           <div className="rounded-lg border border-border bg-card p-4">
             <p className="text-xs text-muted-foreground mb-1">Unassigned profiles</p>
             <p className="text-2xl font-bold text-amber-500">{stats.unassigned_profiles}</p>
+          </div>
+        </div>
+      )}
+
+      {/* System Status */}
+      {systemStatus && (
+        <div className="rounded-lg border border-border bg-card">
+          <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
+            <Activity className="h-4 w-4 text-muted-foreground" />
+            <h2 className="font-semibold text-sm">System Status</h2>
+            <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+              <span>Migration: <span className="font-mono text-foreground">{systemStatus.migration_head ?? "—"}</span></span>
+              <span className={`flex items-center gap-1 ${systemStatus.langfuse_enabled ? "text-emerald-500" : "text-muted-foreground"}`}>
+                <Cpu className="h-3 w-3" />
+                {systemStatus.langfuse_enabled ? "AI tracing on" : "AI tracing off"}
+              </span>
+              <span className={`flex items-center gap-1 ${systemStatus.workers_enabled ? "text-emerald-500" : "text-amber-500"}`}>
+                <Wifi className="h-3 w-3" />
+                {systemStatus.workers_enabled ? "Workers running" : "Workers disabled"}
+              </span>
+            </div>
+          </div>
+          <div className="p-5 space-y-4">
+            {/* Data freshness grid */}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-3">Worker freshness</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {([
+                  systemStatus.price_freshness,
+                  systemStatus.fx_freshness,
+                  systemStatus.portfolio_snapshot,
+                  systemStatus.net_worth_snapshot,
+                  systemStatus.coach_insights,
+                ] as DataFreshnessItem[]).map((item) => (
+                  <div
+                    key={item.label}
+                    className={`rounded-md border p-3 ${
+                      item.status === "ok"
+                        ? "border-emerald-500/30 bg-emerald-500/5"
+                        : item.status === "stale"
+                        ? "border-amber-500/30 bg-amber-500/5"
+                        : "border-border bg-muted/30"
+                    }`}
+                  >
+                    <p className="text-xs text-muted-foreground mb-1">{item.label}</p>
+                    {item.last_at ? (
+                      <>
+                        <p className={`text-sm font-semibold ${item.status === "ok" ? "text-emerald-500" : item.status === "stale" ? "text-amber-500" : ""}`}>
+                          {item.minutes_ago != null && item.minutes_ago < 60
+                            ? `${item.minutes_ago}m ago`
+                            : item.minutes_ago != null
+                            ? `${Math.round(item.minutes_ago / 60)}h ago`
+                            : "—"}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(item.last_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No data</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Data quality + broker sync */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className={`rounded-md border p-3 flex items-start gap-3 ${
+                systemStatus.data_quality.status === "failures"
+                  ? "border-rose-500/30 bg-rose-500/5"
+                  : systemStatus.data_quality.status === "clean"
+                  ? "border-emerald-500/30 bg-emerald-500/5"
+                  : "border-border bg-muted/30"
+              }`}>
+                <Database className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Data quality (Great Expectations)</p>
+                  <p className={`text-sm font-semibold ${
+                    systemStatus.data_quality.status === "failures" ? "text-rose-500" : "text-emerald-500"
+                  }`}>
+                    {systemStatus.data_quality.status === "failures"
+                      ? `${systemStatus.data_quality.failures_last_24h} failure${systemStatus.data_quality.failures_last_24h !== 1 ? "s" : ""} (24h)`
+                      : systemStatus.data_quality.status === "clean"
+                      ? "Clean"
+                      : "No data"}
+                  </p>
+                  {systemStatus.data_quality.last_failure_at && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Last failure: {new Date(systemStatus.data_quality.last_failure_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-md border border-border bg-muted/30 p-3 flex items-start gap-3">
+                <Wifi className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Broker auto-sync</p>
+                  <p className="text-sm font-semibold">
+                    {systemStatus.broker_sync.synced_last_24h} / {systemStatus.broker_sync.total_auto_sync_accounts} synced today
+                  </p>
+                  {systemStatus.broker_sync.last_sync_at && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Last: {new Date(systemStatus.broker_sync.last_sync_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  )}
+                  {systemStatus.broker_sync.total_auto_sync_accounts === 0 && (
+                    <p className="text-xs text-muted-foreground">No auto-sync accounts configured</p>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

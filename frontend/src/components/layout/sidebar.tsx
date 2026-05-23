@@ -41,6 +41,7 @@ import {
   PiggyBank,
   Receipt,
   Brain,
+  GitBranch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -94,6 +95,7 @@ const sections = [
       { label: "News Feed", href: "/news", icon: Newspaper },
       { label: "Pairs Trading", href: "/pairs-trading", icon: ArrowLeftRight },
       { label: "AI Coach", href: "/insights", icon: Brain },
+      { label: "Decision Provenance", href: "/decisions", icon: GitBranch },
     ],
   },
   {

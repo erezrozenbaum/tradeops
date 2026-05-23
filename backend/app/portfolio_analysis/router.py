@@ -63,7 +63,7 @@ def get_rebalance(investor_id: uuid.UUID, db: Session = Depends(get_db)):
                 unit_price_base=unit_price_base,
             ))
 
-    return rebalance_engine.compute_rebalance(
+    result = rebalance_engine.compute_rebalance(
         investor_id=investor_id,
         risk_model=risk_model,
         asset_allocation=portfolio.asset_allocation,
@@ -71,6 +71,29 @@ def get_rebalance(investor_id: uuid.UUID, db: Session = Depends(get_db)):
         currency=portfolio.base_currency,
         holdings=holdings_info or None,
     )
+
+    # Capture provenance for the rebalancing decision
+    try:
+        from app.provenance import recorder as provenance
+        trade_count = sum(len(t.suggested_trades) for t in result.tiers if t.suggested_trades)
+        provenance.record_decision(
+            db,
+            investor_id=investor_id,
+            decision_type="rebalance",
+            risk_model_snapshot=provenance.snapshot_risk_model(risk_model),
+            holdings_summary=provenance.snapshot_holdings(portfolio),
+            output_summary={
+                "tier_count": len(result.tiers),
+                "suggested_trade_count": trade_count,
+                "notes": result.notes,
+            },
+            recommendation_count=trade_count,
+        )
+        db.commit()
+    except Exception:
+        pass
+
+    return result
 
 
 @router.post("/refresh-prices", response_model=PriceRefreshResult)

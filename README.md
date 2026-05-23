@@ -41,6 +41,7 @@
 - [Philosophy](#philosophy)
 - [Features](#features)
 - [Architecture](#architecture)
+- [Trust & Safety Architecture](#trust--safety-architecture)
 - [Quickstart](#quickstart)
 - [Environment Variables](#environment-variables)
 - [Documentation](#documentation)
@@ -235,6 +236,41 @@ All services run as Docker containers. Helm chart at `helm/tradeops/` for Kubern
 - Every significant action is **audit-logged** with full context.
 
 See [`docs/architecture.md`](docs/architecture.md) for the full module and routing reference.
+
+---
+
+## Trust & Safety Architecture
+
+TradeOps is built deterministic-first. Every layer has a defined role and cannot be bypassed by the layer above it.
+
+```
+User action
+    ↓
+Deterministic Risk Engine  ← always runs first, AI cannot override
+    ↓
+AI decision-support layer  ← interprets, explains, suggests; never executes
+    ↓
+Safety gates (5-check live trading)  ← block live execution unless all pass
+    ↓
+Audit log  ← every significant action recorded with full context
+```
+
+### What this means in practice
+
+| Concern | How it is enforced |
+|---|---|
+| **AI cannot execute trades** | All orders route through the deterministic Risk Engine; AI has no order-placement path |
+| **AI cannot override risk limits** | Risk Engine runs before any AI suggestion is shown; limits are code, not prompts |
+| **Live trading disabled by default** | Requires: paper track record (Sharpe ≥ 0.5, ≥ 30 days) + risk acknowledgment + admin approval |
+| **Every AI call is traced** | Langfuse records feature, model, token counts, input (truncated), output, investor_id for every call |
+| **Financial data quality validated daily** | Great Expectations runs 5 suites at 02:00 UTC; failures written to audit log |
+| **DB migrations tested on every push** | CI runs Alembic upgrade → table count check → downgrade → upgrade on a real Postgres container |
+| **Metrics exposed for monitoring** | Prometheus `/metrics` endpoint; pre-provisioned Grafana dashboard at `:3001` |
+| **All significant actions audit-logged** | Immutable `audit_events` table records every operation with investor context |
+| **Minors are education-only** | `guardian_required` flag enforced at the risk modeling layer; live trading blocked |
+| **The system can say "don't invest yet"** | Financial Stability Score may restrict aggressive strategies; high debt triggers debt-first recommendation |
+
+This architecture makes TradeOps auditable by design — not as an afterthought.
 
 ---
 

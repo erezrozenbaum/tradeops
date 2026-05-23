@@ -25,6 +25,7 @@ from app.models.live_trading import LiveTradingSession, LiveOrder
 from app.models.market_research import MarketResearchSnapshot
 from app.models.net_worth import NetWorthSnapshot
 from app.models.coach_insight import CoachInsight
+from app.models.recommendation_decision import RecommendationDecision
 
 __all__ = [
     "InvestorProfile",
@@ -67,4 +68,5 @@ __all__ = [
     "MarketResearchSnapshot",
     "NetWorthSnapshot",
     "CoachInsight",
+    "RecommendationDecision",
 ]

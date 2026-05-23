@@ -51,6 +51,7 @@ from app.fx_impact.router import router as fx_impact_router
 from app.net_worth.router import router as net_worth_router
 from app.tax_summary.router import router as tax_summary_router
 from app.coach.router import router as coach_router
+from app.provenance.router import router as provenance_router
 
 api_router = APIRouter()
 
@@ -111,3 +112,4 @@ api_router.include_router(fx_impact_router, prefix="/investors/{investor_id}", t
 api_router.include_router(net_worth_router, prefix="/investors/{investor_id}/net-worth", tags=["net-worth"], dependencies=_own)
 api_router.include_router(tax_summary_router, prefix="/investors/{investor_id}/tax-summary", tags=["tax-summary"], dependencies=_own)
 api_router.include_router(coach_router, prefix="/investors/{investor_id}/coach", tags=["coach"], dependencies=_own)
+api_router.include_router(provenance_router, prefix="/investors/{investor_id}/decisions", tags=["provenance"], dependencies=_own)
