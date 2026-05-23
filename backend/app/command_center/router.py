@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.command_center import orchestrator
 from app.command_center.schemas import CommandCenterReport, FinancialStatusHeader
 from app.db.session import get_db
-from app.models.investor_profiles import InvestorProfile
+from app.models.investor_profile import InvestorProfile
 
 router = APIRouter()
 
