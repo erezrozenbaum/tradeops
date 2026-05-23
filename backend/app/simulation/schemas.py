@@ -32,6 +32,12 @@ class SimulationParameters(BaseModel):
     crash_drawdown_pct: Optional[float] = None       # e.g. 30.0 = 30% crash depth
     crash_probability_pct: Optional[float] = None    # annual %, e.g. 15.0
 
+    # counterfactual_rebalance — UUID of the RecommendationDecision to fork from
+    decision_id: Optional[str] = None
+
+    # counterfactual_hold — UUID of the BehavioralRiskEvent (panic_selling)
+    event_id: Optional[str] = None
+
 
 class SimulationRunCreate(BaseModel):
     scenario_type: str   # debt_payoff | savings_increase | job_loss | market_crash | retirement | custom

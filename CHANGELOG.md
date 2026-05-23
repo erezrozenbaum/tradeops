@@ -8,6 +8,18 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [2.6.0] — 2026-05-23
+
+### Added
+- **Counterfactual Replay Engine** — 3 backward-looking scenario types that fork from a historical decision point and compare what would have happened against the actual portfolio path
+  - `counterfactual_rebalance` — "What if I had followed the rebalance recommendation?" Forks from a `RecommendationDecision` record; applies the suggested tier allocation vs the actual allocation using reference return rates (low_risk 4%/yr, growth 8%/yr, high_risk 12%/yr); computes the delta between the counterfactual and actual present value
+  - `counterfactual_constraint` — "What if my allocation constraint had always been enforced?" Finds the earliest `PortfolioSnapshot` where total tier drift exceeded 15%; forks from that point using the RiskModel target allocation
+  - `counterfactual_hold` — "What if I hadn't panic-sold?" Loads a `BehavioralRiskEvent` (panic_selling type); reconstructs the value of each sold position today using `PriceSnapshot` when available (fallback: portfolio growth rate proxy); computes the forgone gain
+- All counterfactuals extend the existing `POST /investors/{id}/simulations` API using new `scenario_type` values — no new routes
+- Counterfactual results include: dual-path trajectory (counterfactual line + actual dashed gray), `delta`, `delta_pct`, `reference_date`, `elapsed_months`, `explanation` narrative, and — for panic-sell — `panic_tickers`, `total_sold`, `estimated_held_value`
+- `ValueError` from counterfactual validation (missing decision, no risk model, non-panic event) now returns HTTP 422 via the existing simulation router
+- **Financial Futures page** (`/futures`) updated: "Counterfactual" scenario section with GitBranch icon; UUID text inputs for `decision_id` / `event_id`; dual-path SVG chart; 4-stat result panel (Counterfactual / Actual / Delta / Delta %); Replay Analysis narrative block
+
 ## [2.5.0] — 2026-05-23
 
 ### Added

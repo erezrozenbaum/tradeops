@@ -268,11 +268,12 @@ backend/app/
 │   ├── schemas.py              # BehavioralRiskEventResponse, BehavioralRiskListResponse, EVENT_TYPE_LABELS
 │   └── router.py               # GET /behavioral-risk, GET /{id}, POST /{id}/resolve, POST /detect
 │
-├── simulation/                 # Financial Futures simulation engine (v2.5.0)
+├── simulation/                 # Financial Futures + Counterfactual Replay engine (v2.5.0–v2.6.0)
 │   ├── engine.py               # Pure-math scenarios: run_debt_payoff, run_savings_increase, run_job_loss, run_market_crash, run_monte_carlo_growth; seeded RNG for reproducibility
-│   ├── service.py              # create_simulation(): loads data_snapshot, dispatches engine, persists result; list/get/save CRUD
-│   ├── schemas.py              # SimulationRunCreate, SimulationParameters, SimulationRunResponse, SimulationListResponse
-│   └── router.py               # POST /simulations, GET /simulations, GET /simulations/{id}, POST /simulations/{id}/save
+│   ├── counterfactuals.py      # Backward-looking replay: run_counterfactual_rebalance, run_counterfactual_constraint, run_counterfactual_hold; tier-weighted reference rates; dual-path results
+│   ├── service.py              # create_simulation(): loads data_snapshot, dispatches engine or counterfactual, persists result; list/get/save CRUD
+│   ├── schemas.py              # SimulationRunCreate, SimulationParameters (incl. decision_id, event_id), SimulationRunResponse, SimulationListResponse
+│   └── router.py               # POST /simulations, GET /simulations, GET /simulations/{id}, POST /simulations/{id}/save; ValueError → 422
 │
 ├── pension_simulation/         # Standalone pension projector
 ├── debt_planner/               # Debt payoff planner (avalanche/snowball)

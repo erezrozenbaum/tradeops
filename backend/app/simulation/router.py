@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -16,7 +16,10 @@ def run_simulation(
     payload: SimulationRunCreate,
     db: Session = Depends(get_db),
 ):
-    return service.create_simulation(db, investor_id, payload)
+    try:
+        return service.create_simulation(db, investor_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 
 
 @router.get("", response_model=SimulationListResponse)

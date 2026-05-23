@@ -9,6 +9,11 @@ from sqlalchemy.orm import Session
 from app.models.financial_profile import FinancialProfile
 from app.models.portfolio_snapshot import PortfolioSnapshot
 from app.models.simulation_run import SimulationRun
+from app.simulation.counterfactuals import (
+    run_counterfactual_constraint,
+    run_counterfactual_hold,
+    run_counterfactual_rebalance,
+)
 from app.simulation.engine import (
     DISCLAIMER,
     run_debt_payoff,
@@ -24,6 +29,7 @@ from app.simulation.schemas import (
 )
 
 _MONTE_CARLO = {"market_crash", "retirement", "custom"}
+_COUNTERFACTUAL = {"counterfactual_rebalance", "counterfactual_constraint", "counterfactual_hold"}
 
 _SCENARIO_NAMES = {
     "debt_payoff": "Accelerated Debt Payoff",
@@ -32,6 +38,9 @@ _SCENARIO_NAMES = {
     "market_crash": "Market Crash Scenario",
     "retirement": "Retirement Projection",
     "custom": "Custom Scenario",
+    "counterfactual_rebalance": "What if I Had Rebalanced?",
+    "counterfactual_constraint": "What if Constraint Was Enforced?",
+    "counterfactual_hold": "What if I Hadn't Panic-Sold?",
 }
 
 
@@ -97,6 +106,8 @@ def _run_engine(
     params: dict,
     snap: dict,
     random_seed: int,
+    db: Session | None = None,
+    investor_id: uuid.UUID | None = None,
 ) -> dict:
     portfolio = snap.get("portfolio_value", 0.0)
     liquid = snap.get("liquid_savings", 0.0)
@@ -156,6 +167,22 @@ def _run_engine(
             random_seed=random_seed,
         )
 
+    if scenario_type in _COUNTERFACTUAL:
+        if db is None or investor_id is None:
+            raise ValueError("Counterfactual scenarios require db and investor_id.")
+        if scenario_type == "counterfactual_rebalance":
+            decision_id_str = params.get("decision_id")
+            if not decision_id_str:
+                raise ValueError("counterfactual_rebalance requires decision_id parameter.")
+            return run_counterfactual_rebalance(db, investor_id, uuid.UUID(decision_id_str))
+        if scenario_type == "counterfactual_constraint":
+            return run_counterfactual_constraint(db, investor_id)
+        if scenario_type == "counterfactual_hold":
+            event_id_str = params.get("event_id")
+            if not event_id_str:
+                raise ValueError("counterfactual_hold requires event_id parameter.")
+            return run_counterfactual_hold(db, investor_id, uuid.UUID(event_id_str))
+
     raise ValueError(f"Unknown scenario_type: {scenario_type!r}")
 
 
@@ -189,12 +216,16 @@ def create_simulation(
     data_snapshot = _load_data_snapshot(db, investor_id)
 
     is_mc = payload.scenario_type in _MONTE_CARLO
+    is_cf = payload.scenario_type in _COUNTERFACTUAL
     random_seed = random.randint(1, 2**31 - 1) if is_mc else None
 
     params = payload.parameters.model_dump(exclude_none=True)
     params["horizon_months"] = payload.horizon_months
 
-    results = _run_engine(payload.scenario_type, params, data_snapshot, random_seed or 42)
+    results = _run_engine(
+        payload.scenario_type, params, data_snapshot, random_seed or 42,
+        db=db, investor_id=investor_id,
+    )
 
     run = SimulationRun(
         id=uuid.uuid4(),
