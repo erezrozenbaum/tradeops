@@ -15,6 +15,7 @@ import { AIThoughtPartnerCard } from "@/components/command-center/AIThoughtPartn
 import { ProgressionCard } from "@/components/command-center/ProgressionCard";
 import { GoalProgressPanel } from "@/components/command-center/GoalProgressPanel";
 import { RefreshCw } from "lucide-react";
+import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -204,50 +205,64 @@ export default function CommandCenterPage() {
       />
 
       {/* Row 1: Actions + Evolution Feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ActionsPanel actions={report.top_actions} variant={variant} />
-        <EvolutionFeed items={report.evolution_feed} variant={variant} />
-      </div>
+      <CollapsibleSection id="actions_feed" title="Actions & Evolution">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ActionsPanel actions={report.top_actions} variant={variant} />
+          <EvolutionFeed items={report.evolution_feed} variant={variant} />
+        </div>
+      </CollapsibleSection>
 
       {/* Row 2: Behavioral Risks + Futures Preview */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <BehavioralRisksPanel risks={report.behavioral_risks} />
-        {variant.showFuturesPreview && (
-          <FuturesPreviewCard data={report.futures_preview} />
-        )}
-        {!variant.showFuturesPreview && (
-          <div className="rounded-xl border bg-cyber-surface/30 p-5 flex items-center justify-center" style={{ borderColor: "hsl(217 30% 12%)" }}>
-            <p className="text-xs text-muted-foreground/40 text-center">
-              Simulation engine unlocks at Discipline stage.<br />Keep building your financial foundation.
-            </p>
-          </div>
-        )}
-      </div>
+      <CollapsibleSection id="risks_futures" title="Risks & Futures">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <BehavioralRisksPanel risks={report.behavioral_risks} />
+          {variant.showFuturesPreview && (
+            <FuturesPreviewCard data={report.futures_preview} />
+          )}
+          {!variant.showFuturesPreview && (
+            <div className="rounded-xl border bg-cyber-surface/30 p-5 flex items-center justify-center" style={{ borderColor: "hsl(217 30% 12%)" }}>
+              <p className="text-xs text-muted-foreground/40 text-center">
+                Simulation engine unlocks at Discipline stage.<br />Keep building your financial foundation.
+              </p>
+            </div>
+          )}
+        </div>
+      </CollapsibleSection>
 
       {/* Row 3: Goals + Health Radar */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <GoalProgressPanel goals={report.goal_progress} />
-        <HealthRadarCard data={report.health_radar} />
-      </div>
+      <CollapsibleSection id="goals_radar" title="Goals & Health">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <GoalProgressPanel goals={report.goal_progress} />
+          <HealthRadarCard data={report.health_radar} />
+        </div>
+      </CollapsibleSection>
 
-      {/* Row 4: Twin Insights (full width on its own row) */}
-      <TwinInsightsCard data={report.twin_insights} variant={variant} />
+      {/* Row 4: Twin Insights */}
+      <CollapsibleSection id="twin_insights" title="Twin Insights">
+        <TwinInsightsCard data={report.twin_insights} variant={variant} />
+      </CollapsibleSection>
 
       {/* Replay Highlight */}
       {variant.showReplayHighlight && report.replay_highlight && (
-        <ReplayHighlightCard data={report.replay_highlight} />
+        <CollapsibleSection id="replay" title="Counterfactual Replay">
+          <ReplayHighlightCard data={report.replay_highlight} />
+        </CollapsibleSection>
       )}
 
       {/* AI Thought Partner */}
-      <AIThoughtPartnerCard
-        summary={report.ai_summary}
-        verbosityUsed={report.ai_summary_verbosity}
-        maturityStageLabel={header.maturity_stage_label}
-        onVerbosityChange={handleVerbosityChange}
-      />
+      <CollapsibleSection id="ai_partner" title="AI Thought Partner">
+        <AIThoughtPartnerCard
+          summary={report.ai_summary}
+          verbosityUsed={report.ai_summary_verbosity}
+          maturityStageLabel={header.maturity_stage_label}
+          onVerbosityChange={handleVerbosityChange}
+        />
+      </CollapsibleSection>
 
       {/* Progression */}
-      <ProgressionCard data={report.progression} />
+      <CollapsibleSection id="progression" title="Progression">
+        <ProgressionCard data={report.progression} />
+      </CollapsibleSection>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/layout/sidebar";
+import { BottomNav } from "@/components/layout/BottomNav";
 import { AuthFetchPatch } from "@/components/layout/auth-fetch-patch";
 import { ChatDrawer } from "@/components/ChatDrawer";
 
@@ -7,8 +8,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen bg-background">
       <AuthFetchPatch />
       <Sidebar />
-      {/* pt-14 mobile top bar; lg:ml-56 matches sidebar width; lg:pt-0 resets */}
-      <main className="flex-1 flex flex-col min-h-screen pt-14 lg:ml-56 lg:pt-0">
+      {/* pt-14: mobile top bar; pb-16: mobile bottom nav; lg overrides clear both */}
+      <main className="flex-1 flex flex-col min-h-screen pt-14 pb-16 lg:ml-56 lg:pt-0 lg:pb-0">
         <div className="flex-1">{children}</div>
         <footer
           className="px-6 py-2.5 text-center text-[11px] text-muted-foreground/50 tracking-wide"
@@ -21,6 +22,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </footer>
       </main>
       <ChatDrawer />
+      <BottomNav />
     </div>
   );
 }

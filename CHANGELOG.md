@@ -8,6 +8,18 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.3.0] — 2026-05-23
+
+### Added
+- **Mobile bottom navigation bar** (`BottomNav.tsx`) — fixed 5-tab bar (Home → `/command-center`, Actions → `/insights`, Health → `/health-radar`, Report → `/agent`, Profile → `/profile`); visible only on mobile (`lg:hidden`); active tab highlighted; layout updated with `pb-16 lg:pb-0` so content is never obscured
+- **Swipe-left to dismiss ActionCard** — on mobile, swipe left ≥ 80px to dismiss an action card for 30 days; dismissed state persisted in `localStorage` (`tradeops_dismissed_actions`); "Dismiss 30d" hint revealed as card slides; cards auto-expire after 30 days
+- **Collapsible Command Center sections** — all 7 content sections (Actions & Evolution, Risks & Futures, Goals & Health, Twin Insights, Counterfactual Replay, AI Thought Partner, Progression) now have a collapse toggle; user preference persisted in `localStorage` (`tradeops_cc_collapsed`); smooth `max-height` CSS transition; chevron rotates to indicate state
+- **`CollapsibleSection` component** (`components/ui/CollapsibleSection.tsx`) — reusable collapsible wrapper with localStorage persistence, accessible `aria-expanded`, smooth animation
+
+### Changed
+- `ActionsPanel.tsx` — swipe-dismiss logic added to `ActionCard`; "Swipe left to dismiss" hint shown on mobile only
+- `DashboardLayout` — `pb-16 lg:pb-0` added to main content area for bottom nav clearance
+
 ## [3.2.0] — 2026-05-23
 
 ### Added
