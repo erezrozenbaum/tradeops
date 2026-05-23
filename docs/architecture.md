@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 2.5.0  
+**Version:** 2.8.0  
 **Last updated:** 2026-05-23
 
 ---
@@ -283,6 +283,13 @@ backend/app/
 │   ├── engine.py               # run_agent(verbosity): stage-adaptive prompt, maturity+twin+behavioral context injection
 │   ├── schemas.py              # AgentReport (incl. maturity_stage, verbosity_used), ActionItem, Opportunity, CapitalThresholdPlan
 │   └── router.py               # GET /agent?verbosity=beginner|standard|advanced
+├── command_center/             # Financial Command Center — daily intelligence hub (v2.8.0)
+│   ├── schemas.py              # CommandCenterReport, FinancialStatusHeader, PrioritizedAction, EvolutionItem, HealthRadarPoint, TwinInsightsData, BehavioralRiskCard, FuturesPreview, ReplayHighlight, InvestorProgression
+│   ├── action_engine.py        # Deterministic ActionPrioritizer: 4 rule categories (EF, behavioral, concentration, contribution); top-3 by composite score; stage-adaptive copy
+│   ├── evolution.py            # EvolutionFeedGenerator: 7-day delta across twin + maturity + behavioral events; negatives first; cap 8
+│   ├── replay_selector.py      # CounterfactualSelector: highest abs(delta) from completed counterfactual runs
+│   ├── orchestrator.py         # build(): ThreadPoolExecutor(6) parallel data fetch + serial AI call → CommandCenterReport
+│   └── router.py               # GET /investors/{id}/command-center?verbosity=beginner|standard|advanced
 ├── transactions/               # Immutable holding transaction log
 ├── price_alerts/               # User-defined price triggers
 ├── economic_calendar/          # Earnings dates for held + watched tickers
@@ -369,6 +376,7 @@ All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`.
 | `/investors/{id}/watchlist` | watchlist | watchlist |
 | `/investors/{id}/notifications` | notifications | notifications |
 | `/investors/{id}/agent` | investment_agent | investment-agent |
+| `/investors/{id}/command-center` | command_center | command-center |
 | `/investors/{id}/transactions` | transactions | transactions |
 | `/investors/{id}/alerts` | price_alerts | price-alerts |
 | `/investors/{id}/calendar` | economic_calendar | economic-calendar |
@@ -459,6 +467,10 @@ Managed by Alembic. Migrations in `backend/alembic/versions/`.
 | `0040` | net_worth_snapshots + coach_insights tables |
 | `0041` | recommendation_decisions table (decision provenance: frozen inputs JSONB, AI metadata, output summary, decision hash) |
 | `0042` | investor_maturity_snapshots table (composite score, stage, component_scores JSONB, features_unlocked JSONB, notes JSONB) |
+| `0043` | financial_twin_snapshots table (8 twin dimensions, overall_score, emotional_risk) |
+| `0044` | behavioral_risk_events table (event_type, severity, status, description, recommendation, detected_at, resolved_at) |
+| `0045` | simulation_runs table (scenario_type, parameters JSONB, results JSONB, status, computed_at) |
+| `0046` | command_center_checkpoints table (investor_id, checkpoint_at, twin_score, maturity_score, active_risks, notes JSONB) |
 
 ### Core tables
 
@@ -543,11 +555,13 @@ frontend/src/
 │   │   ├── health-radar/page.tsx   # Financial Health Radar: 9-sided SVG radar + score bar breakdown (v2.2.0)
 │   │   ├── behavioral-risk/page.tsx # Behavioral Risk: event cards, severity badges, resolve action, scan trigger (v2.3.0)
 │   │   ├── futures/page.tsx        # Financial Futures: scenario builder, SVG trajectory chart, p10/p50/p90 bands, save/history (v2.5.0)
+│   │   ├── command-center/page.tsx # Financial Command Center: status header, prioritized actions, evolution feed, health radar, twin insights, behavioral risks, futures preview, replay highlight, AI Thought Partner, investor progression (v2.8.0)
 │   │   └── settings/page.tsx       # Account and platform info
 │   └── page.tsx                    # Root redirect → /dashboard
 ├── components/ui/                  # Shared UI primitives (Card, Badge, Button, etc.)
 ├── hooks/
-│   └── useInvestorId.ts            # Reads investor ID from localStorage, redirects if absent
+│   ├── useInvestorId.ts            # Reads investor ID from localStorage, redirects if absent
+│   └── useMaturityVariant.ts       # Maps maturity stage → MaturityVariant config (showNumericMetrics, showFuturesPreview, showReplayHighlight, showDragFactors, aiVerbosity, etc.)
 └── lib/
     ├── api.ts                      # Typed API client helpers
     └── utils.ts                    # formatCurrency, formatPercent, cn()

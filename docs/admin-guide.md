@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 1.1.0  
+**Version:** 2.8.0  
 **Last updated:** 2026-05-23
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -171,6 +171,12 @@ Migrations also run automatically on every container start.
 | 0038 | paper_trading_v2: cash_balance on paper_portfolios; strategy/risk_model FKs nullable; paper_positions + paper_orders tables |
 | 0039 | market_research_reports table (JSONB report persistence for history browsing) |
 | 0040 | net_worth_snapshots table (daily portfolio + asset + liability snapshots for Net Worth dashboard) + coach_insights table (persistent AI Coach insights with dedup_key suppression) |
+| 0041 | recommendation_decisions table (decision provenance: frozen inputs JSONB, AI metadata, output summary, decision hash) |
+| 0042 | investor_maturity_snapshots table (composite score, stage, component_scores JSONB, features_unlocked JSONB, notes JSONB) |
+| 0043 | financial_twin_snapshots table (8 twin dimensions, overall_score, emotional_risk) |
+| 0044 | behavioral_risk_events table (event_type, severity, status, description, recommendation, detected_at, resolved_at) |
+| 0045 | simulation_runs table (scenario_type, parameters JSONB, results JSONB, status, computed_at) |
+| 0046 | command_center_checkpoints table (investor_id, checkpoint_at, twin_score, maturity_score, active_risks, notes JSONB) |
 
 ### Creating a new migration
 
@@ -647,6 +653,7 @@ kubectl describe ingress tradeops
 | Recommendations | `/recommendations` | None (on-demand) | Tailored to risk model + goals |
 | Market Research | `/market-research` | 6 hours | Screens 63 instruments; takes 45–60 s cold |
 | AI Agent | `/agent?verbosity=beginner\|standard\|advanced` | None | Maturity-aware Thought Partner — adapts tone to investor's stage; injects twin, behavioral risk, and maturity context into every prompt |
+| Command Center | `/command-center?verbosity=beginner\|standard\|advanced` | None | Daily intelligence hub: status header, prioritized actions, evolution feed, health radar, twin insights, behavioral risks, futures preview, replay highlight, AI summary, investor progression. Parallel data fetch (6 workers) + serial AI call. Rendering gated by maturity stage. |
 
 ### Market data features (no API key needed — yfinance)
 
@@ -737,6 +744,8 @@ kubectl describe ingress tradeops
 | Financial Twin + Health Radar | `financial_twin/` + migration 0043 | Financial Twin: 8-dimensional behavioral/financial snapshot (financial_stability, behavioral_discipline, emotional_risk, portfolio_consistency, financial_resilience, risk_alignment, long_term_discipline, contribution_momentum). Health Radar: 9-dimensional health snapshot (stability, liquidity, discipline, diversification, emotional_control, contribution_consistency, tax_efficiency, risk_alignment, financial_resilience). Both computed in one service call to avoid duplicate queries. Daily background job `compute_twin_daily` runs at 03:00 UTC. Auto-computes on first GET. Applied in v2.2.0. |
 | Simulation Engine (Financial Futures) | `simulation/` + migration 0045 | 6 scenario types: 3 deterministic (`debt_payoff`, `savings_increase`, `job_loss`) using compound/drawdown formulas; 3 Monte Carlo (`market_crash`, `retirement`, `custom`) using 1 000 seeded iterations (reproducible via stored `random_seed`). All runs persist parameters + frozen `data_snapshot` + results (p10/p50/p90 trajectory) to `simulation_runs`. Required disclaimer on every response. `simulation_comparison_sets` table for grouping runs. Frontend: `/futures` page with scenario builder + SVG trajectory chart. Applied in v2.5.0. |
 | Counterfactual Replay | `simulation/counterfactuals.py` (no new migration) | 3 backward-looking what-if replays using the same `simulation_runs` table and `POST /investors/{id}/simulations` API. `counterfactual_rebalance`: forks from `RecommendationDecision`; compares actual vs suggested tier allocation using reference rates (low_risk=4%, growth=8%, high_risk=12%/yr). `counterfactual_constraint`: forks from first PortfolioSnapshot where tier drift >15% vs RiskModel targets. `counterfactual_hold`: reconstructs value of panic-sold positions today (PriceSnapshot or growth-rate fallback). Results include dual-path trajectory (counterfactual + actual), delta, delta_pct, explanation. `ValueError` → HTTP 422. Applied in v2.6.0. |
+| Maturity-Aware AI Agent | `investment_agent/` | Adaptive AI Thought Partner using `claude-sonnet-4-6`. Verbosity=beginner: plain language, no jargon. Verbosity=standard: balanced guidance. Verbosity=advanced: institutional framing. Injects maturity stage, financial twin dimensions, behavioral risk summary, and active flags into every prompt. Returns `AgentReport` (portfolio_assessment, verbosity_used, actions, opportunities). Applied in v2.7.0. |
+| Financial Command Center | `command_center/` + migration 0046 | Unified daily intelligence page. `GET /investors/{id}/command-center` assembles 9 data sections in parallel (ThreadPoolExecutor × 6) + 1 serial AI call. Sections: `FinancialStatusHeader` (twin score 7d delta, stability score, net worth 12m change), `PrioritizedAction` top-3 (deterministic rule engine: EF gap, behavioral risk, concentration, contribution), `EvolutionItem` feed (7-day delta across twin + maturity + behavioral events; negatives first; cap 8), `HealthRadarPoint` list, `TwinInsightsData` (positive drivers + drag factors), `BehavioralRiskCard` list, `FuturesPreview` (downsampled p50 trajectory × 3 scenarios), `ReplayHighlight` (highest-abs-delta counterfactual), `InvestorProgression` (stage roadmap + features_unlocked + score_to_next). Frontend: maturity-gated via `useMaturityVariant` hook — foundation stage hides futures/replay/drag factors/numeric metrics. Applied in v2.8.0. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.
