@@ -5,6 +5,7 @@ import uuid
 from sqlalchemy.orm import Session
 
 from app.command_center.schemas import ActionSeverity, PrioritizedAction
+from app.goals_analysis.schemas import GoalsAnalysisResult
 from app.models.behavioral_risk_event import BehavioralRiskEvent
 
 
@@ -91,6 +92,29 @@ def _concentration_actions(db: Session, investor_id: uuid.UUID, style: str) -> l
     return []
 
 
+def _goal_actions(goals_result: GoalsAnalysisResult | None, style: str) -> list[_Candidate]:
+    if not goals_result:
+        return []
+    actions: list[_Candidate] = []
+    for g in goals_result.goals:
+        if g.status != "at_risk":
+            continue
+        months_behind = ""
+        if g.months_to_target is not None:
+            months_behind = f" ({g.months_to_target:.0f} months remaining)"
+        sev = ActionSeverity.high if g.progress_pct < 50 else ActionSeverity.medium
+        score = 68.0 if sev == ActionSeverity.high else 44.0
+        if style == "plain":
+            title = f'Goal "{g.name}" is falling behind'
+            rationale = f"You're at {g.progress_pct:.0f}% progress{months_behind}. Consider increasing your monthly contribution."
+        else:
+            contrib = f" Required: {g.monthly_contribution_needed:,.0f} {g.currency}/mo." if g.monthly_contribution_needed else ""
+            title = f'Goal at risk: "{g.name}" ({g.progress_pct:.0f}%)'
+            rationale = f"Progress below trajectory{months_behind}.{contrib}"
+        actions.append((title, rationale, sev, "high", False, f"goal_{g.id}", score, "/goals"))
+    return actions
+
+
 def _contribution_actions(db: Session, investor_id: uuid.UUID, style: str) -> list[_Candidate]:
     from app.models.holding_transaction import HoldingTransaction
     from datetime import datetime, timedelta, timezone
@@ -120,6 +144,7 @@ def generate_top_actions(
     db: Session,
     investor_id: uuid.UUID,
     maturity_stage: str | None,
+    goals_result: GoalsAnalysisResult | None = None,
 ) -> list[PrioritizedAction]:
     from app.financial_profiles.service import compute_effective_ef_months, get_by_investor
 
@@ -146,6 +171,13 @@ def generate_top_actions(
     candidates.extend(_behavioral_actions(active_risks, style))
     candidates.extend(_concentration_actions(db, investor_id, style))
     candidates.extend(_contribution_actions(db, investor_id, style))
+
+    # Goals: surface the single highest-priority at-risk goal as one "goals" slot
+    goal_candidates = _goal_actions(goals_result, style)
+    if goal_candidates:
+        best_goal = max(goal_candidates, key=lambda x: x[6])
+        # Normalise category to "goals" so it competes as one slot
+        candidates.append((best_goal[0], best_goal[1], best_goal[2], best_goal[3], best_goal[4], "goals", best_goal[6], best_goal[7]))
 
     # Deduplicate by category (keep highest-score per category)
     seen: dict[str, _Candidate] = {}

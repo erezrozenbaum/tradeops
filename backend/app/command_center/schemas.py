@@ -106,6 +106,20 @@ class FinancialStatusHeader(BaseModel):
     active_behavioral_risk_count: int
 
 
+class GoalProgressItem(BaseModel):
+    id: str
+    name: str
+    goal_type: str
+    progress_pct: float
+    months_to_target: float | None
+    on_track: bool
+    status: str          # "complete" | "on_track" | "at_risk" | "no_date" | "needs_log"
+    currency: str
+    target_amount: float
+    current_amount: float
+    monthly_contribution_needed: float | None
+
+
 class CommandCenterReport(BaseModel):
     header: FinancialStatusHeader
     top_actions: list[PrioritizedAction]
@@ -118,5 +132,6 @@ class CommandCenterReport(BaseModel):
     ai_summary: str
     ai_summary_verbosity: str
     progression: InvestorProgression
+    goal_progress: list[GoalProgressItem]
     maturity_stage: str
     generated_at: datetime

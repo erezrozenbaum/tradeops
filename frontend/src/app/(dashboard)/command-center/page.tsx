@@ -13,6 +13,7 @@ import { FuturesPreviewCard } from "@/components/command-center/FuturesPreviewCa
 import { ReplayHighlightCard } from "@/components/command-center/ReplayHighlightCard";
 import { AIThoughtPartnerCard } from "@/components/command-center/AIThoughtPartnerCard";
 import { ProgressionCard } from "@/components/command-center/ProgressionCard";
+import { GoalProgressPanel } from "@/components/command-center/GoalProgressPanel";
 import { RefreshCw } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -82,6 +83,19 @@ interface CommandCenterReport {
     next_unlock_feature: string | null;
     score_to_next_stage: number | null;
   };
+  goal_progress: Array<{
+    id: string;
+    name: string;
+    goal_type: string;
+    progress_pct: number;
+    months_to_target: number | null;
+    on_track: boolean;
+    status: string;
+    currency: string;
+    target_amount: number;
+    current_amount: number;
+    monthly_contribution_needed: number | null;
+  }>;
   maturity_stage: string;
   generated_at: string;
 }
@@ -210,11 +224,14 @@ export default function CommandCenterPage() {
         )}
       </div>
 
-      {/* Row 3: Health Radar + Twin Insights */}
+      {/* Row 3: Goals + Health Radar */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <GoalProgressPanel goals={report.goal_progress} />
         <HealthRadarCard data={report.health_radar} />
-        <TwinInsightsCard data={report.twin_insights} variant={variant} />
       </div>
+
+      {/* Row 4: Twin Insights (full width on its own row) */}
+      <TwinInsightsCard data={report.twin_insights} variant={variant} />
 
       {/* Replay Highlight */}
       {variant.showReplayHighlight && report.replay_highlight && (

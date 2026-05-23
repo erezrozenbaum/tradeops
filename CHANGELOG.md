@@ -8,6 +8,17 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [2.9.0] — 2026-05-23
+
+### Added
+- **Goal Progress Panel** (`GoalProgressPanel`) — top-2 goals surfaced directly on the Command Center; sorted by urgency (at-risk first, then largest relative gap); shows progress bar, status badge, months remaining, and required monthly contribution for at-risk goals
+- **Goal-Aware Action Engine** — `_goal_actions()` rule added; at-risk goals with `progress_pct < 50` generate a high-severity action slot ("goals" category); the highest-priority at-risk goal competes in the top-3 action ranking alongside safety, behavior, and portfolio signals
+- **Goals fetched in parallel** — `_fetch_goals()` added to the orchestrator's `ThreadPoolExecutor` (now 7 workers); no added latency since goal analysis already runs in background
+- **`GoalProgressItem`** schema added to `CommandCenterReport`; `goal_progress: list[GoalProgressItem]` field added to the report
+
+### Changed
+- Command Center layout: Goal Progress + Health Radar now share a row (row 3); Twin Insights moved to its own row below for better visual balance
+
 ## [2.8.0] — 2026-05-23
 
 ### Added

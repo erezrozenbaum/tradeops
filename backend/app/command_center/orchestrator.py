@@ -15,6 +15,7 @@ from app.command_center.schemas import (
     FinancialStatusHeader,
     FuturesPath,
     FuturesPreview,
+    GoalProgressItem,
     HealthRadarPoint,
     InvestorProgression,
     ProgressionStage,
@@ -201,6 +202,41 @@ def _build_futures_preview(db: Session, investor_id: uuid.UUID) -> FuturesPrevie
     return FuturesPreview(paths=paths, fi_probability=None, has_data=len(paths) > 0)
 
 
+def _build_goal_progress(db: Session, investor_id: uuid.UUID) -> list[GoalProgressItem]:
+    from app.goals_analysis.service import get_analysis
+
+    try:
+        result = get_analysis(db, investor_id)
+        if not result or not result.goals:
+            return []
+
+        # Sort: at_risk first, then by largest relative gap (most behind)
+        def _priority(g):
+            status_rank = 0 if g.status == "at_risk" else (1 if g.status == "on_track" else 2)
+            gap_ratio = (g.target_amount - g.current_amount) / g.target_amount if g.target_amount > 0 else 0
+            return (status_rank, -gap_ratio)
+
+        sorted_goals = sorted(result.goals, key=_priority)[:2]
+        return [
+            GoalProgressItem(
+                id=str(g.id),
+                name=g.name,
+                goal_type=g.goal_type,
+                progress_pct=round(g.progress_pct, 1),
+                months_to_target=round(g.months_to_target, 1) if g.months_to_target is not None else None,
+                on_track=g.on_track,
+                status=g.status,
+                currency=g.currency,
+                target_amount=g.target_amount,
+                current_amount=g.current_amount,
+                monthly_contribution_needed=round(g.monthly_contribution_needed, 0) if g.monthly_contribution_needed is not None else None,
+            )
+            for g in sorted_goals
+        ]
+    except Exception:
+        return []
+
+
 def _build_progression(maturity: InvestorMaturitySnapshot | None) -> InvestorProgression:
     from app.investor_maturity.schemas import FEATURES_BY_STAGE
 
@@ -282,13 +318,18 @@ def build(db: Session, investor_id: uuid.UUID, verbosity: str = "standard") -> C
             .all()
         )
 
-    with ThreadPoolExecutor(max_workers=6) as executor:
+    def _fetch_goals():
+        from app.goals_analysis.service import get_analysis
+        return get_analysis(db, investor_id)
+
+    with ThreadPoolExecutor(max_workers=7) as executor:
         f_maturity = executor.submit(_fetch_maturity)
         f_twin = executor.submit(_fetch_twin_current)
         f_twin_prev = executor.submit(_fetch_twin_prev)
         f_risks = executor.submit(_fetch_active_risks)
         f_evolution = executor.submit(generate_evolution_feed, db, investor_id)
         f_replay = executor.submit(select_best_replay, db, investor_id)
+        f_goals = executor.submit(_fetch_goals)
 
         maturity = f_maturity.result()
         twin_current = f_twin.result()
@@ -296,11 +337,12 @@ def build(db: Session, investor_id: uuid.UUID, verbosity: str = "standard") -> C
         active_risks = f_risks.result()
         evolution_feed = f_evolution.result()
         replay_highlight = f_replay.result()
+        goals_result = f_goals.result()
 
     stage = maturity.stage if maturity else "foundation"
 
     header = _build_header(db, investor_id, maturity, twin_current, twin_prev, len(active_risks))
-    top_actions = generate_top_actions(db, investor_id, stage)
+    top_actions = generate_top_actions(db, investor_id, stage, goals_result)
     health_radar = _build_health_radar(db, investor_id)
     twin_insights = _build_twin_insights(twin_current)
     behavioral_risks = [
@@ -314,6 +356,7 @@ def build(db: Session, investor_id: uuid.UUID, verbosity: str = "standard") -> C
     ]
     futures_preview = _build_futures_preview(db, investor_id)
     progression = _build_progression(maturity)
+    goal_progress = _build_goal_progress(db, investor_id)
 
     # AI summary — serial, uses full context
     ai_summary = ""
@@ -337,6 +380,7 @@ def build(db: Session, investor_id: uuid.UUID, verbosity: str = "standard") -> C
         ai_summary=ai_summary,
         ai_summary_verbosity=ai_verbosity,
         progression=progression,
+        goal_progress=goal_progress,
         maturity_stage=stage,
         generated_at=now,
     )
