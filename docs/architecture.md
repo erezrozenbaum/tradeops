@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 2.8.0  
+**Version:** 2.9.0  
 **Last updated:** 2026-05-23
 
 ---
@@ -283,12 +283,12 @@ backend/app/
 │   ├── engine.py               # run_agent(verbosity): stage-adaptive prompt, maturity+twin+behavioral context injection
 │   ├── schemas.py              # AgentReport (incl. maturity_stage, verbosity_used), ActionItem, Opportunity, CapitalThresholdPlan
 │   └── router.py               # GET /agent?verbosity=beginner|standard|advanced
-├── command_center/             # Financial Command Center — daily intelligence hub (v2.8.0)
-│   ├── schemas.py              # CommandCenterReport, FinancialStatusHeader, PrioritizedAction, EvolutionItem, HealthRadarPoint, TwinInsightsData, BehavioralRiskCard, FuturesPreview, ReplayHighlight, InvestorProgression
-│   ├── action_engine.py        # Deterministic ActionPrioritizer: 4 rule categories (EF, behavioral, concentration, contribution); top-3 by composite score; stage-adaptive copy
+├── command_center/             # Financial Command Center — daily intelligence hub (v2.8.0–v2.9.0)
+│   ├── schemas.py              # CommandCenterReport, FinancialStatusHeader, PrioritizedAction, EvolutionItem, HealthRadarPoint, TwinInsightsData, BehavioralRiskCard, FuturesPreview, ReplayHighlight, InvestorProgression, GoalProgressItem (v2.9.0)
+│   ├── action_engine.py        # Deterministic ActionPrioritizer: 5 rule categories (EF, behavioral, concentration, contribution, goals); top-3 by composite score; stage-adaptive copy; _goal_actions() added v2.9.0
 │   ├── evolution.py            # EvolutionFeedGenerator: 7-day delta across twin + maturity + behavioral events; negatives first; cap 8
 │   ├── replay_selector.py      # CounterfactualSelector: highest abs(delta) from completed counterfactual runs
-│   ├── orchestrator.py         # build(): ThreadPoolExecutor(6) parallel data fetch + serial AI call → CommandCenterReport
+│   ├── orchestrator.py         # build(): ThreadPoolExecutor(7) parallel data fetch (incl. goals v2.9.0) + serial AI call → CommandCenterReport
 │   └── router.py               # GET /investors/{id}/command-center?verbosity=beginner|standard|advanced
 ├── transactions/               # Immutable holding transaction log
 ├── price_alerts/               # User-defined price triggers
@@ -555,13 +555,25 @@ frontend/src/
 │   │   ├── health-radar/page.tsx   # Financial Health Radar: 9-sided SVG radar + score bar breakdown (v2.2.0)
 │   │   ├── behavioral-risk/page.tsx # Behavioral Risk: event cards, severity badges, resolve action, scan trigger (v2.3.0)
 │   │   ├── futures/page.tsx        # Financial Futures: scenario builder, SVG trajectory chart, p10/p50/p90 bands, save/history (v2.5.0)
-│   │   ├── command-center/page.tsx # Financial Command Center: status header, prioritized actions, evolution feed, health radar, twin insights, behavioral risks, futures preview, replay highlight, AI Thought Partner, investor progression (v2.8.0)
+│   │   ├── command-center/page.tsx # Financial Command Center: status header, prioritized actions, evolution feed, goal progress, health radar, twin insights, behavioral risks, futures preview, replay highlight, AI Thought Partner, investor progression (v2.8.0–v2.9.0)
 │   │   └── settings/page.tsx       # Account and platform info
 │   └── page.tsx                    # Root redirect → /dashboard
 ├── components/ui/                  # Shared UI primitives (Card, Badge, Button, etc.)
 ├── hooks/
 │   ├── useInvestorId.ts            # Reads investor ID from localStorage, redirects if absent
 │   └── useMaturityVariant.ts       # Maps maturity stage → MaturityVariant config (showNumericMetrics, showFuturesPreview, showReplayHighlight, showDragFactors, aiVerbosity, etc.)
+├── components/command-center/      # Command Center section components
+│   ├── StatusHeader.tsx            # Twin score + delta + maturity stage + trend pills
+│   ├── ActionsPanel.tsx            # Top-3 priority action cards
+│   ├── EvolutionFeed.tsx           # 7-day financial delta feed
+│   ├── GoalProgressPanel.tsx       # Top-2 goals with progress bars + status badges (v2.9.0)
+│   ├── HealthRadarCard.tsx         # 9-axis recharts RadarChart
+│   ├── TwinInsightsCard.tsx        # Positive drivers + drag factors bars
+│   ├── BehavioralRisksPanel.tsx    # Active risk event cards
+│   ├── FuturesPreviewCard.tsx      # 3-path simplified trajectory chart
+│   ├── ReplayHighlightCard.tsx     # Best counterfactual one-liner
+│   ├── AIThoughtPartnerCard.tsx    # AI summary + verbosity toggle
+│   └── ProgressionCard.tsx         # Stage roadmap + unlocked features
 └── lib/
     ├── api.ts                      # Typed API client helpers
     └── utils.ts                    # formatCurrency, formatPercent, cn()
