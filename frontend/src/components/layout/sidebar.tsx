@@ -46,6 +46,7 @@ import {
   Crosshair,
   PieChart,
   Gauge,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -104,6 +105,7 @@ const sections = [
       { label: "Strategy Drift", href: "/strategy-drift", icon: Crosshair },
       { label: "Behavioral Intel", href: "/behavioral", icon: Gauge },
       { label: "Attribution", href: "/attribution", icon: PieChart },
+      { label: "Investor Maturity", href: "/maturity", icon: Trophy },
     ],
   },
   {

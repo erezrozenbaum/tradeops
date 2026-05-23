@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 2.0.1  
+**Version:** 2.1.0  
 **Last updated:** 2026-05-23
 
 ---
@@ -253,6 +253,11 @@ backend/app/
 │   ├── schemas.py              # PerformanceAttribution, AttributionFactor, ConfidenceLayer
 │   └── router.py               # GET /investors/{id}/attribution?period=ytd|1y|6m|3m
 │
+├── investor_maturity/          # Investor maturity engine — 4-stage scoring (v2.1.0)
+│   ├── service.py              # 8 weighted components → composite 0-100 score → Foundation/Discipline/Optimization/Advanced Cognition
+│   ├── schemas.py              # MaturitySnapshot, ComponentScores, STAGE_LABELS, FEATURES_BY_STAGE
+│   └── router.py               # GET /investors/{id}/maturity, GET /maturity/history, POST /maturity/refresh
+│
 ├── pension_simulation/         # Standalone pension projector
 ├── debt_planner/               # Debt payoff planner (avalanche/snowball)
 ├── watchlist/                  # Per-investor ticker watchlist
@@ -365,6 +370,7 @@ All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`.
 | `/investors/{id}/timeline` | decision_timeline | timeline |
 | `/investors/{id}/behavioral-patterns` | behavioral_patterns | behavioral-patterns |
 | `/investors/{id}/attribution` | attribution | attribution |
+| `/investors/{id}/maturity` | investor_maturity | maturity |
 | `/market` | market_data | market-data (REST + SSE) |
 | `/investors/{id}/accounts` | holdings | holdings |
 | `/investors/{id}/accounts/{id}/holdings` | holdings | holdings |
@@ -432,6 +438,7 @@ Managed by Alembic. Migrations in `backend/alembic/versions/`.
 | `0039` | market_research_reports table (JSONB persistence) |
 | `0040` | net_worth_snapshots + coach_insights tables |
 | `0041` | recommendation_decisions table (decision provenance: frozen inputs JSONB, AI metadata, output summary, decision hash) |
+| `0042` | investor_maturity_snapshots table (composite score, stage, component_scores JSONB, features_unlocked JSONB, notes JSONB) |
 
 ### Core tables
 
@@ -511,6 +518,7 @@ frontend/src/
 │   │   ├── timeline/page.tsx       # Financial Decision Timeline: date-grouped event feed (v1.6.0)
 │   │   ├── behavioral/page.tsx     # Behavioral Intelligence: score ring, holding periods, patterns (v1.7.0)
 │   │   ├── attribution/page.tsx    # Performance Attribution: factor bars + confidence breakdown (v2.0.0)
+│   │   ├── maturity/page.tsx       # Investor Maturity: score arc, stage roadmap, component bars (v2.1.0)
 │   │   └── settings/page.tsx       # Account and platform info
 │   └── page.tsx                    # Root redirect → /dashboard
 ├── components/ui/                  # Shared UI primitives (Card, Badge, Button, etc.)
@@ -804,6 +812,7 @@ The sections above describe the baseline architecture at v0.29.0. All additions 
 | `fx_history_sync` | Daily 21:30 UTC | Syncs yesterday's FX rates for all active currency pairs |
 | `net_worth_snapshot` | Daily 21:15 UTC | Writes daily net worth snapshot for all investors |
 | `coach_refresh` | Daily 07:45 UTC | Refreshes AI Coach insights for all investors |
+| `maturity_weekly` | Saturday 06:00 UTC | Computes investor maturity snapshots for all investors |
 
 ### API endpoints added (v0.30–v0.63)
 

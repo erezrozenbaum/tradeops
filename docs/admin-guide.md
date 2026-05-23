@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 1.0.1  
+**Version:** 1.1.0  
 **Last updated:** 2026-05-23
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -730,6 +730,7 @@ kubectl describe ingress tradeops
 | Prometheus + Grafana | `core/telemetry.py` + `infra/` | Prometheus at :9090 scrapes `/metrics` (request rate, latency p50/p95/p99, error rate, in-progress). Grafana at :3001 with pre-provisioned TradeOps dashboard. Optional OTLP export via `OTEL_EXPORTER_OTLP_ENDPOINT`. Applied in v1.0.0. |
 | Great Expectations | `data_quality/` | 5 expectation suites: holdings, fx_rates, price_snapshots, portfolio_snapshots, transactions. Daily job at 02:00 UTC. Violations → audit events. Applied in v1.0.0. |
 | Migration Safety CI | `.github/workflows/ci.yml` | `migration-test` job: real Postgres 16, upgrade head, table count check, downgrade -1, round-trip. Backend Docker image gated on this job. Applied in v1.0.0. |
+| Investor Maturity Engine | `investor_maturity/` + migration 0042 | Deterministic 4-stage investor maturity scoring: Foundation (<25), Discipline (25-49), Optimization (50-74), Advanced Cognition (≥75). 8 weighted components reuse existing financial scoring, behavioral patterns, and strategy drift services. Weekly background job `compute_maturity_weekly` runs every Saturday 06:00 UTC. On-demand compute via `GET /investors/{id}/maturity` (auto-computes on first access) or `POST /maturity/refresh`. Applied in v2.1.0. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.

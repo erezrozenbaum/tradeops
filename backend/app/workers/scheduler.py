@@ -43,6 +43,7 @@ def _register_jobs() -> None:
     from app.workers.jobs.net_worth_snapshot import write_net_worth_snapshots
     from app.workers.jobs.coach_refresh import refresh_all_coach_insights
     from app.workers.jobs.data_quality_check import run_data_quality_checks
+    from app.workers.jobs.maturity_weekly import compute_all_maturity_scores
 
     _scheduler.add_job(
         refresh_all_prices,
@@ -151,6 +152,13 @@ def _register_jobs() -> None:
         replace_existing=True,
         misfire_grace_time=3600,
     )
+    _scheduler.add_job(
+        compute_all_maturity_scores,
+        CronTrigger(day_of_week="sat", hour=6, minute=0),  # Saturday 06:00 UTC
+        id="maturity_weekly",
+        replace_existing=True,
+        misfire_grace_time=7200,
+    )
 
 
 def start() -> None:
@@ -164,7 +172,7 @@ def start() -> None:
         "Workers scheduler started (jobs: price_refresh, snapshot_writer, price_alert_checker, "
         "goal_evaluation, proactive_insights, notification_alerts, broker_auto_sync, weekly_digest, "
         "market_prewarm, research_prewarm, sentiment_signals, fx_history_sync, net_worth_snapshot, "
-        "coach_refresh, data_quality_check)"
+        "coach_refresh, data_quality_check, maturity_weekly)"
     )
 
 

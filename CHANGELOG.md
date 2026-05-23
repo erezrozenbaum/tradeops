@@ -8,6 +8,15 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-05-23
+
+### Added
+- **Investor Maturity Engine** (`GET /investors/{id}/maturity`, `GET /maturity/history`, `POST /maturity/refresh`): deterministic 4-stage investor scoring system — Foundation → Discipline → Optimization → Advanced Cognition
+- **8 scoring components** (weighted): Financial Stability (20%), Debt Discipline (15%), Savings Consistency (15%), Emotional Discipline (15%), Strategy Consistency (15%), Contribution Regularity (10%), Data Maturity (5%), Portfolio Complexity (5%)
+- **`investor_maturity_snapshots` table** (migration 0042): stores composite score, stage, per-component scores, features unlocked, and improvement notes
+- **`compute_maturity_weekly` background job** (Saturday 06:00 UTC): recomputes maturity snapshots for all investors
+- **Maturity page** (`/maturity`): score arc gauge, stage roadmap with progress indicators, per-component bars with weights, features unlocked grid, actionable next-step notes
+
 ## [2.0.1] — 2026-05-23
 
 ### Fixed

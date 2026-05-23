@@ -56,6 +56,7 @@ from app.strategy_drift.router import router as strategy_drift_router
 from app.decision_timeline.router import router as decision_timeline_router
 from app.behavioral_patterns.router import router as behavioral_patterns_router
 from app.attribution.router import router as attribution_router
+from app.investor_maturity.router import router as investor_maturity_router
 
 api_router = APIRouter()
 
@@ -121,3 +122,4 @@ api_router.include_router(strategy_drift_router, prefix="/investors/{investor_id
 api_router.include_router(decision_timeline_router, prefix="/investors/{investor_id}/timeline", tags=["timeline"], dependencies=_own)
 api_router.include_router(behavioral_patterns_router, prefix="/investors/{investor_id}/behavioral-patterns", tags=["behavioral-patterns"], dependencies=_own)
 api_router.include_router(attribution_router, prefix="/investors/{investor_id}/attribution", tags=["attribution"], dependencies=_own)
+api_router.include_router(investor_maturity_router, prefix="/investors/{investor_id}/maturity", tags=["maturity"], dependencies=_own)

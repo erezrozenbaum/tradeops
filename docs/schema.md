@@ -1,8 +1,8 @@
 # TradeOps AI — Database Schema Reference
 
-**Version:** 2.0.0  
+**Version:** 2.1.0  
 **Last updated:** 2026-05-23  
-**Migration head:** 0041
+**Migration head:** 0042
 
 All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete unless noted.
 
@@ -45,7 +45,8 @@ All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete
 29. [ai_usage_logs](#29-ai_usage_logs)
 30. [Relationships diagram](#30-relationships-diagram)
 31. [recommendation_decisions](#31-recommendation_decisions)
-32. [Migration history](#32-migration-history)
+32. [investor_maturity_snapshots](#32-investor_maturity_snapshots)
+33. [Migration history](#33-migration-history)
 
 ---
 
@@ -810,7 +811,28 @@ Decision provenance store. Every AI recommendation, coach insight, and rebalance
 
 ---
 
-## 32. Migration history
+## 32. investor_maturity_snapshots
+
+Weekly computed investor maturity score. Each row is a point-in-time snapshot — never updated; new rows are appended each Saturday by `compute_maturity_weekly`.
+
+| Column | Type | Nullable | Notes |
+|--------|------|----------|-------|
+| id | UUID | NO | PK |
+| investor_id | UUID | NO | FK → investor_profiles (CASCADE), indexed |
+| computed_at | TIMESTAMPTZ | NO | `now()`, indexed |
+| composite_score | FLOAT | NO | Weighted composite 0–100 across 8 components |
+| stage | VARCHAR(30) | NO | `foundation` \| `discipline` \| `optimization` \| `advanced_cognition`, indexed |
+| component_scores | JSONB | NO | `{financial_stability, debt_discipline, savings_consistency, emotional_discipline, strategy_consistency, contribution_regularity, data_maturity, portfolio_complexity}` each 0–100 |
+| features_unlocked | JSONB | NO | List of feature keys accessible at this stage |
+| notes | JSONB | NO | Up to 5 actionable improvement suggestions |
+
+**Written by:** `investor_maturity/service.py:compute_maturity()` — called on demand (`GET /maturity` on first access, `POST /maturity/refresh`) and by the `maturity_weekly` background job.
+
+**Stage thresholds:** Foundation < 25, Discipline 25–49, Optimization 50–74, Advanced Cognition ≥ 75.
+
+---
+
+## 33. Migration history
 
 | Migration | Description |
 |-----------|-------------|
@@ -850,3 +872,4 @@ Decision provenance store. Every AI recommendation, coach insight, and rebalance
 | 0039 | market_research_reports table — JSONB persistence of deep market research reports for history browsing |
 | 0040 | net_worth_snapshots table (daily net worth history: portfolio_value, financial_assets_value, total_liabilities, net_worth, currency, snapshot_at) + coach_insights table (AI Coach persistent insights: insight_type, dedup_key, severity, title, message, action_text, link, is_dismissed, generated_at) |
 | 0041 | recommendation_decisions table — full decision provenance: frozen inputs (risk_model_snapshot, holdings_summary, fx_rate_snapshot, price_snapshot, market_signals_snapshot, rule_results as JSONB), AI layer (model_used, prompt_version, ai_input_summary, ai_output_summary, input/output_tokens), output (output_summary JSONB, recommendation_count, decision_hash VARCHAR(64)); 3 indexes on investor_id, triggered_at, decision_type |
+| 0042 | investor_maturity_snapshots table — composite_score FLOAT, stage VARCHAR(30), component_scores JSONB (8 components), features_unlocked JSONB, notes JSONB; 3 indexes on investor_id, computed_at, stage |

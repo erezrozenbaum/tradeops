@@ -284,6 +284,7 @@ TradeOps goes beyond recommendations to build longitudinal financial understandi
 | **Strategy Drift Detection** | Compares actual portfolio tier allocation (low-risk / growth / high-risk) against risk model targets; alignment score 0–100 |
 | **Behavioral Intelligence** | Detects trading patterns (overtrading, long-term discipline, strategy follow-through) from 12 months of transaction history; behavioral score 0–100 |
 | **Performance Attribution** | Breaks portfolio value change into capital deployed, market return, and fees drag; multi-dimensional confidence score per attribution result |
+| **Investor Maturity Engine** | Deterministic 4-stage scoring (Foundation → Discipline → Optimization → Advanced Cognition) across 8 weighted dimensions; unlocks features as the investor matures; refreshed weekly |
 
 These features share a common foundation: all significant decisions are recorded with deterministic inputs and AI outputs, making the entire decision history queryable, explainable, and auditable.
 
