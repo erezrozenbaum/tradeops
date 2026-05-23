@@ -130,7 +130,7 @@ Risk-Controlled Live Execution (gated, opt-in)
 |---|---|
 | **Strategy library** | Curated templates matched to risk model and suitability |
 | **Backtesting** | Deterministic seeded simulation engine |
-| **Paper trading** | Real virtual trading: buy/sell any ticker, live price fetch, WACC positions, order history |
+| **Paper trading** | Real virtual trading: buy/sell any ticker, live price fetch with automatic FX conversion to portfolio currency, WACC positions, order history |
 | **Pairs trading** | Statistical arbitrage: OLS hedge ratio, ADF cointegration, Z-score signals |
 
 ### AI Intelligence *(requires `ANTHROPIC_API_KEY`)*

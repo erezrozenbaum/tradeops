@@ -102,14 +102,20 @@ def place_order(
                 detail=f"Could not fetch live price for {symbol}. Enter price manually.",
             )
         price_per_share = snapshot.price
-        if snapshot.currency.upper() != portfolio.currency.upper():
-            try:
-                price_per_share = fx_convert(db, price_per_share, snapshot.currency, portfolio.currency)
-            except Exception:
-                raise HTTPException(
-                    status_code=503,
-                    detail=f"Could not convert {symbol} price from {snapshot.currency} to {portfolio.currency}.",
-                )
+        asset_currency = snapshot.currency
+    else:
+        # Price was user-supplied; look up the asset's native currency from cache to convert if needed
+        snapshot = market_data.get_or_fetch(db, symbol)
+        asset_currency = snapshot.currency if snapshot else portfolio.currency
+
+    if asset_currency.upper() != portfolio.currency.upper():
+        try:
+            price_per_share = fx_convert(db, price_per_share, asset_currency, portfolio.currency)
+        except Exception:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Could not convert {symbol} price from {asset_currency} to {portfolio.currency}.",
+            )
 
     total_value = round(quantity * price_per_share, 6)
 

@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 2.0.0  
+**Version:** 2.0.1  
 **Last updated:** 2026-05-23
 
 ---
@@ -703,7 +703,7 @@ Location: `backend/app/paper_trading/`
 **Free-form mode (v0.94+, primary):**
 - User sets starting virtual cash (any amount, any currency) — no risk model required
 - `POST /orders` — buy or sell any ticker; price auto-fetched from live market data cache
-- **Currency-safe (v0.99.3):** market price FX-converted to portfolio currency before deducting cash; position `currency` stored as portfolio currency
+- **Currency-safe (v0.99.3 / v2.0.1):** price always FX-converted to portfolio currency before deducting cash — applies to both auto-fetched prices and user-supplied prices (backend resolves asset native currency from cached snapshot); position `currency` stored as portfolio currency
 - Buy: validates `cash_balance ≥ total_cost`; updates position using WACC average cost
 - Sell: validates position quantity; deletes position row when fully closed
 - `portfolio.current_value = cash_balance + Σ(position.qty × avg_cost)`

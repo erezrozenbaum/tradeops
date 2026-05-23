@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 1.0.0  
-**Last updated:** 2026-05-22
+**Version:** 1.0.1  
+**Last updated:** 2026-05-23
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
@@ -724,7 +724,7 @@ kubectl describe ingress tradeops
 | Docker Hardening | `backend/Dockerfile` + `infra/docker-compose.yml` | Backend runs as non-root `appuser`. All services have `no-new-privileges`, `read_only`, and `tmpfs` for writable paths. Applied in v0.99.1. |
 | Next.js CVE Fix | `frontend/package.json` | Upgraded from Next.js 14.2.3 → 14.2.25. Fixes CVE-2025-29927 (critical auth bypass in middleware). `package-lock.json` regenerated for CI compatibility. Applied in v0.99.2. |
 | Ruff Code Quality | `backend/ruff.toml` + 25+ files | Python linting with `ruff.toml` config. Fixed real syntax bug in `pdf_generator.py` (stress-test list comprehension was invalid Python). Removed duplicate dict entries in market data fetcher and broker parser. Applied in v0.99.2. |
-| Paper Trading Currency Fix | `paper_trading/service.py` + `router.py` | Market prices are now FX-converted to portfolio currency before deducting cash. `PaperPosition.currency` set to portfolio currency. New `reprice_positions()` fetches live prices and recomputes value. New endpoint: `POST /{id}/reprice`. Applied in v0.99.3. |
+| Paper Trading Currency Fix | `paper_trading/service.py` + `router.py` | Market prices are now FX-converted to portfolio currency before deducting cash. `PaperPosition.currency` set to portfolio currency. New `reprice_positions()` fetches live prices and recomputes value. New endpoint: `POST /{id}/reprice`. Applied in v0.99.3. Extended in v2.0.1: user-supplied prices (entered manually after "Get price") are now also FX-converted using the asset's cached native currency — previously they were treated as already being in portfolio currency. |
 | Retirement Readiness Formula Fix | `retirement_readiness/engine.py` + `router.py` + `schemas.py` | Pension funds now compute monthly income via makdam (`projected / makdam`), not SWR. Hishtalmut + portfolio remain under 4% SWR. New schema fields: `pension_monthly_income`, `hishtalmut_projected`. Dashboard card shows both sources separately. Applied in v0.99.3. |
 | Langfuse AI Observability | `core/tracing.py` | `trace_ai_call()` context manager. All 11 AI callers instrumented. Records feature, model, input (truncated), output, token counts, investor ID. No-op when keys absent. Set `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY`. Applied in v1.0.0. |
 | Prometheus + Grafana | `core/telemetry.py` + `infra/` | Prometheus at :9090 scrapes `/metrics` (request rate, latency p50/p95/p99, error rate, in-progress). Grafana at :3001 with pre-provisioned TradeOps dashboard. Optional OTLP export via `OTEL_EXPORTER_OTLP_ENDPOINT`. Applied in v1.0.0. |

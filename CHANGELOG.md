@@ -8,6 +8,12 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [2.0.1] — 2026-05-23
+
+### Fixed
+- **Paper trading FX conversion bug**: user-supplied prices (entered after clicking "Get price") were previously treated as already being in the portfolio's base currency, causing USD-priced assets to be deducted 1:1 from ILS portfolios. Backend now looks up the asset's native currency from the cached snapshot and converts regardless of whether the price was auto-fetched or user-supplied.
+- **Frontend price label**: price field now shows "Price per share (USD → converted to ILS)" when asset and portfolio currencies differ; estimated total correctly shows the original currency with a note that the backend will convert.
+
 ## [2.0.0] — 2026-05-23
 
 ### Added

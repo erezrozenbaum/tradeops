@@ -98,6 +98,7 @@ export default function PaperTradingPage() {
   const [tradeSymbol, setTradeSymbol] = useState("");
   const [tradeQty, setTradeQty] = useState("");
   const [tradePrice, setTradePrice] = useState("");
+  const [tradeAssetCurrency, setTradeAssetCurrency] = useState("");
   const [loadingPrice, setLoadingPrice] = useState(false);
   const [trading, setTrading] = useState(false);
   const [tradeError, setTradeError] = useState<string | null>(null);
@@ -174,6 +175,7 @@ export default function PaperTradingPage() {
       if (res.ok) {
         const data = await res.json();
         setTradePrice(String(data.price));
+        setTradeAssetCurrency(data.currency ?? "");
       }
     } finally {
       setLoadingPrice(false);
@@ -228,6 +230,7 @@ export default function PaperTradingPage() {
       setTradeSymbol("");
       setTradeQty("");
       setTradePrice("");
+      setTradeAssetCurrency("");
     } catch (e: unknown) {
       setTradeError(e instanceof Error ? e.message : "Order failed");
     } finally {
@@ -562,7 +565,7 @@ export default function PaperTradingPage() {
                           <input
                             type="text"
                             value={tradeSymbol}
-                            onChange={(e) => setTradeSymbol(e.target.value.toUpperCase())}
+                            onChange={(e) => { setTradeSymbol(e.target.value.toUpperCase()); setTradeAssetCurrency(""); }}
                             placeholder="AAPL"
                             className="h-9 w-24 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring uppercase"
                           />
@@ -590,7 +593,9 @@ export default function PaperTradingPage() {
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-muted-foreground">
-                          Price per share (optional — auto-fetched if blank)
+                          {tradeAssetCurrency && tradeAssetCurrency !== selected.currency
+                            ? `Price per share (${tradeAssetCurrency} → converted to ${selected.currency})`
+                            : "Price per share (optional — auto-fetched if blank)"}
                         </label>
                         <input
                           type="number"
@@ -604,9 +609,18 @@ export default function PaperTradingPage() {
                       </div>
                       {tradeSymbol && tradeQty && tradePrice && (
                         <div className="text-xs text-muted-foreground self-end pb-2">
-                          ≈ {formatCurrency(
-                            parseFloat(tradeQty || "0") * parseFloat(tradePrice || "0"),
-                            selected.currency
+                          {tradeAssetCurrency && tradeAssetCurrency !== selected.currency ? (
+                            <>
+                              ≈{" "}
+                              {(parseFloat(tradeQty || "0") * parseFloat(tradePrice || "0")).toLocaleString(
+                                undefined,
+                                { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                              )}{" "}
+                              {tradeAssetCurrency}{" "}
+                              <span className="text-yellow-500">(backend converts to {selected.currency})</span>
+                            </>
+                          ) : (
+                            <>≈ {formatCurrency(parseFloat(tradeQty || "0") * parseFloat(tradePrice || "0"), selected.currency)}</>
                           )}
                         </div>
                       )}
