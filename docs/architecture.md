@@ -279,7 +279,10 @@ backend/app/
 ├── debt_planner/               # Debt payoff planner (avalanche/snowball)
 ├── watchlist/                  # Per-investor ticker watchlist
 ├── notifications/              # In-app notification store
-├── investment_agent/           # Free-form AI financial assistant
+├── investment_agent/           # Maturity-aware AI Thought Partner (v2.7.0)
+│   ├── engine.py               # run_agent(verbosity): stage-adaptive prompt, maturity+twin+behavioral context injection
+│   ├── schemas.py              # AgentReport (incl. maturity_stage, verbosity_used), ActionItem, Opportunity, CapitalThresholdPlan
+│   └── router.py               # GET /agent?verbosity=beginner|standard|advanced
 ├── transactions/               # Immutable holding transaction log
 ├── price_alerts/               # User-defined price triggers
 ├── economic_calendar/          # Earnings dates for held + watched tickers
@@ -757,7 +760,7 @@ Six features call the Anthropic Claude API. All require `ANTHROPIC_API_KEY`. All
 | AI Report | `ai_analysis/` | `claude-sonnet-4-6` | `GET /investors/{id}/ai-report` |
 | Deep Market Research | `market_research/` | `claude-sonnet-4-6` | `GET /investors/{id}/market-research` |
 | Recommendations | `investment_recommendations/` | `claude-sonnet-4-6` | `GET /investors/{id}/recommendations` |
-| AI Agent | `investment_agent/` | `claude-sonnet-4-6` | `GET /investors/{id}/agent` |
+| AI Agent (Thought Partner) | `investment_agent/` | `claude-sonnet-4-6` | `GET /investors/{id}/agent?verbosity=beginner\|standard\|advanced` — adapts tone to maturity stage; injects twin + behavioral risk context |
 | Portfolio Chat | `portfolio_chat/` | `claude-haiku-4-5-20251001` | `POST /investors/{id}/chat` |
 | Market Signals | `market_signals/` (worker) | `claude-haiku-4-5-20251001` | background job 20:15 UTC |
 | AI Coach | `coach/` | `claude-haiku-4-5-20251001` (optional enrichment) | `GET /investors/{id}/coach` |

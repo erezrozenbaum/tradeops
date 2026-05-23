@@ -2,8 +2,8 @@ apiVersion: v2
 name: tradeops
 description: TradeOps AI — Personal Financial Intelligence Platform
 type: application
-version: 0.1.0
-appVersion: "0.42.1"
+version: 0.8.0
+appVersion: "2.7.0"
 keywords:
   - finance
   - ai

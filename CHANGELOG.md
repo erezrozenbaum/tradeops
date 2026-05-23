@@ -8,6 +8,23 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [2.7.0] — 2026-05-23
+
+### Added
+- **Maturity-Aware Thought Partner** — AI Investment Agent (`GET /investors/{id}/agent`) now adapts its tone, language, and analytical depth to the investor's maturity stage:
+  - `foundation` (score < 25): plain language, safety-first, no jargon, habit-building capital thresholds
+  - `discipline` (25–49): comparative explanations, behavioural pattern references, moderate progression
+  - `optimization` (50–74): quantitative language, return ranges, portfolio efficiency focus
+  - `advanced` (≥75): institutional-grade — regime, correlation, drawdown, factor tilts, tail scenarios
+- **`?verbosity=beginner|standard|advanced` override** — query param forces a specific communication style regardless of computed maturity stage; `standard` (default) auto-selects based on stage
+- **Maturity + Twin + Behavioral context injection** — every AI prompt now includes: latest `InvestorMaturitySnapshot` (stage, score, features_unlocked, next_steps), latest `FinancialTwinSnapshot` (all 8 dimension scores + overall), and all active `BehavioralRiskEvent` records (event_type, severity, description, recommendation)
+- **`AgentReport` extended**: new `maturity_stage` and `verbosity_used` response fields for UI awareness
+
+### Fixed
+- **Helm chart `SECRET_KEY` bug** — `backend-deployment.yaml` was injecting `JWT_SECRET_KEY` but `config.py` reads `SECRET_KEY`; backend pods would fail to start on K8s due to missing required env var
+- **Helm chart sync with v2.1–v2.7 env vars** — `values.yaml`, `secret.yaml`, and `backend-deployment.yaml` now cover all env vars declared in `config.py`: `SECRET_KEY`, `WORKERS_ENABLED`, `ALLOWED_ORIGINS`, `AI_MONTHLY_BUDGET_USD`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `SMTP_*`, `ALERT_FROM_EMAIL`, `LANGFUSE_*`
+- **`Chart.yaml` `appVersion`** updated from `0.42.1` to `2.7.0`; chart `version` bumped to `0.8.0`
+
 ## [2.6.0] — 2026-05-23
 
 ### Added

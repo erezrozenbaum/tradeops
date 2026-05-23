@@ -25,7 +25,15 @@ backend:
   healthPath: /api/v1/health
   env:
     ENVIRONMENT: production
-    # DATABASE_URL and ANTHROPIC_API_KEY are supplied via secret (see below)
+    # Whether background APScheduler jobs run inside the backend pod (set false for dedicated worker pods)
+    WORKERS_ENABLED: "true"
+    # Comma-separated list of allowed CORS origins
+    ALLOWED_ORIGINS: "http://localhost:3000"
+    # Per-investor AI spend cap over a rolling 30-day window in USD (0 = unlimited)
+    AI_MONTHLY_BUDGET_USD: "0.0"
+    # OpenTelemetry OTLP gRPC endpoint — leave empty to skip export
+    OTEL_EXPORTER_OTLP_ENDPOINT: ""
+    # DATABASE_URL, SECRET_KEY, ANTHROPIC_API_KEY, SMTP, and Langfuse are supplied via secret (see below)
 
 # ── Frontend ─────────────────────────────────────────────────
 frontend:
@@ -78,15 +86,25 @@ secret:
   # PostgreSQL password (also used to build DATABASE_URL when postgresql.enabled=true)
   # MUST be changed from the default for any non-dev deployment
   postgresPassword: "tradeops"
+  # App signing secret — used for JWT and session tokens. MUST be a strong random string (≥32 chars)
+  secretKey: ""
   # Anthropic API key — required for AI features
   anthropicApiKey: ""
-  # JWT signing secret — MUST be a strong random string in production (≥32 chars)
-  jwtSecretKey: ""
   # Alpha Vantage API key — optional fallback price provider
   alphaVantageApiKey: ""
   # Supply a full DATABASE_URL to use an external database
   # Leave empty when postgresql.enabled=true (auto-composed from above)
   databaseUrl: ""
+  # SMTP — required for email alerts, weekly digest, and notifications (all optional — omit to disable)
+  smtpHost: ""
+  smtpPort: 587
+  smtpUser: ""
+  smtpPass: ""
+  alertFromEmail: ""
+  # Langfuse — AI observability (optional; tracing is silently disabled when unset)
+  langfusePublicKey: ""
+  langfuseSecretKey: ""
+  langfuseHost: "https://cloud.langfuse.com"
 
 # ── Ingress ──────────────────────────────────────────────────
 ingress:

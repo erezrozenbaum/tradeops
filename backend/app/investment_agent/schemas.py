@@ -43,6 +43,8 @@ class AgentReport(BaseModel):
     top_opportunities: list[Opportunity]
     capital_thresholds: list[CapitalThresholdPlan]
     risk_warnings: list[str]
+    maturity_stage: str | None = None      # foundation|discipline|optimization|advanced
+    verbosity_used: str = "standard"       # beginner|standard|advanced
     no_data: bool = False
     disclaimer: str = (
         "AI-generated output for educational and analytical purposes only. Not financial advice. "

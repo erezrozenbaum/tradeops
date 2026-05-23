@@ -380,7 +380,7 @@ The Helm chart is at `helm/tradeops/`. It deploys:
 - **Frontend** — Next.js standalone (Deployment, ClusterIP Service)
 - **PostgreSQL** — (StatefulSet + headless Service + PVC) — can be disabled to use an external DB
 - **Ingress** — routes `/api/*` to backend, `/*` to frontend
-- **Secret** — holds `DATABASE_URL` and `ANTHROPIC_API_KEY`
+- **Secret** — holds `DATABASE_URL`, `SECRET_KEY`, `ANTHROPIC_API_KEY`, `ALPHA_VANTAGE_API_KEY`, `SMTP_*`, `ALERT_FROM_EMAIL`, `LANGFUSE_*`
 - **HPA** — optional horizontal pod autoscaler for the backend
 
 ### Quick install
@@ -392,6 +392,7 @@ cd tradeops
 
 # 2. Install with defaults (uses bundled PostgreSQL, no TLS)
 helm install tradeops ./helm/tradeops \
+  --set secret.secretKey=<strong-random-32-chars> \
   --set secret.anthropicApiKey=sk-ant-... \
   --set ingress.host=tradeops.example.com
 
@@ -423,6 +424,7 @@ ingress:
     cert-manager.io/cluster-issuer: letsencrypt-prod
 
 secret:
+  secretKey: "change-me-strong-32-char-secret"
   anthropicApiKey: "sk-ant-..."
   postgresPassword: "change-me-strong-password"
 
@@ -644,7 +646,7 @@ kubectl describe ingress tradeops
 | AI Report | `/ai-report` | None (on-demand) | Full portfolio analysis |
 | Recommendations | `/recommendations` | None (on-demand) | Tailored to risk model + goals |
 | Market Research | `/market-research` | 6 hours | Screens 63 instruments; takes 45–60 s cold |
-| AI Agent | `/agent` | None | Free-form financial assistant |
+| AI Agent | `/agent?verbosity=beginner\|standard\|advanced` | None | Maturity-aware Thought Partner — adapts tone to investor's stage; injects twin, behavioral risk, and maturity context into every prompt |
 
 ### Market data features (no API key needed — yfinance)
 
@@ -707,7 +709,7 @@ kubectl describe ingress tradeops
 | PDF Statement Import | `pdf_import/` + `POST /investors/{id}/pdf-import/parse|import` | pypdf text extraction + Claude Haiku parsing. Any broker PDF format. Smart truncation for large PDFs. `parse` = dry-run preview; `import` = write holdings. Dep: `pypdf>=4.0.0`. |
 | Crypto Staking | `crypto_staking/` + `GET/POST/DELETE /investors/{id}/crypto-staking` | APY tracking via existing `fund_status` + `annual_return_rate` columns. No migration. Annual rewards = quantity × APY/100. Tax = income. `/crypto-staking` page. |
 | IBKR REST Sync | `broker_sync/ibkr_rest.py` + `POST .../broker-sync/ibkr-rest` | Live sync from IBKR Client Portal Gateway. Asset mapping: STK/ETF/CRYPTO/BOND/OPT. `verify_ssl=false` default. Read-only. |
-| K8s Hardening | `helm/tradeops/` | Non-root securityContext, NetworkPolicy (backend ← ingress+frontend; postgres ← backend only), PodDisruptionBudget, podAntiAffinity, JWT_SECRET_KEY + ALPHA_VANTAGE_API_KEY as Helm secrets. All flags default false. |
+| K8s Hardening | `helm/tradeops/` | Non-root securityContext, NetworkPolicy (backend ← ingress+frontend; postgres ← backend only), PodDisruptionBudget, podAntiAffinity. SECRET_KEY, ANTHROPIC_API_KEY, ALPHA_VANTAGE_API_KEY, SMTP_*, LANGFUSE_* injected as K8s secrets. All optional hardening flags default false. Chart v0.8.0, appVersion 2.7.0. |
 | SSE Price Streaming | `market_data/router.py` `GET /market/stream?tickers=...&interval=30` | text/event-stream. Max 20 tickers. Fresh SessionLocal per tick. nginx pass-through via X-Accel-Buffering. Frontend: pulsing LIVE dot + streaming price per holding row. |
 | Live Trading (Gated) | `live_trading/` + migration 0035 | 5-gate readiness checker (paper ≥30d Sharpe>0.5, risk ack, admin toggle, order risk limits, IBKR connection). IBKR Client Portal Gateway REST client: `lookup_conid`, `submit_order`, `cancel_order`. Session lifecycle: `POST /acknowledge`, `POST /session`, `POST /halt` (kill switch). Order form with market/limit, buy/sell, qty, limit price. All actions audit-logged. Live trading is **disabled by default** — admin must set `risk_model.live_trading_allowed=True` per investor. |
 | IDOR Protection | `auth/investor_access.py` + `api/v1/router.py` | `verify_investor_access` FastAPI dependency applied at `include_router` level for all 37 investor-scoped routers. Returns HTTP 404 if the requested `investor_id` does not belong to the authenticated user. Zero changes to individual endpoint handlers. |

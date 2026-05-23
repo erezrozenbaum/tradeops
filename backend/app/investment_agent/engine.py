@@ -15,7 +15,7 @@ from app.models.investor_profile import InvestorProfile
 
 log = logging.getLogger(__name__)
 
-_SYSTEM_PROMPT = """You are a senior financial advisor AI for TradeOps, a personal financial intelligence platform.
+_SYSTEM_PROMPT_BASE = """You are a senior financial advisor AI for TradeOps, a personal financial intelligence platform.
 
 Your role is to analyse an investor's complete financial situation and generate a concrete, actionable investment plan.
 
@@ -75,9 +75,73 @@ Generate 2-4 action plan items, 3-5 top opportunities, 4-5 capital threshold tie
 Capital thresholds should cover the range from first available capital to a well-diversified portfolio for this investor.
 """
 
+# ── Stage-specific prompt extensions ─────────────────────────────────────────
+
+_STAGE_EXTENSIONS: dict[str, str] = {
+    "foundation": """
+COMMUNICATION STYLE — FOUNDATION STAGE:
+This investor is in the Foundation stage of their financial journey. Adapt your response accordingly:
+- Use plain, friendly language. Avoid financial jargon. When you must use a term, briefly define it.
+- Lead with safety: emergency fund and debt elimination come before any investment discussion.
+- Be encouraging and patient. Small, consistent steps matter more than optimisation at this stage.
+- Limit opportunities to the simplest, lowest-risk instruments suitable for beginners.
+- Explain the "why" behind every recommendation in simple terms a non-investor would understand.
+- Capital thresholds should start very small and focus on habit-building before portfolio construction.
+""",
+    "discipline": """
+COMMUNICATION STYLE — DISCIPLINE STAGE:
+This investor is in the Discipline stage — they have basic financial habits but are building consistency.
+- Use clear, structured language. Light use of financial terms is fine; explain anything non-obvious.
+- Draw comparisons: relate their situation to common patterns ("investors who save X% typically see Y").
+- Acknowledge what they are already doing well before suggesting improvements.
+- Focus on optimising their savings rate, reducing behavioural drag, and building allocation discipline.
+- Capital thresholds should reflect a moderate progression from ETFs to a diversified core portfolio.
+- Flag any detected behavioural risk events directly and explain the pattern behind them.
+""",
+    "optimization": """
+COMMUNICATION STYLE — OPTIMIZATION STAGE:
+This investor is in the Optimization stage — they have strong financial discipline and understand investing.
+- Use quantitative language: specific return ranges, allocation percentages, time horizons.
+- Provide confidence-ranged estimates where relevant ("historically, this strategy returns X–Y% annually").
+- Frame advice around refining an already-working system, not building from scratch.
+- Highlight inefficiencies: tax drag, concentration risk, currency exposure, fee structures.
+- Capital thresholds should cover advanced diversification: factor tilts, international exposure, alternatives.
+- Reference the twin snapshot dimensions to identify specific areas of underperformance.
+""",
+    "advanced": """
+COMMUNICATION STYLE — ADVANCED COGNITION STAGE:
+This investor is in the Advanced Cognition stage — institutional-grade thinking applies.
+- Use professional financial language: regime, correlation, Sharpe ratio, drawdown, rebalancing bands.
+- Frame opportunities in terms of risk-adjusted return, not just expected upside.
+- Discuss portfolio construction principles: diversification across factors, geographies, and asset classes.
+- Reference behavioural twin scores to identify psychological biases that may be limiting performance.
+- Capital thresholds should cover sophisticated allocation: multi-asset, currency hedging considerations, alternatives.
+- Be direct about risks including concentration, sequence risk, and tail scenarios.
+""",
+}
+
+# Maps verbosity override → effective stage key
+_VERBOSITY_TO_STAGE: dict[str, str] = {
+    "beginner": "foundation",
+    "advanced": "advanced",
+}
+
+
+def _effective_stage(maturity_stage: str | None, verbosity: str) -> str:
+    if verbosity in _VERBOSITY_TO_STAGE:
+        return _VERBOSITY_TO_STAGE[verbosity]
+    return maturity_stage or "foundation"
+
+
+def _build_system_prompt(maturity_stage: str | None, verbosity: str) -> str:
+    stage = _effective_stage(maturity_stage, verbosity)
+    extension = _STAGE_EXTENSIONS.get(stage, _STAGE_EXTENSIONS["foundation"])
+    return _SYSTEM_PROMPT_BASE + extension
+
+
+# ── Market prices ─────────────────────────────────────────────────────────────
 
 def _get_market_prices(db: Session) -> dict:
-    """Fetch cached prices for all catalog instruments."""
     from app.market_scanner.catalog import CATALOG
     from app.market_data.service import get_cached_price
     prices = {}
@@ -91,8 +155,13 @@ def _get_market_prices(db: Session) -> dict:
     return prices
 
 
+# ── Context builder ───────────────────────────────────────────────────────────
+
 def _build_context(db: Session, investor_id: uuid.UUID) -> dict | None:
     from app.models.financial_profile import FinancialProfile
+    from app.models.investor_maturity_snapshot import InvestorMaturitySnapshot
+    from app.models.financial_twin_snapshot import FinancialTwinSnapshot
+    from app.models.behavioral_risk_event import BehavioralRiskEvent
     from app.risk_modeling.service import get_latest as get_risk_model
     from app.portfolio_analysis.service import get_portfolio
     from app.goals_analysis.service import get_analysis as get_goals
@@ -130,9 +199,36 @@ def _build_context(db: Session, investor_id: uuid.UUID) -> dict | None:
         except Exception:
             pass
 
+    # Maturity snapshot — latest
+    maturity = (
+        db.query(InvestorMaturitySnapshot)
+        .filter(InvestorMaturitySnapshot.investor_id == investor_id)
+        .order_by(InvestorMaturitySnapshot.computed_at.desc())
+        .first()
+    )
+
+    # Financial Twin — latest
+    twin = (
+        db.query(FinancialTwinSnapshot)
+        .filter(FinancialTwinSnapshot.investor_id == investor_id)
+        .order_by(FinancialTwinSnapshot.computed_at.desc())
+        .first()
+    )
+
+    # Active behavioral risk events
+    active_risks = (
+        db.query(BehavioralRiskEvent)
+        .filter(
+            BehavioralRiskEvent.investor_id == investor_id,
+            BehavioralRiskEvent.status == "active",
+        )
+        .order_by(BehavioralRiskEvent.detected_at.desc())
+        .limit(5)
+        .all()
+    )
+
     market_prices = _get_market_prices(db)
 
-    # Holdings tickers the investor already owns
     owned_tickers: set[str] = set()
     if portfolio:
         for acc in portfolio.accounts:
@@ -194,6 +290,32 @@ def _build_context(db: Session, investor_id: uuid.UUID) -> dict | None:
             }
             for g in (goals_result.goals if goals_result else [])
         ],
+        "maturity": {
+            "stage": maturity.stage,
+            "composite_score": maturity.composite_score,
+            "features_unlocked": maturity.features_unlocked,
+            "next_steps": maturity.notes,
+        } if maturity else None,
+        "financial_twin": {
+            "overall_score": twin.overall_score,
+            "financial_stability": twin.financial_stability,
+            "behavioral_discipline": twin.behavioral_discipline,
+            "emotional_risk": twin.emotional_risk,
+            "portfolio_consistency": twin.portfolio_consistency,
+            "financial_resilience": twin.financial_resilience,
+            "risk_alignment": twin.risk_alignment,
+            "long_term_discipline": twin.long_term_discipline,
+            "contribution_momentum": twin.contribution_momentum,
+        } if twin else None,
+        "active_behavioral_risks": [
+            {
+                "event_type": e.event_type,
+                "severity": e.severity,
+                "description": e.description,
+                "recommendation": e.recommendation,
+            }
+            for e in active_risks
+        ],
         "market_catalog": [
             {
                 "ticker": i.ticker,
@@ -215,7 +337,9 @@ def _build_context(db: Session, investor_id: uuid.UUID) -> dict | None:
     return ctx
 
 
-def run_agent(db: Session, investor_id: uuid.UUID) -> AgentReport:
+# ── Public entry point ────────────────────────────────────────────────────────
+
+def run_agent(db: Session, investor_id: uuid.UUID, verbosity: str = "standard") -> AgentReport:
     ctx = _build_context(db, investor_id)
     if not ctx:
         return AgentReport(
@@ -227,8 +351,13 @@ def run_agent(db: Session, investor_id: uuid.UUID) -> AgentReport:
             top_opportunities=[],
             capital_thresholds=[],
             risk_warnings=[],
+            maturity_stage=None,
+            verbosity_used=verbosity,
             no_data=True,
         )
+
+    maturity_stage = ctx.get("maturity", {}).get("stage") if ctx.get("maturity") else None
+    system_prompt = _build_system_prompt(maturity_stage, verbosity)
 
     from app.core.tracing import trace_ai_call
 
@@ -247,7 +376,7 @@ def run_agent(db: Session, investor_id: uuid.UUID) -> AgentReport:
         response = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=3000,
-            system=_SYSTEM_PROMPT,
+            system=system_prompt,
             messages=[{"role": "user", "content": user_msg}],
         )
         span.set_output(response.content[0].text[:4000])
@@ -283,6 +412,8 @@ def run_agent(db: Session, investor_id: uuid.UUID) -> AgentReport:
             top_opportunities=[],
             capital_thresholds=[],
             risk_warnings=["Internal error — please try again."],
+            maturity_stage=maturity_stage,
+            verbosity_used=verbosity,
             no_data=True,
         )
 
@@ -295,5 +426,7 @@ def run_agent(db: Session, investor_id: uuid.UUID) -> AgentReport:
         top_opportunities=[Opportunity(**o) for o in data.get("top_opportunities", [])],
         capital_thresholds=[CapitalThresholdPlan(**t) for t in data.get("capital_thresholds", [])],
         risk_warnings=data.get("risk_warnings", []),
+        maturity_stage=maturity_stage,
+        verbosity_used=verbosity,
         no_data=False,
     )

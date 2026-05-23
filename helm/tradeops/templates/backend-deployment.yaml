@@ -88,16 +88,16 @@ spec:
                 secretKeyRef:
                   name: {{ include "tradeops.fullname" . }}
                   key: DATABASE_URL
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tradeops.fullname" . }}
+                  key: SECRET_KEY
             - name: ANTHROPIC_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ include "tradeops.fullname" . }}
                   key: ANTHROPIC_API_KEY
-            - name: JWT_SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "tradeops.fullname" . }}
-                  key: JWT_SECRET_KEY
                   optional: true
             - name: ALPHA_VANTAGE_API_KEY
               valueFrom:
@@ -105,8 +105,66 @@ spec:
                   name: {{ include "tradeops.fullname" . }}
                   key: ALPHA_VANTAGE_API_KEY
                   optional: true
+            - name: SMTP_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tradeops.fullname" . }}
+                  key: SMTP_HOST
+                  optional: true
+            - name: SMTP_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tradeops.fullname" . }}
+                  key: SMTP_PORT
+                  optional: true
+            - name: SMTP_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tradeops.fullname" . }}
+                  key: SMTP_USER
+                  optional: true
+            - name: SMTP_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tradeops.fullname" . }}
+                  key: SMTP_PASS
+                  optional: true
+            - name: ALERT_FROM_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tradeops.fullname" . }}
+                  key: ALERT_FROM_EMAIL
+                  optional: true
+            - name: LANGFUSE_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tradeops.fullname" . }}
+                  key: LANGFUSE_PUBLIC_KEY
+                  optional: true
+            - name: LANGFUSE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tradeops.fullname" . }}
+                  key: LANGFUSE_SECRET_KEY
+                  optional: true
+            - name: LANGFUSE_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tradeops.fullname" . }}
+                  key: LANGFUSE_HOST
+                  optional: true
             - name: ENVIRONMENT
               value: {{ .Values.backend.env.ENVIRONMENT | quote }}
+            - name: WORKERS_ENABLED
+              value: {{ .Values.backend.env.WORKERS_ENABLED | quote }}
+            - name: ALLOWED_ORIGINS
+              value: {{ .Values.backend.env.ALLOWED_ORIGINS | quote }}
+            - name: AI_MONTHLY_BUDGET_USD
+              value: {{ .Values.backend.env.AI_MONTHLY_BUDGET_USD | quote }}
+            {{- if .Values.backend.env.OTEL_EXPORTER_OTLP_ENDPOINT }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.backend.env.OTEL_EXPORTER_OTLP_ENDPOINT | quote }}
+            {{- end }}
             {{- if .Values.redis.enabled }}
             - name: REDIS_URL
               value: "redis://{{ include "tradeops.fullname" . }}-redis:{{ .Values.redis.port }}/0"

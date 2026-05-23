@@ -291,6 +291,7 @@ TradeOps goes beyond recommendations to build longitudinal financial understandi
 | **Extended Attribution** | 3 supplementary illustrative estimates added to the Attribution page: Behavioral Drag (short-term trade fees), FX Drag (currency movement P&L), Concentration Cost (losses from top-3 concentrated holdings) |
 | **Simulation Engine** | 6 financial futures scenarios: 3 deterministic (Debt Payoff, Save More, Job Loss) + 3 Monte Carlo / 1 000-iteration seeded (Market Crash, Retirement, Custom); p10/p50/p90 trajectory chart; fully reproducible; required disclaimer on every run |
 | **Counterfactual Replay** | 3 backward-looking what-if replays forked from historical decision points: Rebalance (follow recommendation), Constraint (enforce allocation rule from first violation), Hold (reverse panic-sell); dual-path chart showing counterfactual vs actual path; delta and delta % |
+| **Maturity-Aware AI Thought Partner** | AI Investment Agent adapts communication style to the investor's maturity stage (Foundation → Advanced Cognition); injects twin snapshot + behavioral risk history into every prompt; `?verbosity=beginner\|standard\|advanced` override |
 
 These features share a common foundation: all significant decisions are recorded with deterministic inputs and AI outputs, making the entire decision history queryable, explainable, and auditable.
 
