@@ -1,7 +1,7 @@
 # TradeOps AI — Architecture
 
-**Version:** 1.0.0  
-**Last updated:** 2026-05-22
+**Version:** 2.0.0  
+**Last updated:** 2026-05-23
 
 ---
 
@@ -228,6 +228,31 @@ backend/app/
 │   ├── service.py              # 7 rule functions + AI enrichment + dedup_key suppression
 │   └── router.py               # GET /investors/{id}/coach, POST /coach/refresh, DELETE /coach/{id}
 │
+├── provenance/                 # Decision provenance recording and replay (v1.2.0–v1.4.0)
+│   ├── recorder.py             # record_decision() fire-and-forget; snapshot_risk_model/holdings/signals helpers
+│   ├── schemas.py              # DecisionListItem, DecisionDetail, ReplayResult
+│   └── router.py               # GET /investors/{id}/decisions, GET /decisions/{id}, POST /decisions/{id}/replay
+│
+├── strategy_drift/             # Strategy drift detection: actual vs risk model targets (v1.5.0)
+│   ├── service.py              # compute_drift() — RMSE-based alignment score 0–100 per tier
+│   ├── schemas.py              # StrategyDriftReport, DriftItem
+│   └── router.py               # GET /investors/{id}/strategy-drift
+│
+├── decision_timeline/          # Unified chronological event timeline with causal notes (v1.6.0)
+│   ├── service.py              # Merges RecommendationDecision + HoldingTransaction; causal portfolio delta
+│   ├── schemas.py              # TimelineEvent, TimelinePage
+│   └── router.py               # GET /investors/{id}/timeline?days=30&limit=50
+│
+├── behavioral_patterns/        # 12-month behavioral analysis: holding periods, patterns, score (v1.7.0)
+│   ├── service.py              # FIFO buy/sell matching; recommendation follow-through; behavioral score
+│   ├── schemas.py              # BehavioralMetrics, HoldingPeriodStats, BehavioralPattern
+│   └── router.py               # GET /investors/{id}/behavioral-patterns
+│
+├── attribution/                # Performance attribution + multi-dim confidence scoring (v2.0.0)
+│   ├── service.py              # Breaks value change into capital deployed / market return / fees drag
+│   ├── schemas.py              # PerformanceAttribution, AttributionFactor, ConfidenceLayer
+│   └── router.py               # GET /investors/{id}/attribution?period=ytd|1y|6m|3m
+│
 ├── pension_simulation/         # Standalone pension projector
 ├── debt_planner/               # Debt payoff planner (avalanche/snowball)
 ├── watchlist/                  # Per-investor ticker watchlist
@@ -335,6 +360,11 @@ All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`.
 | `/investors/{id}/net-worth` | net_worth | net-worth |
 | `/investors/{id}/tax-summary` | tax_summary | tax-summary |
 | `/investors/{id}/coach` | coach | coach |
+| `/investors/{id}/decisions` | provenance | provenance |
+| `/investors/{id}/strategy-drift` | strategy_drift | strategy-drift |
+| `/investors/{id}/timeline` | decision_timeline | timeline |
+| `/investors/{id}/behavioral-patterns` | behavioral_patterns | behavioral-patterns |
+| `/investors/{id}/attribution` | attribution | attribution |
 | `/market` | market_data | market-data (REST + SSE) |
 | `/investors/{id}/accounts` | holdings | holdings |
 | `/investors/{id}/accounts/{id}/holdings` | holdings | holdings |
@@ -349,6 +379,7 @@ _ai  = [Depends(verify_investor_access),           # JWT + ownership + monthly b
         Depends(require_ai_budget)]
 ```
 AI-gated routes (`_ai`): `ai-report`, `agent`, `market-scan`, `recommendations`, `market-research`, `chat`.
+Replay endpoint (`POST /decisions/{id}/replay`) is `_own` (not `_ai`) — the AI budget check is handled inside the endpoint after validating the decision exists.
 
 Interactive docs: `http://localhost:8000/docs`
 
@@ -400,6 +431,7 @@ Managed by Alembic. Migrations in `backend/alembic/versions/`.
 | `0038` | paper_trading_v2: cash_balance + new paper_positions + paper_orders tables |
 | `0039` | market_research_reports table (JSONB persistence) |
 | `0040` | net_worth_snapshots + coach_insights tables |
+| `0041` | recommendation_decisions table (decision provenance: frozen inputs JSONB, AI metadata, output summary, decision hash) |
 
 ### Core tables
 
@@ -430,6 +462,7 @@ paper_portfolios           — paper trading portfolios
 paper_ticks                — monthly simulation ticks per portfolio
 
 audit_events               — all significant system actions
+recommendation_decisions   — decision provenance: frozen inputs at decision time (risk model, holdings, signals), AI metadata (model, tokens, summaries), output summary, SHA-256 decision hash
 ```
 
 ---
@@ -473,6 +506,11 @@ frontend/src/
 │   │   ├── net-worth/page.tsx      # Net Worth dashboard: balance sheet, 12-month trend, FI projection
 │   │   ├── tax-summary/page.tsx    # Tax Year Summary: realized gains/losses, WACC cost basis, est. tax
 │   │   ├── insights/page.tsx       # AI Coach: proactive insights with severity grouping + dismiss
+│   │   ├── decisions/page.tsx      # Decision Provenance: list + detail panel + replay (v1.3.0–v1.4.0)
+│   │   ├── strategy-drift/page.tsx # Strategy Drift: alignment gauge + per-tier drift bars (v1.5.0)
+│   │   ├── timeline/page.tsx       # Financial Decision Timeline: date-grouped event feed (v1.6.0)
+│   │   ├── behavioral/page.tsx     # Behavioral Intelligence: score ring, holding periods, patterns (v1.7.0)
+│   │   ├── attribution/page.tsx    # Performance Attribution: factor bars + confidence breakdown (v2.0.0)
 │   │   └── settings/page.tsx       # Account and platform info
 │   └── page.tsx                    # Root redirect → /dashboard
 ├── components/ui/                  # Shared UI primitives (Card, Badge, Button, etc.)

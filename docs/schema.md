@@ -1,8 +1,8 @@
 # TradeOps AI — Database Schema Reference
 
-**Version:** 1.0.0  
-**Last updated:** 2026-05-22  
-**Migration head:** 0040
+**Version:** 2.0.0  
+**Last updated:** 2026-05-23  
+**Migration head:** 0041
 
 All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete unless noted.
 
@@ -44,7 +44,8 @@ All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete
 28. [market_signals](#28-market_signals)
 29. [ai_usage_logs](#29-ai_usage_logs)
 30. [Relationships diagram](#30-relationships-diagram)
-31. [Migration history](#31-migration-history)
+31. [recommendation_decisions](#31-recommendation_decisions)
+32. [Migration history](#32-migration-history)
 
 ---
 
@@ -773,7 +774,43 @@ Tracks every Claude API call for cost attribution and admin reporting.
 
 ---
 
-## 31. Migration history
+## 31. recommendation_decisions
+
+Decision provenance store. Every AI recommendation, coach insight, and rebalance event writes one row with the full frozen decision context. Append-only — never updated after insert.
+
+| Column | Type | Nullable | Notes |
+|--------|------|----------|-------|
+| id | UUID | NO | PK |
+| investor_id | UUID | NO | FK → investor_profiles (CASCADE), indexed |
+| decision_type | VARCHAR(50) | NO | `ai_recommendation` \| `ai_recommendation_replay` \| `coach_insight` \| `rebalance`, indexed |
+| triggered_at | TIMESTAMPTZ | NO | `now()`, indexed |
+| portfolio_snapshot_id | UUID | YES | FK → portfolio_snapshots (SET NULL) — the snapshot active at decision time |
+| risk_model_snapshot | JSONB | YES | Full frozen risk model fields at decision time |
+| holdings_summary | JSONB | YES | Frozen portfolio allocation summary |
+| fx_rate_snapshot | JSONB | YES | Relevant FX rates at decision time |
+| price_snapshot | JSONB | YES | Relevant live prices at decision time |
+| market_signals_snapshot | JSONB | YES | Up to 10 market signals at decision time |
+| rule_results | JSONB | YES | Deterministic rule outputs (coach insight keys and types) |
+| model_used | VARCHAR(100) | YES | e.g. `claude-sonnet-4-6` |
+| prompt_version | VARCHAR(50) | YES | e.g. `v1` — tracks prompt engineering iterations |
+| ai_input_summary | TEXT | YES | First 1000 chars of AI prompt context (truncated) |
+| ai_output_summary | TEXT | YES | First 1000 chars of AI output (truncated) |
+| input_tokens | INTEGER | YES | Claude API input token count |
+| output_tokens | INTEGER | YES | Claude API output token count |
+| output_summary | JSONB | YES | Structured output (e.g. `{tickers, guidance, portfolio_actions}`) |
+| recommendation_count | INTEGER | YES | Number of recommendations produced |
+| decision_hash | VARCHAR(64) | YES | SHA-256 of `{investor_id, decision_type, risk_model_id, minute}` truncated to 16 chars — dedup identifier |
+| created_at | TIMESTAMPTZ | NO | `now()` |
+
+**Written by:** `provenance/recorder.py:record_decision()` — fire-and-forget wrapper; never raises; logs warning on failure.
+
+**Read by:** `provenance/router.py` — list, detail, and replay endpoints. Also read by `decision_timeline/service.py` to merge into the unified timeline.
+
+**Replay:** `POST /investors/{id}/decisions/{id}/replay` re-runs the AI using frozen inputs from `risk_model_snapshot`, `holdings_summary`, `market_signals_snapshot`. The replay result is recorded as a new row with `decision_type = ai_recommendation_replay`.
+
+---
+
+## 32. Migration history
 
 | Migration | Description |
 |-----------|-------------|
@@ -812,3 +849,4 @@ Tracks every Claude API call for cost attribution and admin reporting.
 | 0038 | paper_trading_v2: cash_balance on paper_portfolios; strategy_template_id and risk_model_id made nullable; new paper_positions table (WACC positions) and paper_orders table (trade history) |
 | 0039 | market_research_reports table — JSONB persistence of deep market research reports for history browsing |
 | 0040 | net_worth_snapshots table (daily net worth history: portfolio_value, financial_assets_value, total_liabilities, net_worth, currency, snapshot_at) + coach_insights table (AI Coach persistent insights: insight_type, dedup_key, severity, title, message, action_text, link, is_dismissed, generated_at) |
+| 0041 | recommendation_decisions table — full decision provenance: frozen inputs (risk_model_snapshot, holdings_summary, fx_rate_snapshot, price_snapshot, market_signals_snapshot, rule_results as JSONB), AI layer (model_used, prompt_version, ai_input_summary, ai_output_summary, input/output_tokens), output (output_summary JSONB, recommendation_count, decision_hash VARCHAR(64)); 3 indexes on investor_id, triggered_at, decision_type |
