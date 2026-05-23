@@ -8,6 +8,16 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [2.2.0] — 2026-05-23
+
+### Added
+- **Financial Twin** (`GET /investors/{id}/twin`, `GET /twin/history`, `POST /twin/refresh`): 8-dimensional behavioral/financial mirror — Financial Stability, Behavioral Discipline, Emotional Risk, Portfolio Consistency, Financial Resilience, Risk Alignment, Long-Term Discipline, Contribution Momentum
+- **Financial Health Radar** (`GET /investors/{id}/health-radar`): 9-dimensional health snapshot — Stability, Liquidity, Discipline, Diversification, Emotional Control, Contribution Consistency, Tax Efficiency, Risk Alignment, Financial Resilience; co-computed with twin in a single service call
+- **`financial_twin_snapshots` and `financial_health_scores` tables** (migration 0043): daily snapshots with all dimension columns and overall_score; previous_overall derived from the most recent prior row
+- **`compute_twin_daily` background job** (03:00 UTC): refreshes twin + health radar for all investors after portfolio snapshots complete
+- **Twin page** (`/twin`): 8-sided SVG radar chart, overall score with trend arrow, per-dimension cards with score bars and descriptions
+- **Health Radar page** (`/health-radar`): 9-sided SVG radar chart with per-vertex color-coded dots, overall score with trend arrow, dimension breakdown score bars
+
 ## [2.1.0] — 2026-05-23
 
 ### Added

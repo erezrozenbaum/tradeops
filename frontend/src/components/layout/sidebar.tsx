@@ -47,6 +47,7 @@ import {
   PieChart,
   Gauge,
   Trophy,
+  Cpu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -106,6 +107,8 @@ const sections = [
       { label: "Behavioral Intel", href: "/behavioral", icon: Gauge },
       { label: "Attribution", href: "/attribution", icon: PieChart },
       { label: "Investor Maturity", href: "/maturity", icon: Trophy },
+      { label: "Financial Twin", href: "/twin", icon: Cpu },
+      { label: "Health Radar", href: "/health-radar", icon: Activity },
     ],
   },
   {

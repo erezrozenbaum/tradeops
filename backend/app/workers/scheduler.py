@@ -44,6 +44,7 @@ def _register_jobs() -> None:
     from app.workers.jobs.coach_refresh import refresh_all_coach_insights
     from app.workers.jobs.data_quality_check import run_data_quality_checks
     from app.workers.jobs.maturity_weekly import compute_all_maturity_scores
+    from app.workers.jobs.twin_daily import compute_all_twin_scores
 
     _scheduler.add_job(
         refresh_all_prices,
@@ -159,6 +160,13 @@ def _register_jobs() -> None:
         replace_existing=True,
         misfire_grace_time=7200,
     )
+    _scheduler.add_job(
+        compute_all_twin_scores,
+        CronTrigger(hour=3, minute=0),  # daily 03:00 UTC — after portfolio + net worth snapshots
+        id="twin_daily",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
 
 
 def start() -> None:
@@ -172,7 +180,7 @@ def start() -> None:
         "Workers scheduler started (jobs: price_refresh, snapshot_writer, price_alert_checker, "
         "goal_evaluation, proactive_insights, notification_alerts, broker_auto_sync, weekly_digest, "
         "market_prewarm, research_prewarm, sentiment_signals, fx_history_sync, net_worth_snapshot, "
-        "coach_refresh, data_quality_check, maturity_weekly)"
+        "coach_refresh, data_quality_check, maturity_weekly, twin_daily)"
     )
 
 

@@ -1,8 +1,8 @@
 # TradeOps AI — Database Schema Reference
 
-**Version:** 2.1.0  
+**Version:** 2.2.0  
 **Last updated:** 2026-05-23  
-**Migration head:** 0042
+**Migration head:** 0043
 
 All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete unless noted.
 
@@ -46,7 +46,9 @@ All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete
 30. [Relationships diagram](#30-relationships-diagram)
 31. [recommendation_decisions](#31-recommendation_decisions)
 32. [investor_maturity_snapshots](#32-investor_maturity_snapshots)
-33. [Migration history](#33-migration-history)
+33. [financial_twin_snapshots](#33-financial_twin_snapshots)
+34. [financial_health_scores](#34-financial_health_scores)
+35. [Migration history](#35-migration-history)
 
 ---
 
@@ -832,7 +834,54 @@ Weekly computed investor maturity score. Each row is a point-in-time snapshot �
 
 ---
 
-## 33. Migration history
+## 33. financial_twin_snapshots
+
+Daily behavioral/financial twin snapshot per investor. Co-computed with `financial_health_scores`.
+
+| Column | Type | Nullable | Notes |
+|--------|------|----------|-------|
+| id | UUID | NO | PK |
+| investor_id | UUID | NO | FK → investor_profiles CASCADE |
+| computed_at | TIMESTAMPTZ | NO | Snapshot timestamp |
+| financial_stability | FLOAT | NO | Income surplus + emergency fund coverage |
+| behavioral_discipline | FLOAT | NO | Trade quality score from 12-month history |
+| emotional_risk | FLOAT | NO | Short-term reactive trading tendency (lower = calmer) |
+| portfolio_consistency | FLOAT | NO | Actual vs target risk model alignment |
+| financial_resilience | FLOAT | NO | Emergency fund buffer + net worth shock absorption |
+| risk_alignment | FLOAT | NO | Portfolio risk level vs stated risk profile |
+| long_term_discipline | FLOAT | NO | Average holding duration score |
+| contribution_momentum | FLOAT | NO | Frequency of recent investment contributions |
+| overall_score | FLOAT | NO | Weighted average of all 8 dimensions |
+
+Indexes: `investor_id`, `computed_at` (DESC).
+
+---
+
+## 34. financial_health_scores
+
+Daily 9-dimensional financial health snapshot per investor.
+
+| Column | Type | Nullable | Notes |
+|--------|------|----------|-------|
+| id | UUID | NO | PK |
+| investor_id | UUID | NO | FK → investor_profiles CASCADE |
+| computed_at | TIMESTAMPTZ | NO | Snapshot timestamp |
+| stability | FLOAT | NO | Income surplus, expense coverage, financial score |
+| liquidity | FLOAT | NO | Emergency fund months coverage |
+| discipline | FLOAT | NO | Trading behaviour quality |
+| diversification | FLOAT | NO | Unique assets held across portfolio |
+| emotional_control | FLOAT | NO | Absence of short-term reactive / panic trading |
+| contribution_consistency | FLOAT | NO | Regularity of investment contributions |
+| tax_efficiency | FLOAT | NO | Long-term vs short-term holding ratio |
+| risk_alignment | FLOAT | NO | Portfolio allocation vs target risk model |
+| financial_resilience | FLOAT | NO | Emergency fund buffer + net worth strength |
+| overall_score | FLOAT | NO | Weighted average of all 9 dimensions |
+
+Indexes: `investor_id`, `computed_at` (DESC).
+
+---
+
+## 35. Migration history
 
 | Migration | Description |
 |-----------|-------------|
@@ -873,3 +922,4 @@ Weekly computed investor maturity score. Each row is a point-in-time snapshot �
 | 0040 | net_worth_snapshots table (daily net worth history: portfolio_value, financial_assets_value, total_liabilities, net_worth, currency, snapshot_at) + coach_insights table (AI Coach persistent insights: insight_type, dedup_key, severity, title, message, action_text, link, is_dismissed, generated_at) |
 | 0041 | recommendation_decisions table — full decision provenance: frozen inputs (risk_model_snapshot, holdings_summary, fx_rate_snapshot, price_snapshot, market_signals_snapshot, rule_results as JSONB), AI layer (model_used, prompt_version, ai_input_summary, ai_output_summary, input/output_tokens), output (output_summary JSONB, recommendation_count, decision_hash VARCHAR(64)); 3 indexes on investor_id, triggered_at, decision_type |
 | 0042 | investor_maturity_snapshots table — composite_score FLOAT, stage VARCHAR(30), component_scores JSONB (8 components), features_unlocked JSONB, notes JSONB; 3 indexes on investor_id, computed_at, stage |
+| 0043 | financial_twin_snapshots (8 FLOAT dimension columns + overall_score) and financial_health_scores (9 FLOAT dimension columns + overall_score); 2 indexes each on investor_id and computed_at |

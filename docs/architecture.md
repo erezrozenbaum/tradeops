@@ -258,6 +258,11 @@ backend/app/
 │   ├── schemas.py              # MaturitySnapshot, ComponentScores, STAGE_LABELS, FEATURES_BY_STAGE
 │   └── router.py               # GET /investors/{id}/maturity, GET /maturity/history, POST /maturity/refresh
 │
+├── financial_twin/             # Financial Twin + Health Radar — daily snapshot engines (v2.2.0)
+│   ├── service.py              # compute_twin_and_health(): 8 twin dims + 9 health dims co-computed in one call
+│   ├── schemas.py              # TwinSnapshot, TwinDimensions, HealthRadarSnapshot, HealthRadarDimensions
+│   └── router.py               # GET /twin, GET /twin/history, POST /twin/refresh; GET /health-radar
+│
 ├── pension_simulation/         # Standalone pension projector
 ├── debt_planner/               # Debt payoff planner (avalanche/snowball)
 ├── watchlist/                  # Per-investor ticker watchlist
@@ -519,6 +524,8 @@ frontend/src/
 │   │   ├── behavioral/page.tsx     # Behavioral Intelligence: score ring, holding periods, patterns (v1.7.0)
 │   │   ├── attribution/page.tsx    # Performance Attribution: factor bars + confidence breakdown (v2.0.0)
 │   │   ├── maturity/page.tsx       # Investor Maturity: score arc, stage roadmap, component bars (v2.1.0)
+│   │   ├── twin/page.tsx           # Financial Twin: 8-sided SVG radar + dimension cards + trend arrows (v2.2.0)
+│   │   ├── health-radar/page.tsx   # Financial Health Radar: 9-sided SVG radar + score bar breakdown (v2.2.0)
 │   │   └── settings/page.tsx       # Account and platform info
 │   └── page.tsx                    # Root redirect → /dashboard
 ├── components/ui/                  # Shared UI primitives (Card, Badge, Button, etc.)
