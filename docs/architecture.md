@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 3.0.0  
+**Version:** 3.1.0  
 **Last updated:** 2026-05-23
 
 ---
@@ -43,11 +43,11 @@ flowchart TD
         AUTH["auth/\n(JWT httpOnly cookie, JTI blacklist)"]
         ENG["Domain engines\n(pure functions, no DB)"]
         SVC["Services\n(DB + engine + FX)"]
-        WRK["APScheduler workers\n(13 background jobs)"]
+        WRK["APScheduler workers\n(14 background jobs)"]
     end
 
     subgraph Data["Data layer"]
-        PG["PostgreSQL 16\n(Alembic migrations 0001–0040)"]
+        PG["PostgreSQL 16\n(Alembic migrations 0001–0047)"]
         RD["Redis 7\n(rate limit + JTI blacklist)"]
         PS["price_snapshots\n(24h TTL)"]
         FX["currency_rates\n(4h TTL)"]
@@ -279,17 +279,18 @@ backend/app/
 ├── debt_planner/               # Debt payoff planner (avalanche/snowball)
 ├── watchlist/                  # Per-investor ticker watchlist
 ├── notifications/              # In-app notification store
-├── investment_agent/           # Maturity-aware AI Thought Partner (v2.7.0)
-│   ├── engine.py               # run_agent(verbosity): stage-adaptive prompt, maturity+twin+behavioral context injection
+├── investment_agent/           # Maturity-aware AI Thought Partner (v2.7.0–v3.1.0)
+│   ├── engine.py               # run_agent(verbosity): stage-adaptive prompt, maturity+twin+behavioral context injection; past_summaries (v3.1.0) from ai_memory_entries injected for longitudinal narrative
 │   ├── schemas.py              # AgentReport (incl. maturity_stage, verbosity_used), ActionItem, Opportunity, CapitalThresholdPlan
 │   └── router.py               # GET /agent?verbosity=beginner|standard|advanced
-├── command_center/             # Financial Command Center — daily intelligence hub (v2.8.0–v3.0.0)
+├── command_center/             # Financial Command Center — daily intelligence hub (v2.8.0–v3.1.0)
 │   ├── schemas.py              # CommandCenterReport, FinancialStatusHeader, PrioritizedAction, EvolutionItem, HealthRadarPoint, TwinInsightsData, BehavioralRiskCard, FuturesPreview, ReplayHighlight, InvestorProgression, GoalProgressItem (v2.9.0)
 │   ├── action_engine.py        # Deterministic ActionPrioritizer: 5 rule categories (EF, behavioral, concentration, contribution, goals); top-3 by composite score; stage-adaptive copy
 │   ├── ai_cache.py             # Redis AI summary cache (v3.0.0): get/set/invalidate; key cc_ai:{id}:{verbosity}; 26h TTL; no-op fallback when Redis absent
+│   ├── ai_memory.py            # Longitudinal AI memory (v3.1.0): write_entry() / get_recent(months=3); stores portfolio_assessment + key_metrics JSONB; rolling 3-month window
 │   ├── evolution.py            # EvolutionFeedGenerator: 7-day delta across twin + maturity + behavioral events; negatives first; cap 8
 │   ├── replay_selector.py      # CounterfactualSelector: highest abs(delta) from completed counterfactual runs
-│   ├── orchestrator.py         # build(): ThreadPoolExecutor(7) parallel fetch + Redis cache check + serial AI fallback → CommandCenterReport
+│   ├── orchestrator.py         # build(): ThreadPoolExecutor(7) parallel fetch + Redis cache check + serial AI fallback → CommandCenterReport; writes ai_memory_entry after live AI call (v3.1.0)
 │   └── router.py               # GET /investors/{id}/command-center?verbosity=beginner|standard|advanced
 ├── transactions/               # Immutable holding transaction log
 ├── price_alerts/               # User-defined price triggers
@@ -474,6 +475,7 @@ Managed by Alembic. Migrations in `backend/alembic/versions/`.
 | `0044` | behavioral_risk_events table (event_type, severity, status, description, recommendation, detected_at, resolved_at) |
 | `0045` | simulation_runs table (scenario_type, parameters JSONB, results JSONB, status, computed_at) |
 | `0046` | command_center_checkpoints table (investor_id, checkpoint_at, twin_score, maturity_score, active_risks, notes JSONB) |
+| `0047` | ai_memory_entries table (investor_id, summary_at, verbosity, portfolio_assessment TEXT, key_metrics JSONB) — longitudinal AI memory (v3.1.0) |
 
 ### Core tables
 

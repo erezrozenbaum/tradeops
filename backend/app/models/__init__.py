@@ -27,6 +27,7 @@ from app.models.net_worth import NetWorthSnapshot
 from app.models.coach_insight import CoachInsight
 from app.models.recommendation_decision import RecommendationDecision
 from app.models.simulation_run import SimulationRun, SimulationComparisonSet
+from app.models.ai_memory_entry import AIMemoryEntry
 
 __all__ = [
     "InvestorProfile",
@@ -72,4 +73,5 @@ __all__ = [
     "RecommendationDecision",
     "SimulationRun",
     "SimulationComparisonSet",
+    "AIMemoryEntry",
 ]

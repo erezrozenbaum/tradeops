@@ -73,6 +73,10 @@ RESPONSE FORMAT — respond with valid JSON only, no markdown:
 
 Generate 2-4 action plan items, 3-5 top opportunities, 4-5 capital threshold tiers, and 1-3 risk warnings.
 Capital thresholds should cover the range from first available capital to a well-diversified portfolio for this investor.
+
+LONGITUDINAL MEMORY — if the context includes past_summaries, use them to show progress over time.
+Reference specific metric changes when they are meaningful (e.g. "Three months ago your emergency fund was 1.2 months; now it's 2.1 months — that's real progress.").
+Do not reference past summaries if there are none. Never fabricate historical data.
 """
 
 # ── Stage-specific prompt extensions ─────────────────────────────────────────
@@ -229,6 +233,14 @@ def _build_context(db: Session, investor_id: uuid.UUID) -> dict | None:
 
     market_prices = _get_market_prices(db)
 
+    # Longitudinal AI memory — rolling 3-month window
+    from app.command_center.ai_memory import get_recent as get_ai_memories
+    past_memories = []
+    try:
+        past_memories = get_ai_memories(db, investor_id)
+    except Exception:
+        pass
+
     owned_tickers: set[str] = set()
     if portfolio:
         for acc in portfolio.accounts:
@@ -332,6 +344,14 @@ def _build_context(db: Session, investor_id: uuid.UUID) -> dict | None:
                 "brief_rationale": i.brief_rationale,
             }
             for i in CATALOG
+        ],
+        "past_summaries": [
+            {
+                "summary_at": m.summary_at.isoformat(),
+                "portfolio_assessment": m.portfolio_assessment,
+                "key_metrics": m.key_metrics or {},
+            }
+            for m in past_memories
         ],
     }
     return ctx

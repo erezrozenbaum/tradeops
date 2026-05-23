@@ -8,6 +8,16 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.1.0] — 2026-05-23
+
+### Added
+- **Longitudinal AI Memory** — AI Thought Partner now has a rolling 3-month memory of past portfolio assessments; Claude references specific metric changes ("Three months ago your emergency fund was 1.2 months; now it's 2.1 months") when the history is available
+- **`ai_memory_entries` table** (migration 0047) — stores `portfolio_assessment` text + `key_metrics` JSONB snapshot (twin score, maturity stage, stability score, ef_months, net_worth) per investor per AI call
+- **`AIMemoryEntry` ORM model** (`models/ai_memory_entry.py`) — maps to the new table; CASCADE-deleted when investor is removed
+- **`ai_memory` service** (`command_center/ai_memory.py`) — `write_entry()` / `get_recent(months=3, limit=12)` — clean API for memory reads and writes
+- **Memory injection** — `_build_context()` in `engine.py` fetches recent memories and injects them as `past_summaries`; never fabricates history when entries are absent
+- **Auto-write after live AI call** — orchestrator writes a memory entry (with key_metrics snapshot) immediately after any successful live Claude call; cache hits do not create duplicate entries
+
 ## [3.0.0] — 2026-05-23
 
 ### Added

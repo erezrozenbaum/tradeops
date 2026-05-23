@@ -360,6 +360,7 @@ def build(db: Session, investor_id: uuid.UUID, verbosity: str = "standard") -> C
 
     # AI summary — check Redis cache first, fall back to live call
     from app.command_center.ai_cache import get_cached, set_cached
+    from app.command_center.ai_memory import write_entry as write_memory
 
     ai_summary = ""
     ai_verbosity = verbosity
@@ -373,6 +374,37 @@ def build(db: Session, investor_id: uuid.UUID, verbosity: str = "standard") -> C
             ai_verbosity = report.verbosity_used
             if ai_summary:
                 set_cached(investor_id, verbosity, ai_summary)
+                # Build key_metrics snapshot for longitudinal memory
+                from app.models.financial_profile import FinancialProfile
+                from app.models.portfolio_snapshot import PortfolioSnapshot
+                key_metrics: dict = {
+                    "twin_overall_score": round(twin_current.overall_score, 1) if twin_current else None,
+                    "maturity_stage": stage,
+                    "stability_score": header.stability_score,
+                }
+                fp_mem = db.query(FinancialProfile).filter(
+                    FinancialProfile.investor_profile_id == investor_id
+                ).first()
+                if fp_mem:
+                    key_metrics["ef_months"] = fp_mem.emergency_fund_months
+                snap_mem = (
+                    db.query(PortfolioSnapshot)
+                    .filter(PortfolioSnapshot.investor_id == investor_id)
+                    .order_by(PortfolioSnapshot.snapshot_at.desc())
+                    .first()
+                )
+                if snap_mem:
+                    key_metrics["net_worth"] = float(snap_mem.total_value)
+                try:
+                    write_memory(
+                        db=db,
+                        investor_id=investor_id,
+                        verbosity=verbosity,
+                        portfolio_assessment=ai_summary,
+                        key_metrics=key_metrics,
+                    )
+                except Exception:
+                    pass  # memory write failure must never break the report
         except Exception:
             ai_summary = "AI summary unavailable. Configure ANTHROPIC_API_KEY to enable."
 
