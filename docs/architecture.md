@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 3.1.0  
+**Version:** 3.2.0  
 **Last updated:** 2026-05-23
 
 ---
@@ -47,7 +47,7 @@ flowchart TD
     end
 
     subgraph Data["Data layer"]
-        PG["PostgreSQL 16\n(Alembic migrations 0001–0047)"]
+        PG["PostgreSQL 16\n(Alembic migrations 0001–0048)"]
         RD["Redis 7\n(rate limit + JTI blacklist)"]
         PS["price_snapshots\n(24h TTL)"]
         FX["currency_rates\n(4h TTL)"]
@@ -283,6 +283,10 @@ backend/app/
 │   ├── engine.py               # run_agent(verbosity): stage-adaptive prompt, maturity+twin+behavioral context injection; past_summaries (v3.1.0) from ai_memory_entries injected for longitudinal narrative
 │   ├── schemas.py              # AgentReport (incl. maturity_stage, verbosity_used), ActionItem, Opportunity, CapitalThresholdPlan
 │   └── router.py               # GET /agent?verbosity=beginner|standard|advanced
+├── household/                  # Partner/Household View (v3.2.0)
+│   ├── service.py              # create_household, join_household, leave_household, get_summary, get_aggregate_metrics
+│   ├── schemas.py              # HouseholdCreate, HouseholdOut, HouseholdMemberCard, HouseholdSummary, HouseholdAggregateMetrics
+│   └── router.py               # POST /create, POST /join/{id}, DELETE, GET, GET /aggregate
 ├── command_center/             # Financial Command Center — daily intelligence hub (v2.8.0–v3.1.0)
 │   ├── schemas.py              # CommandCenterReport, FinancialStatusHeader, PrioritizedAction, EvolutionItem, HealthRadarPoint, TwinInsightsData, BehavioralRiskCard, FuturesPreview, ReplayHighlight, InvestorProgression, GoalProgressItem (v2.9.0)
 │   ├── action_engine.py        # Deterministic ActionPrioritizer: 5 rule categories (EF, behavioral, concentration, contribution, goals); top-3 by composite score; stage-adaptive copy
@@ -476,6 +480,7 @@ Managed by Alembic. Migrations in `backend/alembic/versions/`.
 | `0045` | simulation_runs table (scenario_type, parameters JSONB, results JSONB, status, computed_at) |
 | `0046` | command_center_checkpoints table (investor_id, checkpoint_at, twin_score, maturity_score, active_risks, notes JSONB) |
 | `0047` | ai_memory_entries table (investor_id, summary_at, verbosity, portfolio_assessment TEXT, key_metrics JSONB) — longitudinal AI memory (v3.1.0) |
+| `0048` | households table + investor_profiles.household_id FK (nullable, SET NULL on delete) — Partner/Household View (v3.2.0) |
 
 ### Core tables
 

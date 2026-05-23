@@ -8,6 +8,18 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.2.0] — 2026-05-23
+
+### Added
+- **Household View** (`/household`) — investors can create or join a household to see a combined financial view with a partner; shows combined net worth, combined portfolio value, combined monthly surplus, total active behavioral risks, and per-member cards (maturity stage, twin score, stability classification)
+- **`households` table** (migration 0048) — `id`, `name`, `created_at`, `updated_at`
+- **`household_id` FK on `investor_profiles`** (migration 0048) — nullable `UUID → households.id ON DELETE SET NULL`; zero impact on existing rows
+- **`Household` ORM model** (`models/household.py`) — bidirectional relationship with `InvestorProfile.members`
+- **`household` module** (`household/`) — `service.py` (create, join, leave, summary, aggregate metrics), `schemas.py`, `router.py`
+- **5 new endpoints** under `/investors/{id}/household`: `POST /create`, `POST /join/{household_id}`, `DELETE`, `GET`, `GET /aggregate`
+- **Household page** — create/join panel with UUID copy-to-clipboard for sharing; aggregate metric cards; per-member twin/stability summary cards; leave button
+- **Sidebar** — "Household" added under Personal section
+
 ## [3.1.0] — 2026-05-23
 
 ### Added

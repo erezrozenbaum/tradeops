@@ -1,10 +1,14 @@
 import enum
 import uuid
 from datetime import date
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Boolean, Date, Enum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+if TYPE_CHECKING:
+    from app.models.household import Household
 
 from app.db.base import Base
 from app.models.base import TimestampMixin, UUIDMixin
@@ -61,6 +65,12 @@ class InvestorProfile(Base, UUIDMixin, TimestampMixin):
     preferred_assets: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     trading_frequency: Mapped[str | None] = mapped_column(String(10), nullable=True)
     guardian_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # Household link — partner/household view (v3.2.0)
+    household_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("households.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    household: Mapped[Optional["Household"]] = relationship("Household", back_populates="members")
 
     # Alert settings
     alert_email: Mapped[str | None] = mapped_column(String(255), nullable=True)

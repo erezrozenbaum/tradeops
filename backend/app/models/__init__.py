@@ -28,6 +28,7 @@ from app.models.coach_insight import CoachInsight
 from app.models.recommendation_decision import RecommendationDecision
 from app.models.simulation_run import SimulationRun, SimulationComparisonSet
 from app.models.ai_memory_entry import AIMemoryEntry
+from app.models.household import Household
 
 __all__ = [
     "InvestorProfile",
@@ -74,4 +75,5 @@ __all__ = [
     "SimulationRun",
     "SimulationComparisonSet",
     "AIMemoryEntry",
+    "Household",
 ]

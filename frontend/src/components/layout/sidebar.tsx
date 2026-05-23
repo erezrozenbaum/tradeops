@@ -50,6 +50,7 @@ import {
   Cpu,
   AlertTriangle,
   Layers,
+  Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -65,6 +66,7 @@ const sections = [
     items: [
       { label: "Profile", href: "/profile", icon: User },
       { label: "Family", href: "/family", icon: Users },
+      { label: "Household", href: "/household", icon: Home },
       { label: "Financial", href: "/financial", icon: Wallet },
       { label: "Goals", href: "/goals", icon: Target },
       { label: "Net Worth", href: "/net-worth", icon: PiggyBank },
