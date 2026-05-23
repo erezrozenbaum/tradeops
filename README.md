@@ -4,7 +4,7 @@
 
 **Personal Financial Intelligence Platform**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.8.0-blue?style=flat-square)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org)
@@ -185,7 +185,22 @@ Risk-Controlled Live Execution (gated, opt-in)
 | **Mobile-first UI** | Responsive sidebar, touch-friendly layouts |
 | **Kubernetes / Helm** | Production-hardened chart with NetworkPolicy, PDB, securityContext |
 
-### Observability & Data Integrity *(v1.0.0)*
+### Financial Command Center *(v2.8.0)*
+
+| Feature | Description |
+|---|---|
+| **Today's Command Center** | Unified daily intelligence screen — answers "What should I focus on next, and why?" Replaces the dashboard as the primary landing page |
+| **Top 3 Prioritized Actions** | Rule-based action engine ranks the highest-impact next steps (emergency fund, concentration risk, behavioral warnings, contribution gaps) — adapted to maturity stage |
+| **7-Day Financial Evolution Feed** | Delta feed comparing key metrics (Twin score, stability, behavioral risk, net worth) vs 7 days ago; explains what changed and why |
+| **Health Radar Inline** | 8-dimension radar chart surfaced on the main screen — instant financial clarity |
+| **Financial Twin Insights** | Positive drivers and drag factors that are actually shaping financial progress |
+| **Behavioral Risk Surface** | Active warnings shown inline — no need to navigate to a separate page |
+| **Parallel Futures Preview** | Simplified 3-path projection (current / +savings / debt-free) with FI probability — links to full simulation |
+| **Decision Replay Highlight** | Most impactful counterfactual insight surfaced on the main screen |
+| **Maturity-Aware AI Summary** | AI Thought Partner summary adapts tone and depth to investor's maturity stage; inline verbosity toggle |
+| **Investor Progression Track** | Stage progression bar + unlocked features + next unlock target |
+
+### Observability & Data Integrity *(v2.7.1)*
 
 | Feature | Description |
 |---|---|

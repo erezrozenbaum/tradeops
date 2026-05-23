@@ -60,6 +60,7 @@ from app.investor_maturity.router import router as investor_maturity_router
 from app.financial_twin.router import router as financial_twin_router, health_router as financial_health_router
 from app.behavioral_risk.router import router as behavioral_risk_router
 from app.simulation.router import router as simulation_router
+from app.command_center.router import router as command_center_router
 
 api_router = APIRouter()
 
@@ -130,3 +131,4 @@ api_router.include_router(financial_twin_router, prefix="/investors/{investor_id
 api_router.include_router(financial_health_router, prefix="/investors/{investor_id}/health-radar", tags=["health-radar"], dependencies=_own)
 api_router.include_router(behavioral_risk_router, prefix="/investors/{investor_id}/behavioral-risk", tags=["behavioral-risk"], dependencies=_own)
 api_router.include_router(simulation_router, prefix="/investors/{investor_id}/simulations", tags=["simulations"], dependencies=_own)
+api_router.include_router(command_center_router, prefix="/investors/{investor_id}/command-center", tags=["command-center"], dependencies=_own)

@@ -8,6 +8,30 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [2.8.0] — 2026-05-23
+
+### Added
+- **Financial Command Center** (`/command-center`) — primary landing screen replacing the dashboard as the first meaningful destination; answers "What should I focus on next, and why?" with a unified intelligent daily view
+- **Action Prioritization Engine** (`command_center/action_engine.py`) — deterministic rule engine ranks up to 3 highest-impact actions from existing data (emergency fund gap, active behavioral risks, concentration exposure, contribution gaps); actions adapt copy style to investor's maturity stage (plain → institutional)
+- **7-Day Evolution Feed** (`command_center/evolution.py`) — computes deltas across Twin snapshot, Maturity snapshot, and Behavioral Risk events vs 7 days ago; surfaces negatives first, suppresses sub-threshold noise; shows causal explanation for discipline+ stages
+- **Counterfactual Replay Selector** (`command_center/replay_selector.py`) — picks the highest-delta counterfactual simulation from saved runs and surfaces it as a one-line insight on the Command Center
+- **Command Center Orchestrator** (`command_center/orchestrator.py`) — parallel ThreadPoolExecutor fetch across 6 data sources; AI Thought Partner summary runs serially after context is assembled
+- **`GET /investors/{id}/command-center`** — full aggregated report (all sections); `?verbosity=beginner|standard|advanced` param
+- **`useMaturityVariant` hook** — maps maturity stage to a typed config controlling which sections and copy style each component renders; centralizes all maturity logic outside component code
+- **StatusHeader** — Twin score + 7-day delta + maturity stage chip + stability/net-worth/behavioral-risk trend pills
+- **ActionsPanel + ActionCard** — severity-coded action cards with impact badges; optional rationale shown for discipline+ stage
+- **EvolutionFeed** — 7-day delta feed with directional icons; color-coded by severity
+- **HealthRadarCard** — recharts RadarChart with 8-dimension health axes; links to `/health-radar`
+- **TwinInsightsCard** — animated horizontal bar charts for positive drivers and drag factors; drag factors hidden for foundation stage
+- **BehavioralRisksPanel** — active behavioral risk cards with severity badge and recommendation; links to `/behavioral-risk`
+- **FuturesPreviewCard** — simplified 3-path LineChart from cached simulation runs; hidden (replaced by gated placeholder) for foundation stage
+- **ReplayHighlightCard** — surfaces best counterfactual insight with estimated delta %; hidden for foundation/discipline stages
+- **AIThoughtPartnerCard** — maturity-adapted AI portfolio assessment with inline verbosity toggle (Simplified / Standard / Detailed); re-fetches on toggle
+- **ProgressionCard** — stage track with 4 checkpoints, composite score, unlocked features list, and next unlock target
+- **Migration 0046** — `command_center_checkpoints` table (weekly snapshot anchor for future evolution feed precision)
+- **Sidebar** — Command Center added as first navigation item above Dashboard
+- **README** — version badge updated to 2.8.0; Financial Command Center section added to feature table
+
 ## [2.7.1] — 2026-05-23
 
 ### Security

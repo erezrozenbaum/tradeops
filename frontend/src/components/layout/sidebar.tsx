@@ -55,7 +55,10 @@ import { cn } from "@/lib/utils";
 
 const sections = [
   {
-    items: [{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard }],
+    items: [
+      { label: "Command Center", href: "/command-center", icon: Cpu },
+      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    ],
   },
   {
     label: "Personal",
