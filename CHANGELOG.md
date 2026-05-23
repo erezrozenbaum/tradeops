@@ -8,6 +8,19 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.0.0] — 2026-05-23
+
+### Added
+- **Nightly Command Center AI pre-compute** (`workers/jobs/command_center_nightly.py`) — daily at 05:00 UTC (after twin + behavioral risk jobs); calls `run_agent("standard")` for every investor and stores the result in Redis (`cc_ai:{id}:standard`, 26h TTL); Command Center page now serves instantly from cache instead of blocking on a 2–4s Claude call
+- **Redis AI summary cache** (`command_center/ai_cache.py`) — `get_cached()` / `set_cached()` / `invalidate()`; falls back transparently to live call when Redis is unavailable or cache is cold; lazy-caches beginner/advanced verbosity on first request
+- **Weekly Command Center checkpoints** (`workers/jobs/command_center_checkpoint.py`) — runs Monday 04:00 UTC; writes a `command_center_checkpoints` row per investor capturing twin score, maturity score, stability score, net worth, behavioral discipline, financial resilience, active risk count, and top concentration %; idempotent (skips if row already exists for the checkpoint hour)
+- **`CommandCenterCheckpoint` ORM model** (`models/command_center_checkpoint.py`) — SQLAlchemy model for the table created in migration 0046
+- **Critical push notifications** — two new in-app notification types added to `notifications/center.py`: emergency fund < 1 month (danger severity, `critical_ef_below_1m`) and highest active HIGH behavioral risk (danger severity, `critical_behavioral_{event_type}`); both appear instantly in the Notifications panel
+
+### Changed
+- **Weekly digest schedule** moved from Friday 18:00 UTC to **Monday 08:00 UTC** — start-of-week briefing timing
+- **Command Center orchestrator** — AI summary now checks Redis cache before calling Claude; result cached after any successful live call; no change to API contract
+
 ## [2.9.0] — 2026-05-23
 
 ### Added

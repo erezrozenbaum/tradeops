@@ -46,6 +46,8 @@ def _register_jobs() -> None:
     from app.workers.jobs.maturity_weekly import compute_all_maturity_scores
     from app.workers.jobs.twin_daily import compute_all_twin_scores
     from app.workers.jobs.behavioral_risk_daily import detect_behavioral_risk_daily
+    from app.workers.jobs.command_center_nightly import precompute_command_center_ai
+    from app.workers.jobs.command_center_checkpoint import write_command_center_checkpoints
 
     _scheduler.add_job(
         refresh_all_prices,
@@ -98,7 +100,7 @@ def _register_jobs() -> None:
     )
     _scheduler.add_job(
         send_weekly_digest,
-        CronTrigger(day_of_week="fri", hour=18, minute=0),
+        CronTrigger(day_of_week="mon", hour=8, minute=0),
         id="weekly_digest",
         replace_existing=True,
         misfire_grace_time=3600,
@@ -175,6 +177,20 @@ def _register_jobs() -> None:
         replace_existing=True,
         misfire_grace_time=3600,
     )
+    _scheduler.add_job(
+        precompute_command_center_ai,
+        CronTrigger(hour=5, minute=0),  # daily 05:00 UTC — after twin + behavioral risk
+        id="command_center_nightly",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+    _scheduler.add_job(
+        write_command_center_checkpoints,
+        CronTrigger(day_of_week="mon", hour=4, minute=0),  # Monday 04:00 UTC — before nightly AI
+        id="command_center_checkpoint",
+        replace_existing=True,
+        misfire_grace_time=7200,
+    )
 
 
 def start() -> None:
@@ -188,7 +204,8 @@ def start() -> None:
         "Workers scheduler started (jobs: price_refresh, snapshot_writer, price_alert_checker, "
         "goal_evaluation, proactive_insights, notification_alerts, broker_auto_sync, weekly_digest, "
         "market_prewarm, research_prewarm, sentiment_signals, fx_history_sync, net_worth_snapshot, "
-        "coach_refresh, data_quality_check, maturity_weekly, twin_daily)"
+        "coach_refresh, data_quality_check, maturity_weekly, twin_daily, behavioral_risk_daily, "
+        "command_center_nightly, command_center_checkpoint)"
     )
 
 

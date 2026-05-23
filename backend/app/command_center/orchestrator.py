@@ -358,15 +358,23 @@ def build(db: Session, investor_id: uuid.UUID, verbosity: str = "standard") -> C
     progression = _build_progression(maturity)
     goal_progress = _build_goal_progress(db, investor_id)
 
-    # AI summary — serial, uses full context
+    # AI summary — check Redis cache first, fall back to live call
+    from app.command_center.ai_cache import get_cached, set_cached
+
     ai_summary = ""
     ai_verbosity = verbosity
-    try:
-        report = agent_engine.run_agent(db, investor_id, verbosity=verbosity)
-        ai_summary = report.portfolio_assessment or ""
-        ai_verbosity = report.verbosity_used
-    except Exception:
-        ai_summary = "AI summary unavailable. Configure ANTHROPIC_API_KEY to enable."
+    cached = get_cached(investor_id, verbosity)
+    if cached:
+        ai_summary = cached
+    else:
+        try:
+            report = agent_engine.run_agent(db, investor_id, verbosity=verbosity)
+            ai_summary = report.portfolio_assessment or ""
+            ai_verbosity = report.verbosity_used
+            if ai_summary:
+                set_cached(investor_id, verbosity, ai_summary)
+        except Exception:
+            ai_summary = "AI summary unavailable. Configure ANTHROPIC_API_KEY to enable."
 
     return CommandCenterReport(
         header=header,

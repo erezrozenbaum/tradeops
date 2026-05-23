@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 2.9.0  
+**Version:** 3.0.0  
 **Last updated:** 2026-05-23
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -351,6 +351,8 @@ The backend runs 14 scheduled jobs:
 | `weekly_digest` | Friday 18:00 UTC | AI-generated HTML digest email to opted-in investors |
 | `coach_refresh` | Daily 07:45 UTC | Refreshes AI Coach insights for all investors |
 | `data_quality_check` | Daily 02:00 UTC | Great Expectations validation suites across financial tables |
+| `command_center_nightly` | Daily 05:00 UTC | Pre-computes AI summaries for all investors and caches in Redis (26h TTL); Command Center page serves instantly from cache |
+| `command_center_checkpoint` | Monday 04:00 UTC | Writes weekly `command_center_checkpoints` row per investor (twin score, maturity, stability, net worth, behavioral discipline, active risks, concentration) |
 
 ### Audit log
 
@@ -745,7 +747,7 @@ kubectl describe ingress tradeops
 | Simulation Engine (Financial Futures) | `simulation/` + migration 0045 | 6 scenario types: 3 deterministic (`debt_payoff`, `savings_increase`, `job_loss`) using compound/drawdown formulas; 3 Monte Carlo (`market_crash`, `retirement`, `custom`) using 1 000 seeded iterations (reproducible via stored `random_seed`). All runs persist parameters + frozen `data_snapshot` + results (p10/p50/p90 trajectory) to `simulation_runs`. Required disclaimer on every response. `simulation_comparison_sets` table for grouping runs. Frontend: `/futures` page with scenario builder + SVG trajectory chart. Applied in v2.5.0. |
 | Counterfactual Replay | `simulation/counterfactuals.py` (no new migration) | 3 backward-looking what-if replays using the same `simulation_runs` table and `POST /investors/{id}/simulations` API. `counterfactual_rebalance`: forks from `RecommendationDecision`; compares actual vs suggested tier allocation using reference rates (low_risk=4%, growth=8%, high_risk=12%/yr). `counterfactual_constraint`: forks from first PortfolioSnapshot where tier drift >15% vs RiskModel targets. `counterfactual_hold`: reconstructs value of panic-sold positions today (PriceSnapshot or growth-rate fallback). Results include dual-path trajectory (counterfactual + actual), delta, delta_pct, explanation. `ValueError` → HTTP 422. Applied in v2.6.0. |
 | Maturity-Aware AI Agent | `investment_agent/` | Adaptive AI Thought Partner using `claude-sonnet-4-6`. Verbosity=beginner: plain language, no jargon. Verbosity=standard: balanced guidance. Verbosity=advanced: institutional framing. Injects maturity stage, financial twin dimensions, behavioral risk summary, and active flags into every prompt. Returns `AgentReport` (portfolio_assessment, verbosity_used, actions, opportunities). Applied in v2.7.0. |
-| Financial Command Center | `command_center/` + migration 0046 | Unified daily intelligence page. `GET /investors/{id}/command-center` assembles 10 data sections in parallel (ThreadPoolExecutor × 7) + 1 serial AI call. Sections: `FinancialStatusHeader` (twin score 7d delta, stability score, net worth 12m change), `PrioritizedAction` top-3 (deterministic rule engine: EF gap, behavioral risk, concentration, contribution, **goals v2.9.0**), `EvolutionItem` feed (7-day delta across twin + maturity + behavioral events; negatives first; cap 8), `HealthRadarPoint` list, `TwinInsightsData` (positive drivers + drag factors), `BehavioralRiskCard` list, `FuturesPreview` (downsampled p50 trajectory × 3 scenarios), `ReplayHighlight` (highest-abs-delta counterfactual), `InvestorProgression` (stage roadmap + features_unlocked + score_to_next), **`GoalProgressItem` top-2 goals (v2.9.0)**. Frontend: maturity-gated via `useMaturityVariant` hook — foundation stage hides futures/replay/drag factors/numeric metrics. Applied in v2.8.0; goal progress added v2.9.0. |
+| Financial Command Center | `command_center/` + migration 0046 | Unified daily intelligence page. `GET /investors/{id}/command-center` assembles 10 data sections in parallel (ThreadPoolExecutor × 7) + 1 AI step. AI summary served from Redis cache (`cc_ai:{id}:{verbosity}`, 26h TTL) pre-warmed nightly at 05:00 UTC; falls back to live Claude call when cache is cold. Sections: `FinancialStatusHeader`, `PrioritizedAction` top-3 (EF, behavioral, concentration, contribution, goals), `EvolutionItem` feed, `HealthRadarPoint` list, `TwinInsightsData`, `BehavioralRiskCard` list, `FuturesPreview`, `ReplayHighlight`, `InvestorProgression`, `GoalProgressItem` top-2. Frontend: maturity-gated via `useMaturityVariant`. Applied v2.8.0; goals v2.9.0; Redis cache v3.0.0. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.

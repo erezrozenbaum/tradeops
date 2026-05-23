@@ -25,6 +25,51 @@ def get_notifications(db: Session, investor_id: uuid.UUID) -> list[AppNotificati
     if not investor:
         return []
 
+    # --- Critical: emergency fund < 1 month ---
+    try:
+        from app.financial_profiles.service import get_by_investor, compute_effective_ef_months
+        fp = get_by_investor(db, investor_id)
+        if fp:
+            ef = compute_effective_ef_months(db, investor_id, fp)
+            if ef < 1.0:
+                notifications.append(AppNotification(
+                    id="critical_ef_below_1m",
+                    type="safety",
+                    severity="danger",
+                    title="Emergency fund critically low",
+                    message=f"You have less than 1 month of expenses saved ({ef:.1f} months). Build your safety net before investing.",
+                    link="/financial",
+                ))
+    except Exception:
+        pass
+
+    # --- Critical: HIGH behavioral risk active ---
+    try:
+        from app.models.behavioral_risk_event import BehavioralRiskEvent
+        high_risks = (
+            db.query(BehavioralRiskEvent)
+            .filter(
+                BehavioralRiskEvent.investor_id == investor_id,
+                BehavioralRiskEvent.status == "active",
+                BehavioralRiskEvent.severity == "high",
+            )
+            .order_by(BehavioralRiskEvent.detected_at.desc())
+            .limit(1)
+            .first()
+        )
+        if high_risks:
+            label = high_risks.event_type.replace("_", " ").title()
+            notifications.append(AppNotification(
+                id=f"critical_behavioral_{high_risks.event_type}",
+                type="behavioral",
+                severity="danger",
+                title=f"High behavioral risk: {label}",
+                message=high_risks.description or "A high-severity behavioral pattern has been detected. Review your recent activity.",
+                link="/behavioral-risk",
+            ))
+    except Exception:
+        pass
+
     # --- Goals analysis ---
     try:
         from app.goals_analysis.service import get_analysis

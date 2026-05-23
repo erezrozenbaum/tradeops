@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 2.9.0  
+**Version:** 3.0.0  
 **Last updated:** 2026-05-23
 
 ---
@@ -283,12 +283,13 @@ backend/app/
 │   ├── engine.py               # run_agent(verbosity): stage-adaptive prompt, maturity+twin+behavioral context injection
 │   ├── schemas.py              # AgentReport (incl. maturity_stage, verbosity_used), ActionItem, Opportunity, CapitalThresholdPlan
 │   └── router.py               # GET /agent?verbosity=beginner|standard|advanced
-├── command_center/             # Financial Command Center — daily intelligence hub (v2.8.0–v2.9.0)
+├── command_center/             # Financial Command Center — daily intelligence hub (v2.8.0–v3.0.0)
 │   ├── schemas.py              # CommandCenterReport, FinancialStatusHeader, PrioritizedAction, EvolutionItem, HealthRadarPoint, TwinInsightsData, BehavioralRiskCard, FuturesPreview, ReplayHighlight, InvestorProgression, GoalProgressItem (v2.9.0)
-│   ├── action_engine.py        # Deterministic ActionPrioritizer: 5 rule categories (EF, behavioral, concentration, contribution, goals); top-3 by composite score; stage-adaptive copy; _goal_actions() added v2.9.0
+│   ├── action_engine.py        # Deterministic ActionPrioritizer: 5 rule categories (EF, behavioral, concentration, contribution, goals); top-3 by composite score; stage-adaptive copy
+│   ├── ai_cache.py             # Redis AI summary cache (v3.0.0): get/set/invalidate; key cc_ai:{id}:{verbosity}; 26h TTL; no-op fallback when Redis absent
 │   ├── evolution.py            # EvolutionFeedGenerator: 7-day delta across twin + maturity + behavioral events; negatives first; cap 8
 │   ├── replay_selector.py      # CounterfactualSelector: highest abs(delta) from completed counterfactual runs
-│   ├── orchestrator.py         # build(): ThreadPoolExecutor(7) parallel data fetch (incl. goals v2.9.0) + serial AI call → CommandCenterReport
+│   ├── orchestrator.py         # build(): ThreadPoolExecutor(7) parallel fetch + Redis cache check + serial AI fallback → CommandCenterReport
 │   └── router.py               # GET /investors/{id}/command-center?verbosity=beginner|standard|advanced
 ├── transactions/               # Immutable holding transaction log
 ├── price_alerts/               # User-defined price triggers
@@ -324,11 +325,13 @@ backend/app/
 └── workers/                    # APScheduler background jobs
     ├── scheduler.py            # Job registry + start/stop
     └── jobs/
-        ├── market_signals_job.py   # 20:15 UTC daily — sentiment per holding
-        ├── broker_auto_sync.py     # 09:00 UTC daily — auto-sync enabled accounts
-        ├── weekly_digest.py        # 18:00 UTC Friday — email digest
-        ├── research_prewarm.py     # Scheduled market research refresh
-        └── fx_history_sync.py      # 21:30 UTC daily — yesterday's FX rates for all active currency pairs
+        ├── market_signals_job.py         # 20:15 UTC daily — sentiment per holding
+        ├── broker_auto_sync.py           # 09:00 UTC daily — auto-sync enabled accounts
+        ├── weekly_digest.py              # 08:00 UTC Monday — AI portfolio email digest (v3.0.0: moved from Friday 18:00)
+        ├── research_prewarm.py           # Scheduled market research refresh
+        ├── fx_history_sync.py            # 21:30 UTC daily — yesterday's FX rates for all active currency pairs
+        ├── command_center_nightly.py     # 05:00 UTC daily — pre-compute AI summaries for all investors → Redis (v3.0.0)
+        └── command_center_checkpoint.py  # 04:00 UTC Monday — weekly checkpoint anchors → command_center_checkpoints table (v3.0.0)
 ```
 
 ### API routing
