@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
@@ -23,7 +23,7 @@ from app.command_center.schemas import (
     TwinInsightsData,
 )
 from app.models.behavioral_risk_event import BehavioralRiskEvent
-from app.models.financial_twin_snapshot import FinancialHealthScore, FinancialTwinSnapshot
+from app.models.financial_twin_snapshot import FinancialTwinSnapshot
 from app.models.investor_maturity_snapshot import InvestorMaturitySnapshot
 from app.models.simulation_run import SimulationRun
 
@@ -67,7 +67,6 @@ def _build_header(
     from app.financial_profiles.service import get_by_investor
     from app.financial_scoring.engine import calculate_stability_score
     from app.financial_scoring.schemas import FinancialScoringInput
-    from app.models.financial_profile import FinancialProfile
 
     # Stability score
     stab_score = 0.0

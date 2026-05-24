@@ -14,7 +14,6 @@ log = logging.getLogger(__name__)
 def write_command_center_checkpoints() -> None:
     from app.db.session import SessionLocal
     from app.models.investor_profile import InvestorProfile
-    from app.models.command_center_checkpoint import CommandCenterCheckpoint
 
     with SessionLocal() as db:
         investor_ids = [row[0] for row in db.query(InvestorProfile.id).all()]
@@ -104,7 +103,7 @@ def _write_one(investor_id: uuid.UUID, checkpoint_at: datetime) -> None:
         # Stability score
         stab_score = None
         try:
-            from app.financial_profiles.service import get_by_investor, compute_effective_ef_months
+            from app.financial_profiles.service import get_by_investor
             from app.financial_scoring.engine import calculate_stability_score
             from app.financial_scoring.schemas import FinancialScoringInput
             fp = get_by_investor(db, investor_id)

@@ -4,7 +4,7 @@
 
 **Personal Financial Intelligence Platform**
 
-[![Version](https://img.shields.io/badge/version-3.3.0-blue?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-3.7.0-blue?style=flat-square)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org)
@@ -116,11 +116,11 @@ Risk-Controlled Live Execution (gated, opt-in)
 | **Live price refresh** | Alpha Vantage / yfinance with 24h cache; SSE streaming (30s interval) |
 | **FX Impact** | P&L split into Asset P&L (price movement) vs Currency P&L (FX movement) |
 | **Performance attribution** | TWR, MWR (IRR), alpha vs benchmark, per-holding CAGR |
-| **Rebalancing engine** | Actionable BUY/SELL suggestions per allocation tier |
+| **Rebalancing engine** | Actionable BUY/SELL suggestions per allocation tier; dedicated `/rebalance` page with tier bars and suggested trades |
 | **Correlation matrix** | 90-day Pearson correlation, concentration risk flags |
 | **Stress testing** | 5 historical crash scenarios + Monte Carlo P10/P50/P90 |
 | **Tax-loss harvesting** | Candidates sorted by estimated saving, wash-sale warnings |
-| **Tax Year Summary** | WACC-method realized gains, year-over-year P&L, estimated 25% flat tax |
+| **Tax Year Summary** | WACC-method realized gains, year-over-year P&L, estimated 25% flat tax; one-click CSV export |
 | **Liquidity runway** | T+2 / 1-week / locked tier breakdown, emergency liquidation path |
 | **Resilience simulator** | Job loss / expense shock survival score with depletion path |
 
@@ -182,6 +182,7 @@ Risk-Controlled Live Execution (gated, opt-in)
 | **Login rate limiting** | 5 attempts per IP per 5-minute window (Redis-backed) |
 | **AI monthly budget guard** | Configurable per-investor USD spending cap |
 | **PWA** | Installable, offline-capable |
+| **Dark / light mode** | Toggle in sidebar; dark default; persisted via `next-themes` |
 | **Mobile-first UI** | Responsive sidebar, touch-friendly layouts |
 | **Kubernetes / Helm** | Production-hardened chart with NetworkPolicy, PDB, securityContext |
 
