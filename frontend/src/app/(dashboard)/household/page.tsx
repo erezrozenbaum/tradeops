@@ -139,8 +139,10 @@ function SetupPanel({ investorId, onSuccess }: { investorId: string; onSuccess: 
         body: JSON.stringify({ name: name.trim() }),
       });
       if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.detail || `HTTP ${res.status}`);
+        const text = await res.text();
+        let detail = `HTTP ${res.status}`;
+        try { detail = JSON.parse(text).detail || detail; } catch { /* non-JSON body */ }
+        throw new Error(detail);
       }
       onSuccess();
     } catch (e) {
@@ -160,8 +162,10 @@ function SetupPanel({ investorId, onSuccess }: { investorId: string; onSuccess: 
         credentials: "include",
       });
       if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.detail || `HTTP ${res.status}`);
+        const text = await res.text();
+        let detail = `HTTP ${res.status}`;
+        try { detail = JSON.parse(text).detail || detail; } catch { /* non-JSON body */ }
+        throw new Error(detail);
       }
       onSuccess();
     } catch (e) {

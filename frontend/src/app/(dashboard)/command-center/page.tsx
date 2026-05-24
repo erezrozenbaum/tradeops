@@ -14,7 +14,7 @@ import { ReplayHighlightCard } from "@/components/command-center/ReplayHighlight
 import { AIThoughtPartnerCard } from "@/components/command-center/AIThoughtPartnerCard";
 import { ProgressionCard } from "@/components/command-center/ProgressionCard";
 import { GoalProgressPanel } from "@/components/command-center/GoalProgressPanel";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Share2, Copy, CheckCheck, Trash2, X } from "lucide-react";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -110,6 +110,10 @@ export default function CommandCenterPage() {
   const [error, setError] = useState<string | null>(null);
   const [verbosity, setVerbosity] = useState<"beginner" | "standard" | "advanced">("standard");
   const [reloading, setReloading] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareTokens, setShareTokens] = useState<Array<{ token: string; created_at: string; expires_at: string }>>([]);
+  const [shareCreating, setShareCreating] = useState(false);
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
   const variant = useMaturityVariant(report?.maturity_stage);
 
@@ -140,6 +144,48 @@ export default function CommandCenterPage() {
   const handleVerbosityChange = (v: "beginner" | "standard" | "advanced") => {
     setVerbosity(v);
     if (investorId) fetchReport(investorId, v, true);
+  };
+
+  const openShareModal = async () => {
+    setShowShareModal(true);
+    if (!investorId) return;
+    const res = await fetch(`/api/v1/investors/${investorId}/advisor-share`, { credentials: "include" });
+    if (res.ok) {
+      const data = await res.json();
+      setShareTokens(data.tokens);
+    }
+  };
+
+  const createShare = async () => {
+    if (!investorId) return;
+    setShareCreating(true);
+    const res = await fetch(`/api/v1/investors/${investorId}/advisor-share`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (res.ok) {
+      const newToken = await res.json();
+      setShareTokens((prev) => [newToken, ...prev]);
+    }
+    setShareCreating(false);
+  };
+
+  const revokeShare = async (token: string) => {
+    if (!investorId) return;
+    const res = await fetch(`/api/v1/investors/${investorId}/advisor-share/${token}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (res.ok) {
+      setShareTokens((prev) => prev.filter((t) => t.token !== token));
+    }
+  };
+
+  const copyShareLink = (token: string) => {
+    const url = `${window.location.origin}/advisor-view/${token}`;
+    navigator.clipboard.writeText(url);
+    setCopiedToken(token);
+    setTimeout(() => setCopiedToken(null), 2000);
   };
 
   if (loading) {
@@ -182,15 +228,93 @@ export default function CommandCenterPage() {
             {new Date(report.generated_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
           </p>
         </div>
-        <button
-          onClick={() => investorId && fetchReport(investorId, verbosity, true)}
-          disabled={reloading}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-40"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${reloading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={openShareModal}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-foreground transition-colors"
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            Share
+          </button>
+          <button
+            onClick={() => investorId && fetchReport(investorId, verbosity, true)}
+            disabled={reloading}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-40"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${reloading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
       </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border bg-cyber-surface shadow-2xl" style={{ borderColor: "hsl(217 30% 16%)" }}>
+            <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: "hsl(217 30% 12%)" }}>
+              <div>
+                <h2 className="text-sm font-semibold">Share with Advisor</h2>
+                <p className="text-xs text-muted-foreground/50 mt-0.5">Read-only link · expires in 7 days · no write access</p>
+              </div>
+              <button onClick={() => setShowShareModal(false)} className="text-muted-foreground/50 hover:text-foreground transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <button
+                onClick={createShare}
+                disabled={shareCreating}
+                className="w-full flex items-center justify-center gap-2 rounded-lg bg-cyber-blue/10 border border-cyber-blue/20 text-cyber-blue text-xs font-medium py-2.5 hover:bg-cyber-blue/15 transition-colors disabled:opacity-50"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                {shareCreating ? "Creating…" : "Create New Share Link"}
+              </button>
+
+              {shareTokens.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground/40 font-medium uppercase tracking-wide">Active Links</p>
+                  {shareTokens.map((t) => (
+                    <div
+                      key={t.token}
+                      className="flex items-center gap-2 rounded-lg border p-3"
+                      style={{ borderColor: "hsl(217 30% 12%)" }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-mono text-muted-foreground/70 truncate">{t.token.slice(0, 20)}…</p>
+                        <p className="text-[10px] text-muted-foreground/40 mt-0.5">
+                          Expires {new Date(t.expires_at).toLocaleDateString(undefined, { dateStyle: "medium" })}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => copyShareLink(t.token)}
+                        className="flex items-center gap-1 text-[10px] text-muted-foreground/50 hover:text-cyber-blue transition-colors shrink-0"
+                      >
+                        {copiedToken === t.token ? (
+                          <CheckCheck className="h-3.5 w-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                        {copiedToken === t.token ? "Copied" : "Copy"}
+                      </button>
+                      <button
+                        onClick={() => revokeShare(t.token)}
+                        className="text-muted-foreground/30 hover:text-red-400 transition-colors shrink-0"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {shareTokens.length === 0 && (
+                <p className="text-xs text-muted-foreground/30 text-center py-2">No active share links</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Status Header */}
       <StatusHeader

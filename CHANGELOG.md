@@ -8,6 +8,18 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.4.0] — 2026-05-23
+
+### Added
+- **Advisor Share** — investors can generate a read-only, time-limited link to their Command Center snapshot to share with a trusted financial advisor; token-scoped, expires in 7 days, no write access, revocable at any time
+- **`advisor_share_tokens` table** (migration 0049) — `id`, `investor_id` (FK CASCADE), `token` (VARCHAR 64, unique), `created_at`, `expires_at`, `revoked`; indexes on `token` and `(investor_id, revoked, expires_at)`
+- **`AdvisorShareToken` ORM model** (`models/advisor_share_token.py`)
+- **`advisor_share` module** — `service.py` (`create_token`, `revoke_token`, `list_active`, `get_valid`), `schemas.py` (`AdvisorShareOut`, `AdvisorShareListOut`, `AdvisorShareSnapshot`), `router.py` (investor-scoped + public router)
+- **3 investor-scoped endpoints** under `/investors/{id}/advisor-share`: `POST` (create), `DELETE /{token}` (revoke), `GET` (list active)
+- **Public endpoint** `GET /advisor-share/{token}` — no auth required; validates token, returns full `CommandCenterReport` + investor name + expiry; returns 404 for expired or revoked tokens
+- **Share button + modal** on Command Center page — "Share" button opens a modal to create new links, copy share URLs to clipboard, and revoke existing links; shows token prefix and expiry date
+- **`/advisor-view/[token]`** — public read-only page; "Advisor View — Read Only" sticky banner; shows investor name, expiry, full Command Center report using existing components; error state for expired/revoked links; no auth required
+
 ## [3.3.0] — 2026-05-23
 
 ### Added

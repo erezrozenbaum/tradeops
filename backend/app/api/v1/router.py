@@ -62,6 +62,7 @@ from app.behavioral_risk.router import router as behavioral_risk_router
 from app.simulation.router import router as simulation_router
 from app.command_center.router import router as command_center_router
 from app.household.router import router as household_router
+from app.advisor_share.router import router as advisor_share_router, public_router as advisor_share_public_router
 
 api_router = APIRouter()
 
@@ -134,3 +135,5 @@ api_router.include_router(behavioral_risk_router, prefix="/investors/{investor_i
 api_router.include_router(simulation_router, prefix="/investors/{investor_id}/simulations", tags=["simulations"], dependencies=_own)
 api_router.include_router(command_center_router, prefix="/investors/{investor_id}/command-center", tags=["command-center"], dependencies=_own)
 api_router.include_router(household_router, prefix="/investors/{investor_id}/household", tags=["household"], dependencies=_own)
+api_router.include_router(advisor_share_router, prefix="/investors/{investor_id}/advisor-share", tags=["advisor-share"], dependencies=_own)
+api_router.include_router(advisor_share_public_router, prefix="/advisor-share", tags=["advisor-share-public"])

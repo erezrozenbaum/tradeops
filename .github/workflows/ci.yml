@@ -313,6 +313,10 @@ jobs:
           RELEASE_NOTES: ${{ steps.notes.outputs.notes }}
         run: |
           echo "$RELEASE_NOTES" > /tmp/release-notes.md
-          gh release create "${{ needs.version.outputs.tag }}" \
-            --title "${{ needs.version.outputs.tag }}" \
-            --notes-file /tmp/release-notes.md
+          if gh release view "${{ needs.version.outputs.tag }}" &>/dev/null; then
+            echo "Release ${{ needs.version.outputs.tag }} already exists — skipping"
+          else
+            gh release create "${{ needs.version.outputs.tag }}" \
+              --title "${{ needs.version.outputs.tag }}" \
+              --notes-file /tmp/release-notes.md
+          fi

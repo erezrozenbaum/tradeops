@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 3.3.0  
+**Version:** 3.4.0  
 **Last updated:** 2026-05-23
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -179,6 +179,7 @@ Migrations also run automatically on every container start.
 | 0046 | command_center_checkpoints table (investor_id, checkpoint_at, twin_score, maturity_score, active_risks, notes JSONB) |
 | 0047 | ai_memory_entries table (investor_id, summary_at, verbosity, portfolio_assessment TEXT, key_metrics JSONB) — longitudinal AI memory (v3.1.0) |
 | 0048 | households table + investor_profiles.household_id (nullable FK, SET NULL on delete) — Partner/Household View (v3.2.0) |
+| 0049 | advisor_share_tokens table (investor_id FK CASCADE, token VARCHAR 64 unique, created_at, expires_at, revoked BOOLEAN) — Advisor Share (v3.4.0) |
 
 ### Creating a new migration
 

@@ -29,6 +29,16 @@ from app.models.recommendation_decision import RecommendationDecision
 from app.models.simulation_run import SimulationRun, SimulationComparisonSet
 from app.models.ai_memory_entry import AIMemoryEntry
 from app.models.household import Household
+from app.models.advisor_share_token import AdvisorShareToken
+from app.models.goal_progress_log import GoalProgressLog
+from app.models.watchlist import WatchlistItem
+from app.models.price_alert import PriceAlert
+from app.models.holding_transaction import HoldingTransaction
+from app.models.behavioral_risk_event import BehavioralRiskEvent
+from app.models.investor_maturity_snapshot import InvestorMaturitySnapshot
+from app.models.financial_twin_snapshot import FinancialTwinSnapshot, FinancialHealthScore
+from app.models.market_signal import MarketSignal
+from app.models.command_center_checkpoint import CommandCenterCheckpoint
 
 __all__ = [
     "InvestorProfile",
