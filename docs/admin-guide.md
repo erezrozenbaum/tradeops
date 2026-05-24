@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 3.5.0  
+**Version:** 3.6.0  
 **Last updated:** 2026-05-24
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -90,7 +90,53 @@ REDIS_URL=redis://redis:6379/0
 
 ---
 
-## 3. Starting with Docker Compose (local/dev)
+## 3. Automated Windows Deployment (`deploy.ps1`)
+
+For a one-command setup on any Windows 10/11 machine (no prior knowledge of Docker required):
+
+```powershell
+# From the repository root:
+.\deploy.ps1
+```
+
+The script handles the full setup end-to-end:
+
+| Step | What happens |
+|------|-------------|
+| System check | Windows build ≥ 19041, disk ≥ 15 GB on C:\, RAM ≥ 6 GB |
+| Docker Desktop | Detected automatically; downloaded and installed if missing; started if not running |
+| WSL2 | Installed by the Docker Desktop installer — no manual steps needed |
+| Secrets | `POSTGRES_PASSWORD` (24-char alphanumeric) and `SECRET_KEY` (256-bit hex) generated automatically |
+| Anthropic key | Interactive prompt with step-by-step instructions (console.anthropic.com) |
+| Alpha Vantage | Optional prompt (25 free calls/day for live market prices) |
+| Email alerts | Optional Gmail SMTP with App Password instructions |
+| Build | `docker compose -f infra/docker-compose.deploy.yml up -d --build` |
+| Health check | Polls `/health` and frontend until both respond |
+| Browser | Optionally opens http://localhost:3000 on success |
+
+All secrets are written to `.env.deploy` (gitignored). Safe to re-run — existing secrets are preserved unless `-Reset` is passed.
+
+**Other modes:**
+
+```powershell
+.\deploy.ps1 -Stop        # docker compose down
+.\deploy.ps1 -Update      # rebuild + restart, keep secrets
+.\deploy.ps1 -Reset       # regenerate all secrets
+```
+
+**Production compose vs dev compose:**
+
+| Feature | `docker-compose.yml` (dev) | `docker-compose.deploy.yml` (production) |
+|---------|---------------------------|------------------------------------------|
+| Source mounts | Yes (`../backend:/app`) | No — built from Dockerfile |
+| Uvicorn mode | `--reload` | 2 workers, no reload |
+| Redis persistence | tmpfs (in-memory) | AOF to `redis_data` volume |
+| Prometheus / Grafana | Yes | No (keep it simple) |
+| Secrets source | `backend/.env` | `.env.deploy` via `--env-file` |
+
+---
+
+## 3a. Starting with Docker Compose (local/dev)
 
 ```bash
 cd infra

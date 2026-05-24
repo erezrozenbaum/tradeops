@@ -8,6 +8,13 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.6.0] — 2026-05-24
+
+### Added
+- **`deploy.ps1`** — fully automated Windows production deployment script; covers system checks (Windows build ≥ 19041, disk ≥ 15 GB, RAM), Docker Desktop install/start, cryptographic secret generation, Anthropic API key setup with step-by-step instructions, optional Alpha Vantage key and Gmail SMTP, image build, health checks, and browser launch on success
+- **`infra/docker-compose.deploy.yml`** — production-mode Docker Compose file separate from the dev compose; no source volume mounts; backend runs `alembic upgrade head` + `uvicorn` 2 workers; frontend built from Dockerfile with `NEXT_PUBLIC_API_URL=http://backend:8000`; Redis with AOF persistence; proper healthchecks with `start_period` on all services
+- **`.env.deploy`** (gitignored) — auto-generated secrets file written by `deploy.ps1`; contains `POSTGRES_PASSWORD`, `SECRET_KEY`, `ANTHROPIC_API_KEY`, and optional SMTP/market-data keys
+
 ## [3.5.0] — 2026-05-24
 
 ### Added
