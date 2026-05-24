@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  :root,
+  .dark {
     /* ── Grafana-dark token set ────────────────────────────────────────── */
     --background:       220 30% 5%;      /* #090d14 — deepest navy */
     --foreground:       210 40% 96%;     /* near-white */
@@ -33,6 +34,35 @@
     --down:  0 84% 60%;     /* red — negative */
     --warn:  38 92% 50%;    /* amber — warning */
   }
+
+  .light {
+    --background:       0 0% 98%;
+    --foreground:       220 30% 12%;
+
+    --card:             0 0% 100%;
+    --card-foreground:  220 30% 12%;
+
+    --border:           220 15% 88%;
+    --border-glow:      199 95% 45%;
+
+    --primary:          199 85% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --accent:           160 60% 35%;
+    --accent-foreground: 0 0% 100%;
+
+    --muted:            220 15% 94%;
+    --muted-foreground: 220 15% 45%;
+
+    --destructive:      0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --radius: 0.5rem;
+
+    --up:    160 60% 35%;
+    --down:  0 72% 50%;
+    --warn:  38 80% 40%;
+  }
 }
 
 @layer base {
@@ -44,10 +74,17 @@
     color-scheme: dark;
   }
 
+  html.light {
+    color-scheme: light;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
-    /* subtle dot-grid background — Grafana signature */
+  }
+
+  /* dot-grid only in dark mode */
+  .dark body {
     background-image: radial-gradient(circle, hsl(217 30% 18% / 0.4) 1px, transparent 1px);
     background-size: 28px 28px;
   }

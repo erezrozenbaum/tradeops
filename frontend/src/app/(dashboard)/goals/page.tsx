@@ -409,6 +409,44 @@ export default function GoalsPage() {
         </div>
       )}
 
+      {/* Monthly Budget Plan */}
+      {analysis && analysis.goals.length > 0 && analysis.total_monthly_contribution_needed > 0 && (
+        <Card>
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+            <p className="text-sm font-medium">Monthly Budget Plan</p>
+            <span className="text-xs text-muted-foreground">Required allocation per goal</span>
+          </div>
+          <div className="px-5 py-4 space-y-3">
+            {sortedGoals.map(goal => {
+              const ga = analysisMap.get(goal.id);
+              if (!ga || ga.monthly_contribution_needed === null || ga.monthly_contribution_needed <= 0) return null;
+              const share = (ga.monthly_contribution_needed / analysis.total_monthly_contribution_needed) * 100;
+              return (
+                <div key={goal.id} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium truncate max-w-[55%]">{goal.name}</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {formatCurrency(ga.monthly_contribution_needed, goal.currency)}/mo
+                      <span className="ml-1.5 text-muted-foreground/60">({share.toFixed(0)}%)</span>
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${ga.on_track ? "bg-emerald-500" : "bg-amber-500"}`}
+                      style={{ width: `${share}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+            <div className="pt-2 border-t border-border flex items-center justify-between text-xs font-semibold">
+              <span>Total</span>
+              <span className="tabular-nums">{formatCurrency(analysis.total_monthly_contribution_needed, baseCurrency)}/mo</span>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Create goal form */}
       {showForm && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -5,7 +5,7 @@ import { useInvestorId } from "@/hooks/useInvestorId";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
-import { TrendingUp, TrendingDown, DollarSign, Receipt, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Receipt, AlertTriangle, ChevronDown, ChevronUp, Download } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -106,6 +106,51 @@ export default function TaxSummaryPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  function downloadCsv() {
+    if (!data?.summary) return;
+    const s = data.summary;
+    const rows: string[] = [
+      "Section,Ticker,Asset Name,Date,Proceeds,Cost Basis,Gain/Loss,Holding Days,Term,Amount,Currency",
+    ];
+    for (const r of s.realized_rows) {
+      rows.push([
+        "Realized",
+        r.ticker,
+        `"${r.asset_name}"`,
+        r.sell_date,
+        r.proceeds.toFixed(2),
+        r.cost_basis.toFixed(2),
+        r.gain.toFixed(2),
+        r.holding_days,
+        r.is_long_term ? "Long" : "Short",
+        "",
+        r.currency,
+      ].join(","));
+    }
+    for (const d of s.dividend_rows) {
+      rows.push([
+        "Dividend",
+        d.ticker,
+        `"${d.asset_name}"`,
+        d.pay_date,
+        "",
+        "",
+        "",
+        "",
+        "",
+        d.amount.toFixed(2),
+        d.currency,
+      ].join(","));
+    }
+    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tax-summary-${s.year}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function handleYearChange(year: number) {
     setSelectedYear(year);
     load(year);
@@ -154,8 +199,9 @@ export default function TaxSummaryPage() {
           </p>
         </div>
 
-        {/* Year selector */}
-        <div className="flex gap-1.5 flex-wrap">
+        {/* Year selector + CSV */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex gap-1.5 flex-wrap">
           {data.available_years.map(y => (
             <button
               key={y}
@@ -169,6 +215,16 @@ export default function TaxSummaryPage() {
               {y}
             </button>
           ))}
+          </div>
+          {s && (
+            <button
+              onClick={downloadCsv}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium border border-border text-muted-foreground hover:bg-muted transition-colors"
+            >
+              <Download className="h-3.5 w-3.5" />
+              CSV
+            </button>
+          )}
         </div>
       </div>
 

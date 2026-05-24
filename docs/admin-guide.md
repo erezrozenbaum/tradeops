@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 3.6.0  
+**Version:** 3.7.0  
 **Last updated:** 2026-05-24
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -783,6 +783,10 @@ kubectl describe ingress tradeops
 | Tax Year Summary | `tax_summary/` | `GET /investors/{id}/tax-summary?year=YYYY` — WACC-method cost basis per ticker; realized gains/losses per sell transaction; long/short-term (≥365 days) classification; dividend tracking; estimated 25% flat tax (illustrative). Available years auto-detected from `holding_transactions`. Disclaimer clearly shown — not a substitute for professional tax preparation. |
 | AI Coach | `coach/` + migration 0040 | `GET /investors/{id}/coach` — returns active (non-dismissed) insights. `POST /coach/refresh` — runs 7 rule functions + optional Claude Haiku enrichment. `DELETE /coach/{id}` — dismiss insight (suppressed for 7 days via `dedup_key`). Rules: emergency fund, idle cash, goal behind, portfolio drift, tax-loss harvest, paper trading milestone, high-interest debt. Daily refresh at 07:45 UTC via `coach_refresh` worker. |
 
+| Tax Summary CSV Export | `frontend/tax-summary/page.tsx` | "CSV" button on the Tax Summary page; two-section CSV (Realized Transactions + Dividends) generated client-side from already-loaded data; no new backend endpoint; filename: `tax-summary-{year}.csv` |
+| Goals Monthly Budget Plan | `frontend/goals/page.tsx` | Dedicated "Monthly Budget Plan" card on the Goals page showing each goal's required monthly contribution as a percentage-share bar (green = on track, amber = at risk); total budget row at bottom; only rendered when `total_monthly_contribution_needed > 0` |
+| Dark / Light Mode Toggle | `globals.css` + `providers.tsx` + `sidebar.tsx` | `.light` CSS variable block added; `forcedTheme="dark"` removed from ThemeProvider; dot-grid background restricted to dark mode via `.dark body` selector; Sun/Moon toggle button in sidebar footer; persisted via `next-themes` with dark as default |
+| Portfolio Rebalancing Page | `frontend/rebalance/page.tsx` + sidebar | `/rebalance` page calling existing `GET /investors/{id}/portfolio/rebalance`; shows status banner, per-tier allocation bars (actual vs target + deviation delta), money gap, and expandable suggested trade cards (buy/sell, ticker, units, estimated value); "Rebalance" entry added to sidebar under Portfolio |
 | Docker Hardening | `backend/Dockerfile` + `infra/docker-compose.yml` | Backend runs as non-root `appuser`. All services have `no-new-privileges`, `read_only`, and `tmpfs` for writable paths. Applied in v0.99.1. |
 | Next.js CVE Fix | `frontend/package.json` | Upgraded from Next.js 14.2.3 → 14.2.25. Fixes CVE-2025-29927 (critical auth bypass in middleware). `package-lock.json` regenerated for CI compatibility. Applied in v0.99.2. |
 | Ruff Code Quality | `backend/ruff.toml` + 25+ files | Python linting with `ruff.toml` config. Fixed real syntax bug in `pdf_generator.py` (stress-test list comprehension was invalid Python). Removed duplicate dict entries in market data fetcher and broker parser. Applied in v0.99.2. |

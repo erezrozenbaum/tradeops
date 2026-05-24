@@ -8,6 +8,14 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.7.0] — 2026-05-24
+
+### Added
+- **Tax Summary CSV export** — "CSV" download button on the Tax Summary page; generates a two-section CSV (Realized Transactions + Dividends) from data already loaded in the browser; no new backend endpoint
+- **Goals Monthly Budget Plan** — dedicated "Monthly Budget Plan" card below the existing summary banner on the Goals page; shows each goal's required monthly contribution as a share of the total with a per-goal progress bar and on-track/at-risk color coding
+- **Dark / Light mode toggle** — theme switcher button in the sidebar footer (Sun/Moon icon); persisted via `next-themes`; dark remains the default; `.light` CSS variable block added to `globals.css`; dot-grid background is dark-mode-only
+- **Portfolio Rebalancing page** (`/rebalance`) — new page calling the existing `GET /portfolio/rebalance` backend endpoint; shows a status banner, per-tier allocation bars (actual vs target with deviation), money gap amounts, and expandable suggested trade cards; "Rebalance" entry added to sidebar under Portfolio
+
 ## [3.6.0] — 2026-05-24
 
 ### Added

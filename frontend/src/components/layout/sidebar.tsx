@@ -51,7 +51,11 @@ import {
   AlertTriangle,
   Layers,
   Home,
+  Sun,
+  Moon,
+  Scale,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 
 const sections = [
@@ -86,6 +90,7 @@ const sections = [
     label: "Portfolio",
     items: [
       { label: "Investments", href: "/investments", icon: Briefcase },
+      { label: "Rebalance", href: "/rebalance", icon: Scale },
       { label: "Performance", href: "/performance", icon: Activity },
       { label: "Stress Test", href: "/stress-test", icon: Zap },
       { label: "Transactions", href: "/transactions", icon: ClipboardList },
@@ -136,6 +141,7 @@ const sections = [
 function SidebarContent({ onNav }: { onNav?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -220,6 +226,13 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         )}
       </div>
       <div className="border-t border-cyber-rule/60 p-2 shrink-0 space-y-0.5">
+        <button
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="flex w-full items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] text-muted-foreground hover:bg-cyber-rule/60 hover:text-foreground transition-all duration-150 border border-transparent"
+        >
+          {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+          {theme === "dark" ? "Light mode" : "Dark mode"}
+        </button>
         <button
           onClick={handleSwitchProfile}
           className="flex w-full items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] text-muted-foreground hover:bg-cyber-rule/60 hover:text-foreground transition-all duration-150 border border-transparent"
