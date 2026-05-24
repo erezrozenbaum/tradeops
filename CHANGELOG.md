@@ -8,6 +8,19 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.5.0] — 2026-05-24
+
+### Added
+- **AI Memory Timeline** (`/ai-history`) — dedicated page surfacing the rolling 3-month `ai_memory_entries` history; shows each AI assessment with its key metrics snapshot (twin score, stability, EF months, net worth), expandable text, and a time-window filter (1/3/6/12 months)
+- **`GET /investors/{id}/command-center/ai-memory`** — new endpoint returning paginated AI memory entries with key metrics; `months` query param (1–12)
+- **Score History** (`/score-history`) — chart page showing how Twin Score, Investor Maturity composite score, and all 8 twin dimensions evolved over time (1–12 months); uses recharts LineChart with summary stats (current, change, high, low)
+- **`GET /investors/{id}/command-center/score-history`** — new endpoint querying `financial_twin_snapshots` and `investor_maturity_snapshots`; returns chronological arrays for charting
+- **Command Center PDF Download** — "PDF" button in the Command Center header triggers a `GET /investors/{id}/command-center/pdf` download; generates a reportlab PDF snapshot with financial overview, AI assessment, priority actions, health radar dimensions, and goal progress
+- **`generate_command_center_pdf()`** in `pdf_generator.py` — new function distinct from the portfolio PDF; renders the Command Center report into a structured A4 document
+- **`GET /investors/{id}/command-center/pdf`** — new streaming endpoint in `command_center/router.py`
+- **Onboarding Wizard** — guided setup overlay on the Command Center page for new users with no data (detected via `composite_score == 0` and empty evolution feed); shows 4 actionable steps (profile → financial → goals → refresh); dismissible via localStorage flag `tradeops_onboarding_dismissed`
+- **Sidebar entries** — "AI Memory" (`/ai-history`) and "Score History" (`/score-history`) added under Intelligence section
+
 ## [3.4.0] — 2026-05-23
 
 ### Added

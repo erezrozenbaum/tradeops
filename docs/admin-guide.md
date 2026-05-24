@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 3.4.0  
-**Last updated:** 2026-05-23
+**Version:** 3.5.0  
+**Last updated:** 2026-05-24
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
@@ -180,6 +180,7 @@ Migrations also run automatically on every container start.
 | 0047 | ai_memory_entries table (investor_id, summary_at, verbosity, portfolio_assessment TEXT, key_metrics JSONB) — longitudinal AI memory (v3.1.0) |
 | 0048 | households table + investor_profiles.household_id (nullable FK, SET NULL on delete) — Partner/Household View (v3.2.0) |
 | 0049 | advisor_share_tokens table (investor_id FK CASCADE, token VARCHAR 64 unique, created_at, expires_at, revoked BOOLEAN) — Advisor Share (v3.4.0) |
+| — | No new migrations in v3.5.0 — AI Memory Timeline, Score History, Command Center PDF, and Onboarding Wizard all read from existing tables (ai_memory_entries, financial_twin_snapshots, investor_maturity_snapshots) |
 
 ### Creating a new migration
 

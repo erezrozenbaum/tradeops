@@ -417,12 +417,122 @@ def _tax(story: list, tax: Any, s: dict):
     ))
 
 
+# ── Section: Command Center snapshot ──────────────────────────────────────
+
+def _cc_snapshot(story: list, report: Any, s: dict):
+    from app.command_center.schemas import CommandCenterReport
+    r: CommandCenterReport = report
+
+    # Header metrics
+    h = r.header
+    story.append(Paragraph("Financial Overview", s["section"]))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=_BORDER, spaceAfter=8))
+    metrics = [
+        ["Twin Score", "Stability", "Stage", "Active Risks"],
+        [
+            f"{h.twin_overall_score:.1f}",
+            f"{h.stability_score:.0f} — {h.stability_classification.capitalize()}",
+            h.maturity_stage_label,
+            str(h.active_behavioral_risk_count),
+        ],
+    ]
+    extra_m = [
+        ("ALIGN", (0, 1), (-1, 1), "CENTER"),
+        ("FONTNAME", (0, 1), (-1, 1), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 1), (-1, 1), 14),
+        ("TOPPADDING", (0, 1), (-1, 1), 10),
+        ("BOTTOMPADDING", (0, 1), (-1, 1), 10),
+        ("TEXTCOLOR", (3, 1), (3, 1), _RED if h.active_behavioral_risk_count > 0 else _GREEN),
+    ]
+    story.append(_table(metrics, [4 * cm] * 4, extra_m))
+    story.append(Spacer(1, 0.5 * cm))
+
+    # AI summary
+    story.append(Paragraph("AI Assessment", s["section"]))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=_BORDER, spaceAfter=8))
+    story.append(Paragraph(r.ai_summary or "No assessment available.", s["body"]))
+    story.append(Spacer(1, 0.4 * cm))
+
+    # Top actions
+    if r.top_actions:
+        story.append(Paragraph("Priority Actions", s["section"]))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=_BORDER, spaceAfter=8))
+        rows = [["#", "Action", "Severity", "Impact"]]
+        for i, a in enumerate(r.top_actions[:5], 1):
+            rows.append([str(i), a.title, a.severity.value.capitalize(), a.impact.capitalize()])
+        extra_a = []
+        for i, a in enumerate(r.top_actions[:5], 1):
+            col = _RED if a.severity.value == "critical" else (_AMBER if a.severity.value == "high" else _BLUE)
+            extra_a.append(("TEXTCOLOR", (2, i), (2, i), col))
+        story.append(_table(rows, [0.7 * cm, 9 * cm, 3 * cm, 3 * cm], extra_a))
+        story.append(Spacer(1, 0.3 * cm))
+
+    # Health radar dimensions
+    if r.health_radar:
+        story.append(Paragraph("Health Radar Dimensions", s["section"]))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=_BORDER, spaceAfter=8))
+        rows = [["Dimension", "Score", "Dimension", "Score"]]
+        pts = r.health_radar
+        for i in range(0, len(pts), 2):
+            left = pts[i]
+            right = pts[i + 1] if i + 1 < len(pts) else None
+            rows.append([
+                left.label, f"{left.value:.1f}",
+                right.label if right else "", f"{right.value:.1f}" if right else "",
+            ])
+        story.append(_table(rows, [5 * cm, 2.5 * cm, 5 * cm, 2.5 * cm]))
+        story.append(Spacer(1, 0.3 * cm))
+
+    # Goal progress
+    if r.goal_progress:
+        story.append(Paragraph("Goal Progress", s["section"]))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=_BORDER, spaceAfter=8))
+        rows = [["Goal", "Progress", "Status"]]
+        for g in r.goal_progress[:6]:
+            rows.append([g.name, f"{g.progress_pct:.0f}%", g.status.replace("_", " ").capitalize()])
+        extra_g = []
+        for i, g in enumerate(r.goal_progress[:6], 1):
+            col = _GREEN if g.on_track else _AMBER
+            extra_g.append(("TEXTCOLOR", (1, i), (2, i), col))
+        story.append(_table(rows, [8 * cm, 3 * cm, 4.4 * cm], extra_g))
+
+    story.append(Spacer(1, 0.3 * cm))
+    story.append(Paragraph(
+        "This Command Center snapshot is for informational purposes only and does not constitute financial advice.",
+        s["disclaimer"],
+    ))
+
+
 # ── Public API ─────────────────────────────────────────────────────────────
 
 def fmt(v: float | None, decimals: int = 2) -> str:
     if v is None:
         return "—"
     return f"{v:.{decimals}f}"
+
+
+def generate_command_center_pdf(investor_name: str, report: Any) -> bytes:
+    """Generate a PDF snapshot of the Command Center report."""
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=A4,
+        rightMargin=1.5 * cm,
+        leftMargin=1.5 * cm,
+        topMargin=1.5 * cm,
+        bottomMargin=1.5 * cm,
+        title=f"TradeOps Command Center — {investor_name}",
+        author="TradeOps AI",
+    )
+
+    s = _styles()
+    story: list = []
+
+    _cover(story, investor_name, "Command Center Snapshot", "—", s)
+    _cc_snapshot(story, report, s)
+
+    doc.build(story)
+    return buf.getvalue()
 
 
 def generate_pdf(

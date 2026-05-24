@@ -135,3 +135,45 @@ class CommandCenterReport(BaseModel):
     goal_progress: list[GoalProgressItem]
     maturity_stage: str
     generated_at: datetime
+
+
+# ── AI Memory Timeline ─────────────────────────────────────────────────────
+
+class AIMemoryItem(BaseModel):
+    id: str
+    summary_at: datetime
+    verbosity: str
+    portfolio_assessment: str
+    key_metrics: dict | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class AIMemoryResponse(BaseModel):
+    items: list[AIMemoryItem]
+
+
+# ── Score History ──────────────────────────────────────────────────────────
+
+class TwinHistoryPoint(BaseModel):
+    computed_at: datetime
+    overall_score: float
+    financial_stability: float
+    behavioral_discipline: float
+    emotional_risk: float
+    portfolio_consistency: float
+    financial_resilience: float
+    risk_alignment: float
+    long_term_discipline: float
+    contribution_momentum: float
+
+
+class MaturityHistoryPoint(BaseModel):
+    computed_at: datetime
+    composite_score: float
+    stage: str
+
+
+class ScoreHistoryResponse(BaseModel):
+    twin_history: list[TwinHistoryPoint]
+    maturity_history: list[MaturityHistoryPoint]

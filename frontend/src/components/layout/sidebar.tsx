@@ -108,6 +108,8 @@ const sections = [
       { label: "News Feed", href: "/news", icon: Newspaper },
       { label: "Pairs Trading", href: "/pairs-trading", icon: ArrowLeftRight },
       { label: "AI Coach", href: "/insights", icon: Brain },
+      { label: "AI Memory", href: "/ai-history", icon: Brain },
+      { label: "Score History", href: "/score-history", icon: Activity },
       { label: "Decision Provenance", href: "/decisions", icon: GitBranch },
       { label: "Decision Timeline", href: "/timeline", icon: Clock },
       { label: "Strategy Drift", href: "/strategy-drift", icon: Crosshair },

@@ -14,7 +14,7 @@ import { ReplayHighlightCard } from "@/components/command-center/ReplayHighlight
 import { AIThoughtPartnerCard } from "@/components/command-center/AIThoughtPartnerCard";
 import { ProgressionCard } from "@/components/command-center/ProgressionCard";
 import { GoalProgressPanel } from "@/components/command-center/GoalProgressPanel";
-import { RefreshCw, Share2, Copy, CheckCheck, Trash2, X } from "lucide-react";
+import { RefreshCw, Share2, Copy, CheckCheck, Trash2, X, Download, GraduationCap, ArrowRight, CheckCircle } from "lucide-react";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -114,6 +114,13 @@ export default function CommandCenterPage() {
   const [shareTokens, setShareTokens] = useState<Array<{ token: string; created_at: string; expires_at: string }>>([]);
   const [shareCreating, setShareCreating] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [pdfDownloading, setPdfDownloading] = useState(false);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("tradeops_onboarding_dismissed") === "1";
+    }
+    return false;
+  });
 
   const variant = useMaturityVariant(report?.maturity_stage);
 
@@ -188,6 +195,32 @@ export default function CommandCenterPage() {
     setTimeout(() => setCopiedToken(null), 2000);
   };
 
+  const downloadPdf = async () => {
+    if (!investorId || pdfDownloading) return;
+    setPdfDownloading(true);
+    try {
+      const res = await fetch(
+        `/api/v1/investors/${investorId}/command-center/pdf?verbosity=${verbosity}`,
+        { credentials: "include" },
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tradeops-command-center-${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setPdfDownloading(false);
+    }
+  };
+
+  const dismissOnboarding = () => {
+    localStorage.setItem("tradeops_onboarding_dismissed", "1");
+    setOnboardingDismissed(true);
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col gap-4 p-6 animate-pulse">
@@ -235,6 +268,15 @@ export default function CommandCenterPage() {
           >
             <Share2 className="h-3.5 w-3.5" />
             Share
+          </button>
+          <button
+            onClick={downloadPdf}
+            disabled={pdfDownloading}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-40"
+            title="Download PDF snapshot"
+          >
+            <Download className={`h-3.5 w-3.5 ${pdfDownloading ? "animate-bounce" : ""}`} />
+            PDF
           </button>
           <button
             onClick={() => investorId && fetchReport(investorId, verbosity, true)}
@@ -313,6 +355,56 @@ export default function CommandCenterPage() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Onboarding Wizard — shown to new users with no data */}
+      {!onboardingDismissed && report.progression.composite_score === 0 && report.evolution_feed.length === 0 && (
+        <div className="rounded-2xl border bg-gradient-to-br from-cyber-blue/5 to-purple-500/5 p-5 space-y-4" style={{ borderColor: "hsl(217 30% 16%)" }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="h-5 w-5 text-cyber-blue" />
+              <div>
+                <h2 className="text-sm font-semibold text-cyber-text">Welcome to TradeOps AI</h2>
+                <p className="text-xs text-muted-foreground/60 mt-0.5">Complete these steps to unlock your personalized Command Center</p>
+              </div>
+            </div>
+            <button onClick={dismissOnboarding} className="text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { step: 1, label: "Complete your profile", sub: "Name, DOB, base currency", href: "/profile", done: false },
+              { step: 2, label: "Add financial data", sub: "Income, assets, liabilities", href: "/financial", done: false },
+              { step: 3, label: "Set financial goals", sub: "Targets and timeframes", href: "/goals", done: false },
+              { step: 4, label: "Refresh Command Center", sub: "Your AI report is ready", href: null, done: false, action: () => investorId && fetchReport(investorId, verbosity, true) },
+            ].map(({ step, label, sub, href, action }) => (
+              <div key={step} className="rounded-xl border p-3 flex flex-col gap-2" style={{ borderColor: "hsl(217 30% 12%)", backgroundColor: "hsl(217 30% 8%)" }}>
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-cyber-blue/10 border border-cyber-blue/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-[10px] font-bold text-cyber-blue">{step}</span>
+                  </div>
+                  <span className="text-xs font-semibold text-cyber-text">{label}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground/50 pl-7">{sub}</p>
+                {href ? (
+                  <a href={href} className="ml-7 flex items-center gap-1 text-[10px] text-cyber-blue hover:text-cyber-blue/80 transition-colors font-medium">
+                    Go <ArrowRight className="h-3 w-3" />
+                  </a>
+                ) : action ? (
+                  <button onClick={action} className="ml-7 flex items-center gap-1 text-[10px] text-cyber-blue hover:text-cyber-blue/80 transition-colors font-medium">
+                    Refresh <ArrowRight className="h-3 w-3" />
+                  </button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+
+          <p className="text-[10px] text-muted-foreground/30 text-center">
+            You can dismiss this and return to it at any time via the Help page.
+          </p>
         </div>
       )}
 
