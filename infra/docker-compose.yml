@@ -77,7 +77,7 @@ services:
     tmpfs:
       - /tmp
       - /root/.npm
-    command: sh -c "npm install --include=dev && npm run build && npm start"
+    command: sh -c "npm install --include=dev && npm run dev"
 
   prometheus:
     image: prom/prometheus:v2.51.0
