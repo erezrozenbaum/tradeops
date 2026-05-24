@@ -1,5 +1,4 @@
 fastapi>=0.136.1
-starlette>=1.0.1
 uvicorn[standard]>=0.29.0
 sqlalchemy>=2.0.0
 alembic>=1.13.0
