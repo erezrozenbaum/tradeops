@@ -8,6 +8,15 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.8.0] — 2026-05-25
+
+### Added
+- **Narrative header** — personalized 2–3 sentence financial snapshot at the top of the dashboard; composed deterministically from loaded data (stability score, emergency fund, goal status, portfolio P&L); no extra API call; updates with every data load
+- **"Why this matters" tooltips** — `MetricTooltip` component (new `components/ui/metric-tooltip.tsx`) wraps key metrics with a `ⓘ` icon that shows a plain-English explanation on hover/click; applied to all 4 stat cards (Net Worth, Liquid Capital, Monthly Surplus, Emergency Fund), Financial Stability card title, Risk Allocation card title, and Max Drawdown label
+- **Progressive disclosure** — "Show full picture" toggle below the Stability + Risk section; collapses Investment Readiness, Portfolio, Goals, Pension, Retirement, Earnings, and News into an expandable section; preference persisted in localStorage
+- **Smart empty state** — replaces the generic "complete your profile" message with three actionable setup cards (Add finances / Set goals / Generate risk model), each describing exactly what it unlocks
+- **Design token pass** — spacing scale (`--space-1` through `--space-12`) and narrative card CSS variables added to `globals.css`; `StatCard` gains optional `tooltip` prop
+
 ## [3.7.0] — 2026-05-24
 
 ### Fixed

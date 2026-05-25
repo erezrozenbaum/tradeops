@@ -3,6 +3,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { MetricTooltip } from "@/components/ui/metric-tooltip";
 
 /* Animated number counter */
 function useCountUp(target: number, duration = 600) {
@@ -38,6 +39,7 @@ interface StatCardProps {
   accent?: "cyan" | "emerald" | "amber" | "red" | "purple";
   className?: string;
   animate?: boolean;
+  tooltip?: string;
 }
 
 const ACCENT_MAP = {
@@ -58,7 +60,7 @@ const TREND_COLOR = {
 };
 
 export function StatCard({
-  label, value, rawValue, sub, trend, trendLabel, icon, accent = "cyan", className, animate = true,
+  label, value, rawValue, sub, trend, trendLabel, icon, accent = "cyan", className, animate = true, tooltip,
 }: StatCardProps) {
   const cfg = ACCENT_MAP[accent];
   const [mounted, setMounted] = useState(false);
@@ -78,7 +80,9 @@ export function StatCard({
         {/* label + icon row */}
         <div className="flex items-center justify-between">
           <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/70">
-            {label}
+            {tooltip ? (
+              <MetricTooltip content={tooltip}>{label}</MetricTooltip>
+            ) : label}
           </p>
           {icon && (
             <div className={cn("opacity-60", cfg.text)}>{icon}</div>

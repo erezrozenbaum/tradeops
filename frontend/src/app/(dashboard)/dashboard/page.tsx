@@ -13,8 +13,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { AlertCircle, TrendingUp, TrendingDown, Minus, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, AlertTriangle, CheckCircle2, Circle, Zap, Clock, CalendarClock, PiggyBank, Bot, Calendar, Newspaper, ExternalLink, Target, Landmark } from "lucide-react";
+import { AlertCircle, TrendingUp, TrendingDown, Minus, ShieldCheck, ShieldAlert, ShieldX, GraduationCap, AlertTriangle, CheckCircle2, Circle, Zap, Clock, CalendarClock, PiggyBank, Bot, Calendar, Newspaper, ExternalLink, Target, Landmark, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { StatCard } from "@/components/ui/stat-card";
+import { MetricTooltip } from "@/components/ui/metric-tooltip";
 import Link from "next/link";
 import { DailyActionFeedCard } from "@/components/DailyActionFeedCard";
 
@@ -228,6 +229,15 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [earningsEvents, setEarningsEvents] = useState<EarningsEvent[]>([]);
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
+  const [showFullPicture, setShowFullPicture] = useState<boolean>(() => {
+    try { return localStorage.getItem("tradeops_show_full_picture") === "1"; } catch { return false; }
+  });
+
+  function toggleFullPicture() {
+    const next = !showFullPicture;
+    setShowFullPicture(next);
+    try { localStorage.setItem("tradeops_show_full_picture", next ? "1" : "0"); } catch {}
+  }
 
   useEffect(() => {
     if (!investorId) return;
@@ -329,6 +339,17 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Narrative header */}
+      <NarrativeHeader
+        investor={investor}
+        net_worth={net_worth}
+        cash_flow={cash_flow}
+        stability={stability}
+        goals={goals}
+        goalsAnalysis={goalsAnalysis}
+        portfolio={portfolio}
+      />
+
       {/* Setup checklist */}
       <SetupChecklist
         hasFinancialProfile={!!net_worth}
@@ -347,6 +368,7 @@ export default function DashboardPage() {
           trend={net_worth ? (net_worth.net_worth >= 0 ? "up" : "down") : undefined}
           sub={net_worth ? `${formatCurrency(net_worth.total_assets, net_worth.currency)} assets` : "No financial data yet"}
           icon={<Landmark className="h-4 w-4" />}
+          tooltip="Total assets minus total liabilities. The single most important number in your financial life — it should grow steadily over time."
         />
         <StatCard
           label="Liquid Capital"
@@ -355,6 +377,7 @@ export default function DashboardPage() {
           accent="cyan"
           sub={net_worth ? "Available liquid assets" : "No financial data yet"}
           icon={<ShieldCheck className="h-4 w-4" />}
+          tooltip="Cash and near-cash assets you can access quickly. This is what protects you in a crisis and what determines how much you can actually invest."
         />
         <StatCard
           label="Monthly Surplus"
@@ -364,6 +387,7 @@ export default function DashboardPage() {
           trend={cash_flow ? (cash_flow.monthly_surplus >= 0 ? "up" : "down") : undefined}
           trendLabel={cash_flow ? `${cash_flow.savings_rate_pct.toFixed(1)}% savings rate` : undefined}
           icon={<TrendingUp className="h-4 w-4" />}
+          tooltip="Income minus expenses each month. A negative surplus means you are spending more than you earn — investing before fixing this makes things worse, not better."
         />
         <StatCard
           label="Emergency Fund"
@@ -372,6 +396,7 @@ export default function DashboardPage() {
           accent={!cash_flow ? "amber" : cash_flow.emergency_fund_months >= 3 ? "emerald" : "amber"}
           sub={cash_flow ? (cash_flow.emergency_fund_months >= 3 ? "Adequate buffer" : "Build savings first") : "No data"}
           icon={<ShieldCheck className="h-4 w-4" />}
+          tooltip="How many months you could cover all expenses if your income stopped tomorrow. Aim for 3–6 months before investing aggressively. Without this, a market drop can force you to sell at the worst time."
         />
       </div>
 
@@ -391,7 +416,11 @@ export default function DashboardPage() {
         {/* Stability score */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Financial Stability</CardTitle>
+            <CardTitle>
+              <MetricTooltip content="A 0–100 score measuring how prepared your finances are for investment and unexpected events. It weighs your income/expense ratio, debt load, emergency fund, job stability, and savings rate. Below 40 means focus on foundations first.">
+                Financial Stability
+              </MetricTooltip>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {!stability ? (
@@ -432,7 +461,11 @@ export default function DashboardPage() {
         {/* Risk allocation */}
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>Risk Allocation</CardTitle>
+            <CardTitle>
+              <MetricTooltip content="How your investable capital is split between low-risk (bonds, savings), growth (diversified equities), and high-risk (concentrated positions, crypto). This is determined by your stability score and goals — not just preference.">
+                Risk Allocation
+              </MetricTooltip>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {!risk_model ? (
@@ -482,7 +515,9 @@ export default function DashboardPage() {
                   ))}
                   <div className="pt-2 border-t border-border">
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>Max drawdown</span>
+                      <MetricTooltip content="The maximum loss your portfolio could absorb before the system considers it a critical event. Staying within this limit means you can survive a market crash without being forced to sell.">
+                        Max drawdown
+                      </MetricTooltip>
                       <span className="font-medium text-foreground">{formatPercent(-risk_model.max_drawdown_pct)}</span>
                     </div>
                   </div>
@@ -492,6 +527,20 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Progressive disclosure toggle */}
+      <button
+        onClick={toggleFullPicture}
+        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-border/60 text-xs text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+      >
+        {showFullPicture ? (
+          <><ChevronUp className="h-3.5 w-3.5" /> Collapse details</>
+        ) : (
+          <><ChevronDown className="h-3.5 w-3.5" /> Show full picture — portfolio, goals, retirement, pension</>
+        )}
+      </button>
+
+      {showFullPicture && <>
 
       {/* Investment Readiness */}
       <ReadinessCard decision={decision} hasFinancialData={!!data.net_worth} />
@@ -679,16 +728,153 @@ export default function DashboardPage() {
         </div>
       )}
 
+      </> /* end showFullPicture */}
+
+      {/* Smart empty state — only when no data at all */}
       {goals.length === 0 && !net_worth && !cash_flow && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-sm font-medium">Start by completing your profile</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Add your financial data, set goals, and generate a risk model to see your dashboard.
-            </p>
-          </CardContent>
-        </Card>
+        <SmartEmptyState hasRiskModel={!!risk_model} />
       )}
+    </div>
+  );
+}
+
+function buildNarrativeSentences(
+  investor: DashboardData["investor"],
+  net_worth: DashboardData["net_worth"],
+  cash_flow: DashboardData["cash_flow"],
+  stability: DashboardData["stability"],
+  goals: DashboardData["goals"],
+  goalsAnalysis: GoalsAnalysisResult | null,
+  portfolio: PortfolioSummary | null,
+): string[] {
+  const sentences: string[] = [];
+
+  if (!net_worth && !cash_flow && goals.length === 0) {
+    return ["Complete your financial profile to unlock personalized insights and tracking."];
+  }
+
+  if (stability) {
+    const adj = stability.classification === "strong" ? "strong" : stability.classification === "stable" ? "stable" : stability.classification === "fragile" ? "fragile" : "unstable";
+    sentences.push(`Your financial foundation is ${adj} — stability score ${stability.score}/100.`);
+  } else if (net_worth) {
+    sentences.push(`Net worth recorded. Add a financial profile to generate your stability score.`);
+  }
+
+  if (cash_flow && cash_flow.emergency_fund_months < 3) {
+    sentences.push(`Emergency fund is at ${cash_flow.emergency_fund_months.toFixed(1)} months — build to 3 months before investing aggressively.`);
+  } else if (cash_flow && cash_flow.monthly_surplus < 0) {
+    sentences.push(`Monthly expenses exceed income by ${formatCurrency(Math.abs(cash_flow.monthly_surplus), cash_flow.currency)} — address this before increasing investments.`);
+  } else if (goalsAnalysis) {
+    const offTrack = goalsAnalysis.goals.filter((g) => !g.on_track).length;
+    const total = goalsAnalysis.goals.length;
+    if (offTrack === 0 && total > 0) {
+      sentences.push(`All ${total} goal${total > 1 ? "s are" : " is"} on track.`);
+    } else if (offTrack > 0) {
+      sentences.push(`${offTrack} of ${total} goal${total > 1 ? "s need" : " needs"} attention.`);
+    }
+  } else if (portfolio && portfolio.unrealized_pnl !== 0) {
+    const sign = portfolio.unrealized_pnl > 0 ? "+" : "";
+    sentences.push(`Portfolio unrealized P&L: ${sign}${formatCurrency(portfolio.unrealized_pnl, portfolio.base_currency)} (${sign}${portfolio.unrealized_pnl_pct.toFixed(2)}%).`);
+  }
+
+  if (stability?.recommendations?.[0]) {
+    sentences.push(stability.recommendations[0]);
+  } else if (stability?.risk_modifier === "allow_growth" && !sentences.some(s => s.includes("goal"))) {
+    sentences.push("Your stability supports growth — consider reviewing your investment allocation.");
+  }
+
+  return sentences.slice(0, 3);
+}
+
+function NarrativeHeader({
+  investor, net_worth, cash_flow, stability, goals, goalsAnalysis, portfolio,
+}: {
+  investor: DashboardData["investor"];
+  net_worth: DashboardData["net_worth"];
+  cash_flow: DashboardData["cash_flow"];
+  stability: DashboardData["stability"];
+  goals: DashboardData["goals"];
+  goalsAnalysis: GoalsAnalysisResult | null;
+  portfolio: PortfolioSummary | null;
+}) {
+  const sentences = buildNarrativeSentences(investor, net_worth, cash_flow, stability, goals, goalsAnalysis, portfolio);
+  const hasData = !!(net_worth || cash_flow || stability);
+
+  return (
+    <div className="rounded-xl border border-primary/20 bg-card px-5 py-4 flex gap-4 items-start">
+      <div className="mt-0.5 shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+        <Sparkles className="h-4 w-4 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-foreground mb-1">
+          {hasData ? `Your financial picture` : `Welcome, ${investor.full_name.split(" ")[0]}`}
+        </p>
+        <div className="space-y-0.5">
+          {sentences.map((s, i) => (
+            <p key={i} className="text-sm text-muted-foreground leading-relaxed">{s}</p>
+          ))}
+        </div>
+      </div>
+      {!hasData && (
+        <Link
+          href="/financial"
+          className="shrink-0 text-xs font-medium text-primary hover:underline"
+        >
+          Set up profile →
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function SmartEmptyState({ hasRiskModel }: { hasRiskModel: boolean }) {
+  const steps = [
+    {
+      href: "/financial",
+      title: "Add your finances",
+      description: "Income, expenses, assets, liabilities. Unlocks your stability score, net worth, and cash flow analysis.",
+      done: false,
+    },
+    {
+      href: "/goals",
+      title: "Set your goals",
+      description: "House, retirement, emergency fund. Unlocks goal tracking, monthly contribution plan, and gap analysis.",
+      done: false,
+    },
+    {
+      href: "/risk",
+      title: "Generate risk model",
+      description: "Your personal investment allocation based on stability and goals. Required before any strategy recommendations.",
+      done: hasRiskModel,
+    },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Get started</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {steps.map((step) => (
+          <Link
+            key={step.href}
+            href={step.href}
+            className={`group rounded-xl border p-4 transition-colors ${
+              step.done
+                ? "border-green-500/30 bg-green-500/5 pointer-events-none"
+                : "border-border hover:border-primary/40 hover:bg-primary/5"
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              {step.done
+                ? <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                : <Circle className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0 transition-colors" />}
+              <span className={`text-sm font-medium ${step.done ? "text-green-600 dark:text-green-400" : "group-hover:text-primary transition-colors"}`}>
+                {step.title}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">{step.description}</p>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
