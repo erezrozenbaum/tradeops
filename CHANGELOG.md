@@ -10,6 +10,9 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [3.7.0] — 2026-05-24
 
+### Fixed
+- **Dev compose static assets** — standalone server (`node .next/standalone/server.js`) now copies `.next/static` and `public` into the standalone output directory before startup; previously all JS chunk requests returned 404, causing a ChunkLoadError and React error #423 on first load
+
 ### Added
 - **Tax Summary CSV export** — "CSV" download button on the Tax Summary page; generates a two-section CSV (Realized Transactions + Dividends) from data already loaded in the browser; no new backend endpoint
 - **Goals Monthly Budget Plan** — dedicated "Monthly Budget Plan" card below the existing summary banner on the Goals page; shows each goal's required monthly contribution as a share of the total with a per-goal progress bar and on-track/at-risk color coding
