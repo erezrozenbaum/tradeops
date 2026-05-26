@@ -2,6 +2,7 @@
 
 import { TrendingUp, TrendingDown, Minus, Brain, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MetricTooltip } from "@/components/ui/metric-tooltip";
 
 interface StatusHeaderProps {
   twinScore: number;
@@ -67,7 +68,9 @@ export function StatusHeader({
         <div className="flex items-center gap-3">
           <Brain className="h-5 w-5 text-muted-foreground/50 shrink-0" />
           <div>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60">Financial Twin</p>
+            <MetricTooltip content="A composite score across 8 behavioral and financial dimensions: stability, discipline, emotional control, portfolio consistency, resilience, risk alignment, long-term discipline, and contribution momentum. Higher is healthier. Drops when risky behavior is detected; rises when you act with discipline.">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60">Financial Twin</p>
+            </MetricTooltip>
             <div className="flex items-baseline gap-1.5">
               <span className={cn("text-3xl font-bold font-mono tabular-nums", scoreColor)}>
                 {twinScore.toFixed(1)}
@@ -88,11 +91,17 @@ export function StatusHeader({
 
         {/* Trend pills */}
         <div className="flex flex-wrap gap-3 sm:gap-5 text-xs ml-auto">
-          <TrendPill
-            label="Stability"
-            value={`${stabilityClassification} (${stabilityScore.toFixed(0)})`}
-            trend={stabilityClassification === "strong" || stabilityClassification === "stable" ? "up" : "down"}
-          />
+          <div className="flex items-center gap-1.5">
+            <MetricTooltip content="Your financial stability score (0–100) weighs emergency fund depth, income/expense ratio, debt load, job stability, and savings rate. It directly controls how much of your capital the risk engine allows you to invest aggressively.">
+              <span className="text-muted-foreground/60 text-xs">Stability</span>
+            </MetricTooltip>
+            <span className={cn("flex items-center gap-0.5 font-mono font-medium text-xs", stabilityClassification === "strong" || stabilityClassification === "stable" ? "text-emerald-400" : "text-red-400")}>
+              {stabilityClassification === "strong" || stabilityClassification === "stable"
+                ? <TrendingUp className="h-3 w-3" />
+                : <TrendingDown className="h-3 w-3" />}
+              {stabilityClassification} ({stabilityScore.toFixed(0)})
+            </span>
+          </div>
           {netWorthChangePct !== null && (
             <TrendPill
               label="Net Worth 12m"

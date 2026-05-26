@@ -1,7 +1,7 @@
 # TradeOps AI — Architecture
 
-**Version:** 3.3.0  
-**Last updated:** 2026-05-23
+**Version:** 3.10.0  
+**Last updated:** 2026-05-26
 
 ---
 
@@ -557,7 +557,8 @@ frontend/src/
 │   │   ├── insights/page.tsx       # AI Coach: proactive insights with severity grouping + dismiss
 │   │   ├── decisions/page.tsx      # Decision Provenance: list + detail panel + replay (v1.3.0–v1.4.0)
 │   │   ├── strategy-drift/page.tsx # Strategy Drift: alignment gauge + per-tier drift bars (v1.5.0)
-│   │   ├── timeline/page.tsx       # Financial Decision Timeline: date-grouped event feed (v1.6.0)
+│   │   ├── timeline/page.tsx       # Financial Decision Timeline: score sparklines, AI assessment cards, month grouping, behavioral events (v3.9.0 rewrite)
+│   │   ├── onboarding/page.tsx     # 4-step guided setup wizard with step completion detection (v3.10.0)
 │   │   ├── behavioral/page.tsx     # Behavioral Intelligence: score ring, holding periods, patterns (v1.7.0)
 │   │   ├── attribution/page.tsx    # Performance Attribution: factor bars + confidence breakdown (v2.0.0)
 │   │   ├── maturity/page.tsx       # Investor Maturity: score arc, stage roadmap, component bars (v2.1.0)
@@ -582,7 +583,7 @@ frontend/src/
 │   ├── BehavioralRisksPanel.tsx    # Active risk event cards
 │   ├── FuturesPreviewCard.tsx      # 3-path simplified trajectory chart
 │   ├── ReplayHighlightCard.tsx     # Best counterfactual one-liner
-│   ├── AIThoughtPartnerCard.tsx    # AI summary + verbosity toggle
+│   ├── AIThoughtPartnerCard.tsx    # AI summary + verbosity toggle + collapsible context panel (twin delta, behavioral risks, evolution chips) (v3.10.0)
 │   └── ProgressionCard.tsx         # Stage roadmap + unlocked features
 └── lib/
     ├── api.ts                      # Typed API client helpers

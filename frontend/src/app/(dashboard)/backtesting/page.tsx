@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import { AlertCircle, BarChart2, ChevronRight } from "lucide-react";
+import { MetricTooltip } from "@/components/ui/metric-tooltip";
 import {
   LineChart,
   Line,
@@ -242,35 +243,43 @@ export default function BacktestingPage() {
                       label: "Total Return",
                       value: formatPercent(selected.total_return_pct),
                       color: selected.total_return_pct >= 0 ? "text-green-500" : "text-red-500",
+                      tooltip: undefined,
                     },
                     {
                       label: "Annualised",
                       value: formatPercent(selected.annualized_return_pct),
                       color: "text-foreground",
+                      tooltip: "Total return scaled to a per-year rate. More useful than total return for comparing strategies run over different time periods.",
                     },
                     {
                       label: "Max Drawdown",
                       value: formatPercent(-selected.max_drawdown_pct),
                       color: "text-red-500",
+                      tooltip: "The largest peak-to-trough loss during the simulation. A strategy with 25% max drawdown means at some point you would have been down 25% from a recent high — could you have held on without panic-selling?",
                     },
                     {
                       label: "Sharpe Ratio",
                       value: selected.sharpe_ratio.toFixed(2),
                       color: "text-foreground",
+                      tooltip: "Return per unit of risk. Above 1.0 is good; above 2.0 is excellent. A high return with high volatility can have a lower Sharpe than a moderate return with low volatility — this metric captures that trade-off.",
                     },
                     {
                       label: "Win Rate",
                       value: `${selected.win_rate_pct.toFixed(1)}%`,
                       color: "text-foreground",
+                      tooltip: "Percentage of simulated periods where the strategy was profitable. A 60% win rate doesn't mean 60% returns — a strategy can win often but lose big, or lose often but win big. Read alongside total return.",
                     },
                     {
                       label: "Final Capital",
                       value: formatCurrency(selected.final_capital, selected.currency),
                       color: "text-foreground",
+                      tooltip: undefined,
                     },
                   ].map((m) => (
                     <div key={m.label}>
-                      <p className="text-xs text-muted-foreground mb-0.5">{m.label}</p>
+                      <p className="text-xs text-muted-foreground mb-0.5">
+                        {m.tooltip ? <MetricTooltip content={m.tooltip}>{m.label}</MetricTooltip> : m.label}
+                      </p>
                       <p className={`text-sm font-semibold ${m.color}`}>{m.value}</p>
                     </div>
                   ))}

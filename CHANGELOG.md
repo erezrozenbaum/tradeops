@@ -8,6 +8,28 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.10.0] — 2026-05-26
+
+### Added
+- **MetricTooltip expansion** — "Why this matters" tooltips applied across all major insight pages:
+  - **Command Center** (`StatusHeader`) — Financial Twin score (8-dimension explanation), Stability score explanation
+  - **Risk Model page** — Investable Capital, Max Drawdown, and all three allocation tiers (Low Risk, Growth, High Risk) now have contextual explanations
+  - **Backtesting page** — Annualised Return, Max Drawdown, Sharpe Ratio, and Win Rate metrics now have explanations helping users interpret simulation results
+- **AI Thought Partner depth** (`AIThoughtPartnerCard`) — collapsible "What your AI is seeing right now" panel added beneath the AI summary:
+  - Twin score 7-day delta with trend icon (green up / red down)
+  - Active behavioral risk count with direct link to `/behavioral-risk`
+  - Up to 3 notable evolution items (critical/alert/warning severity) as `DeltaChip` cards with severity-coded borders
+  - Link to full AI assessment history (`/ai-history`)
+  - Data sourced from existing Command Center report fields (`evolution_feed`, `twin_score_delta_7d`, `active_behavioral_risk_count`) — no additional API calls
+  - Advisor view (`/advisor-view`) also updated to pass new props
+- **Onboarding wizard** (`/onboarding`) — new guided setup page:
+  - 4-step flow: Profile → Financial Data → Goals → Risk Model
+  - Fetches `/dashboard` + `/risk-model` on load to detect which steps are already complete
+  - Progress bar with percentage; auto-selects first incomplete step
+  - `StepCard` component — icon, title, description, "Unlocks" expandable box, CTA link
+  - Completion state: "You're all set" messaging with green CTA to Command Center
+  - Sets `tradeops_onboarding_dismissed` localStorage key on finish/skip
+
 ## [3.9.0] — 2026-05-26
 
 ### Added

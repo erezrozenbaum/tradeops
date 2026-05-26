@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 3.7.0  
-**Last updated:** 2026-05-24
+**Version:** 3.10.0  
+**Last updated:** 2026-05-26
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
@@ -777,6 +777,9 @@ kubectl describe ingress tradeops
 | AI Monthly Budget | `ai_usage/logger.py` + `core/config.py` | `AI_MONTHLY_BUDGET_USD` env var (default 0 = unlimited). `require_ai_budget` FastAPI dependency applied to 6 expensive AI routers. Queries rolling 30-day aggregate from `ai_usage_logs`; raises HTTP 429 when cap is reached. Market signals background worker also checks per-investor budget before each Claude call. |
 | Minor Account Block | `live_trading/service.py` | `submit_order()` explicitly checks `investor.is_minor` before any gate evaluation and rejects with HTTP 422. Enforces safety rule #4 at the service layer, independent of gate configuration. |
 | Live Trading Gateway Validation | `live_trading/schemas.py` + `live_trading/router.py` | `gateway_url` validated on all write paths: must use `http`/`https` scheme and hostname must be `localhost` or `127.0.0.1`. Prevents SSRF via user-supplied gateway URLs. |
+| MetricTooltip Expansion | `components/ui/metric-tooltip.tsx` + Risk / Backtesting / Command Center pages | "Why this matters" inline tooltips extended to: Risk Model page (Investable Capital, Max Drawdown, Low Risk / Growth / High Risk allocation tiers); Backtesting page (Annualised Return, Max Drawdown, Sharpe Ratio, Win Rate); Command Center StatusHeader (Financial Twin score — 8-dimension explanation, Stability score). Applied in v3.10.0. |
+| AI Thought Partner Depth | `components/command-center/AIThoughtPartnerCard.tsx` | Collapsible "What your AI is seeing right now" panel beneath the AI summary. Shows Twin score 7-day delta (with trend icon), active behavioral risk count (link to `/behavioral-risk`), and up to 3 notable evolution items (critical/alert/warning) as severity-coded chips. Data sourced entirely from existing Command Center report fields — zero additional API calls. Advisor view also updated. Applied in v3.10.0. |
+| Onboarding Wizard | `app/(dashboard)/onboarding/page.tsx` | `/onboarding` — guided 4-step setup page: Profile → Financial Data → Goals → Risk Model. Detects which steps are already complete by fetching `/dashboard` + `/risk-model` on load. Progress bar with percentage. Each `StepCard` shows icon, title, description, and an "Unlocks" box listing features that become available after completion. Finish/skip sets `tradeops_onboarding_dismissed` in localStorage and redirects to `/command-center`. Applied in v3.10.0. |
 | Audit Event Index | Migration 0036 | `ix_audit_events_investor_profile_id` index on `audit_events` table. Required for efficient per-investor audit log queries at scale. |
 | Pct Field Constraints | Migration 0036 | `CHECK` constraints: `investable_capital_pct` (0–100) on `financial_profiles`, `max_trade_size_pct` (0–100) on `risk_models`. |
 | Net Worth Dashboard | `net_worth/` + migration 0040 | `GET /investors/{id}/net-worth` — aggregates portfolio value + financial assets − liabilities + FI projection (binary search, 4% SWR, 7% real return). `GET /investors/{id}/net-worth/history` — 12-month trend from `net_worth_snapshots`. Daily snapshot at 21:15 UTC. Frontend: 4 stat cards, line chart, FI date, assets/liabilities breakdown. |

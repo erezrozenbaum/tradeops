@@ -4,7 +4,7 @@
 
 **Personal Financial Intelligence Platform**
 
-[![Version](https://img.shields.io/badge/version-3.9.0-blue?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-3.10.0-blue?style=flat-square)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org)
@@ -222,6 +222,14 @@ Risk-Controlled Live Execution (gated, opt-in)
 | **Event-type filters** | All \| AI Recs \| Coach \| Rebalance \| Transactions \| Behavioral \| Assessments |
 | **Behavioral risk events** | Severity-coded left border (red = high, amber = medium); evidence and recommendation surfaced inline |
 | **Causal notes** | Impact annotations on events where downstream portfolio effect was measurable (e.g. "followed by −6.2% drawdown over 7 days") |
+
+### UX Depth & Onboarding *(v3.10.0)*
+
+| Feature | Description |
+|---|---|
+| **MetricTooltip expansion** | "Why this matters" inline tooltips now cover Risk Model page (Investable Capital, Max Drawdown, all three tiers), Backtesting page (Annualised, Max Drawdown, Sharpe, Win Rate), and Command Center status header (Twin Score, Stability) |
+| **AI Thought Partner depth** | Collapsible "What your AI is seeing right now" panel shows Twin score 7-day delta, active behavioral risk count, and up to 3 notable evolution items with severity-coded chips — sourced from existing report data, no new API calls |
+| **Onboarding wizard** | `/onboarding` — 4-step guided setup (Profile → Finances → Goals → Risk Model); detects completed steps automatically; progress bar; each step shows what it unlocks |
 
 ### Observability & Data Integrity *(v2.7.1)*
 

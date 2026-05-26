@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import { AlertCircle, RefreshCw, TrendingUp } from "lucide-react";
+import { MetricTooltip } from "@/components/ui/metric-tooltip";
 
 interface RiskModel {
   id: string;
@@ -131,14 +132,16 @@ export default function RiskPage() {
           {/* Overview row */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: "Net Worth", value: formatCurrency(model.total_net_worth, model.currency) },
-              { label: "Liquid Capital", value: formatCurrency(model.liquid_capital, model.currency) },
-              { label: "Investable Capital", value: formatCurrency(model.investable_capital, model.currency) },
-              { label: "Max Drawdown", value: formatPercent(-model.max_drawdown_pct) },
+              { label: "Net Worth", value: formatCurrency(model.total_net_worth, model.currency), tooltip: undefined },
+              { label: "Liquid Capital", value: formatCurrency(model.liquid_capital, model.currency), tooltip: undefined },
+              { label: "Investable Capital", value: formatCurrency(model.investable_capital, model.currency), tooltip: "The portion of your liquid capital the system considers safe to put to work. Computed from your stability score — a fragile score reduces this significantly to protect you from investing money you may need." },
+              { label: "Max Drawdown", value: formatPercent(-model.max_drawdown_pct), tooltip: "The maximum loss the risk engine will tolerate before flagging an emergency. Staying within this limit means you can survive a market crash without being forced to sell at the worst moment." },
             ].map((s) => (
               <Card key={s.label}>
                 <CardContent className="pt-5">
-                  <p className="text-xs text-muted-foreground mb-2">{s.label}</p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    {s.tooltip ? <MetricTooltip content={s.tooltip}>{s.label}</MetricTooltip> : s.label}
+                  </p>
                   <p className="text-xl font-bold tracking-tight">{s.value}</p>
                 </CardContent>
               </Card>
@@ -179,25 +182,30 @@ export default function RiskPage() {
                     pct: model.low_risk_pct,
                     amount: model.low_risk_amount,
                     bar: "bg-green-500",
+                    tooltip: "Capital allocated to stable, low-volatility assets: bonds, money market, fixed deposits. This portion should never be needed urgently — it provides ballast during market downturns.",
                   },
                   {
                     label: "Growth",
                     pct: model.growth_pct,
                     amount: model.growth_amount,
                     bar: "bg-primary",
+                    tooltip: "Capital allocated to diversified growth assets: broad-market ETFs, index funds, dividend stocks. Designed to grow over 5+ year horizons with moderate volatility.",
                   },
                   {
                     label: "High Risk",
                     pct: model.high_risk_pct,
                     amount: model.high_risk_amount,
                     bar: "bg-red-500",
+                    tooltip: "Capital you can afford to lose entirely without affecting your financial stability. For concentrated bets, sector plays, crypto, or single stocks. Only deploy after low-risk and growth tiers are funded.",
                   },
                 ].map((tier) => (
                   <div key={tier.label}>
                     <div className="flex items-center justify-between text-sm mb-1.5">
                       <div className="flex items-center gap-2">
                         <span className={`h-2 w-2 rounded-full ${tier.bar}`} />
-                        <span className="text-muted-foreground">{tier.label}</span>
+                        <MetricTooltip content={tier.tooltip}>
+                          <span className="text-muted-foreground">{tier.label}</span>
+                        </MetricTooltip>
                       </div>
                       <div className="text-right">
                         <span className="font-semibold">{tier.pct.toFixed(1)}%</span>

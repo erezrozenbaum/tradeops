@@ -471,6 +471,9 @@ export default function CommandCenterPage() {
           summary={report.ai_summary}
           verbosityUsed={report.ai_summary_verbosity}
           maturityStageLabel={header.maturity_stage_label}
+          twinDelta={header.twin_score_delta_7d}
+          evolutionItems={report.evolution_feed}
+          activeRiskCount={header.active_behavioral_risk_count}
           onVerbosityChange={handleVerbosityChange}
         />
       </CollapsibleSection>
