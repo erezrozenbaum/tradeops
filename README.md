@@ -4,7 +4,7 @@
 
 **Personal Financial Intelligence Platform**
 
-[![Version](https://img.shields.io/badge/version-3.7.0-blue?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-3.9.0-blue?style=flat-square)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org)
@@ -200,6 +200,28 @@ Risk-Controlled Live Execution (gated, opt-in)
 | **Decision Replay Highlight** | Most impactful counterfactual insight surfaced on the main screen |
 | **Maturity-Aware AI Summary** | AI Thought Partner summary adapts tone and depth to investor's maturity stage; inline verbosity toggle |
 | **Investor Progression Track** | Stage progression bar + unlocked features + next unlock target |
+
+### Dashboard Intelligence *(v3.8.0)*
+
+| Feature | Description |
+|---|---|
+| **Narrative Header** | Personalised 2–3 sentence financial snapshot at dashboard top; composed from stability score, EF months, goal status, and portfolio P&L; no extra API call |
+| **"Why this matters" tooltips** | `MetricTooltip` component on all 4 stat cards, Financial Stability, Risk Allocation, and Max Drawdown; plain-English explanation of each metric |
+| **Progressive disclosure** | "Show full picture" toggle below the stability section; collapses portfolio, goals, pension, retirement, earnings, and news; preference persisted in `localStorage` |
+| **Smart empty states** | First-time users see three actionable setup cards instead of a blank message — each describes exactly what it unlocks |
+
+### Financial Life Timeline *(v3.9.0)*
+
+| Feature | Description |
+|---|---|
+| **Unified narrative timeline** | `/timeline` page merges AI recommendations, coach insights, rebalances, transactions, behavioral risk events, and AI assessment snapshots into a single chronological feed |
+| **Score evolution strip** | Three live sparklines at the top: Twin Score trend, Maturity Score trend, Net Worth trend — with delta indicators vs previous snapshot |
+| **AI Assessment cards** | Periodic AI narrative snapshots surfaced inline on the timeline with metric pills (twin score, stability, EF months, maturity stage) and expandable full text |
+| **Month grouping** | Events grouped by calendar month with event count; longer history stays navigable |
+| **1m / 3m / 6m / 1yr range** | Configurable look-back; all data sources re-fetch together |
+| **Event-type filters** | All \| AI Recs \| Coach \| Rebalance \| Transactions \| Behavioral \| Assessments |
+| **Behavioral risk events** | Severity-coded left border (red = high, amber = medium); evidence and recommendation surfaced inline |
+| **Causal notes** | Impact annotations on events where downstream portfolio effect was measurable (e.g. "followed by −6.2% drawdown over 7 days") |
 
 ### Observability & Data Integrity *(v2.7.1)*
 

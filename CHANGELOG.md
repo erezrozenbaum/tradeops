@@ -8,6 +8,21 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.9.0] — 2026-05-26
+
+### Added
+- **Financial Life Timeline** (`/timeline`) — complete rewrite of the existing decision timeline page into a full narrative experience:
+  - **Score evolution strip** — three sparkline cards (Twin Score, Maturity Score, Net Worth) with delta vs previous snapshot; recharts `LineChart` with tooltip; renders only when history data exists
+  - **AI Assessment cards** — AI memory entries injected into the timeline at their `summary_at` timestamp; show metric pills (twin score, stability, EF months, maturity stage) and expandable full narrative text
+  - **Unified event feed** — merges four data sources client-side: `/timeline`, `/command-center/ai-memory`, `/command-center/score-history`, `/net-worth/history`; sorted chronologically, deduplicated by type
+  - **Month grouping** — events grouped by calendar month with event count badge; replaces day-by-day grouping for longer time ranges
+  - **Behavioral risk events** — severity-coded left border accent (red = high, amber = medium) with evidence and recommendation surfaced inline
+  - **Causal notes** — downstream portfolio impact annotations shown on relevant events (e.g. "followed by −6.2% drawdown over 7 days")
+  - **Time range selector** — 1m / 3m / 6m / 1yr; all four data sources re-fetch together on change
+  - **Event-type filters** — All | AI Recs | Coach | Rebalance | Transactions | Behavioral | Assessments
+  - **Refresh button** with spinner; calm empty state with filter-clear CTA
+- **README** — Dashboard Intelligence (v3.8.0) and Financial Life Timeline (v3.9.0) sections added to features table; version badge updated to 3.9.0
+
 ## [3.8.0] — 2026-05-25
 
 ### Added
