@@ -9,6 +9,7 @@ import {
   Layers, TrendingUp, TrendingDown, CheckCircle2, XCircle,
   ChevronDown, ChevronUp, AlertTriangle, Zap, ShieldCheck,
   RefreshCw, Trash2, PlayCircle, Info, Target, Leaf,
+  BookMarked, Plus, BarChart3, History,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -92,6 +93,30 @@ interface GenerateResult {
   net_value: number;
   currency: string;
   notes: string[];
+}
+
+interface OrderTemplateItem { ticker: string | null; name: string; action: string; quantity: number; unit_price: number; currency: string; asset_type: string | null }
+interface OrderTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  orders: OrderTemplateItem[];
+  times_applied: number;
+  last_applied_at: string | null;
+  created_at: string;
+}
+
+interface OutcomeSnapshot { days: number; snapshot_at: string; portfolio_value: number | null; low_risk_pct: number | null; growth_pct: number | null; high_risk_pct: number | null }
+interface OutcomeComparison {
+  order_id: string;
+  ticker: string | null;
+  name: string;
+  action: string;
+  estimated_value: number;
+  currency: string;
+  executed_at: string | null;
+  projected: ProjectedMetrics | null;
+  snapshots: OutcomeSnapshot[];
 }
 
 // ── API base ───────────────────────────────────────────────────────────────────
@@ -365,6 +390,12 @@ export default function OrderBuilderPage() {
   const [rebalance, setRebalance] = useState<RebalanceResult | null>(null);
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
   const [activeTab, setActiveTab] = useState<"pending" | "executed" | "cancelled">("pending");
+  const [templates, setTemplates] = useState<OrderTemplate[]>([]);
+  const [outcomes, setOutcomes] = useState<OutcomeComparison[]>([]);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [selectedForTemplate, setSelectedForTemplate] = useState<string[]>([]);
+  const [templateError, setTemplateError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [genResult, setGenResult] = useState<GenerateResult | null>(null);
   const [loadingOrders, setLoadingOrders] = useState(false);
@@ -418,12 +449,30 @@ export default function OrderBuilderPage() {
     }
   }, [investorId]);
 
+  const fetchTemplates = useCallback(async () => {
+    if (!investorId) return;
+    try {
+      const data = await apiFetch<OrderTemplate[]>(`/investors/${investorId}/staged-orders/templates`);
+      setTemplates(Array.isArray(data) ? data : []);
+    } catch { /* silent */ }
+  }, [investorId]);
+
+  const fetchOutcomes = useCallback(async () => {
+    if (!investorId) return;
+    try {
+      const data = await apiFetch<OutcomeComparison[]>(`/investors/${investorId}/staged-orders/outcomes`);
+      setOutcomes(Array.isArray(data) ? data : []);
+    } catch { /* silent */ }
+  }, [investorId]);
+
   useEffect(() => {
     if (!investorId) return;
     fetchOrders();
     fetchRebalance();
     fetchGoals();
-  }, [investorId, fetchOrders, fetchRebalance, fetchGoals]);
+    fetchTemplates();
+    fetchOutcomes();
+  }, [investorId, fetchOrders, fetchRebalance, fetchGoals, fetchTemplates, fetchOutcomes]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -499,6 +548,47 @@ export default function OrderBuilderPage() {
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!investorId || !templateName.trim()) return;
+    const pendingIds = orderList?.orders.filter(o => o.status === "pending").map(o => o.id) ?? [];
+    if (pendingIds.length === 0) { setTemplateError("No pending orders to save as template."); return; }
+    setSavingTemplate(true);
+    setTemplateError(null);
+    try {
+      await apiFetch(`/investors/${investorId}/staged-orders/templates`, {
+        method: "POST",
+        body: JSON.stringify({ name: templateName, order_ids: selectedForTemplate.length > 0 ? selectedForTemplate : pendingIds }),
+      });
+      setTemplateName("");
+      setSelectedForTemplate([]);
+      fetchTemplates();
+    } catch (err: unknown) {
+      setTemplateError(err instanceof Error ? err.message : "Failed to save template");
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const handleApplyTemplate = async (templateId: string) => {
+    if (!investorId) return;
+    try {
+      await apiFetch(`/investors/${investorId}/staged-orders/templates/${templateId}/apply`, { method: "POST" });
+      fetchOrders();
+      fetchTemplates();
+      setActiveTab("pending");
+    } catch (err: unknown) {
+      setTemplateError(err instanceof Error ? err.message : "Failed to apply template");
+    }
+  };
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    if (!investorId) return;
+    try {
+      await apiFetch(`/investors/${investorId}/staged-orders/templates/${templateId}`, { method: "DELETE" });
+      fetchTemplates();
+    } catch { /* silent */ }
   };
 
   const filteredOrders = orderList?.orders.filter(o => o.status === activeTab) ?? [];
@@ -822,6 +912,137 @@ export default function OrderBuilderPage() {
           </Card>
         </div>
       </div>
+
+      {/* ── Template Library ────────────────────────────────────────────────── */}
+      <Card>
+        <CardContent className="p-5 space-y-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <h2 className="font-semibold text-sm flex items-center gap-2">
+              <BookMarked className="w-4 h-4 text-purple-400" />
+              Template Library
+            </h2>
+            <div className="flex items-center gap-2">
+              <input
+                className="px-3 py-1.5 rounded bg-background border border-white/10 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-purple-500/50 w-48"
+                placeholder="Template name..."
+                value={templateName}
+                onChange={e => setTemplateName(e.target.value)}
+              />
+              <button
+                onClick={handleSaveTemplate}
+                disabled={savingTemplate || !templateName.trim()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30 hover:bg-purple-500/30 transition-colors disabled:opacity-50"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Save pending as template
+              </button>
+            </div>
+          </div>
+          {templateError && (
+            <div className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded px-3 py-2">{templateError}</div>
+          )}
+          {templates.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-4 text-center">
+              No templates yet. Stage orders, then save them as a reusable template (e.g. "Monthly DCA", "60/40 Rebalance").
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {templates.map(tmpl => (
+                <div key={tmpl.id} className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-medium text-sm text-foreground">{tmpl.name}</div>
+                      {tmpl.description && <div className="text-[11px] text-muted-foreground">{tmpl.description}</div>}
+                    </div>
+                    <button onClick={() => handleDeleteTemplate(tmpl.id)} className="text-muted-foreground/40 hover:text-rose-400 transition-colors">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {tmpl.orders.length} order{tmpl.orders.length !== 1 ? "s" : ""} · Applied {tmpl.times_applied}×
+                    {tmpl.last_applied_at && ` · Last: ${new Date(tmpl.last_applied_at).toLocaleDateString()}`}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {tmpl.orders.slice(0, 4).map((o, i) => (
+                      <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded border ${o.action === "buy" ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10" : "border-rose-500/30 text-rose-400 bg-rose-500/10"}`}>
+                        {o.action.toUpperCase()} {o.ticker || o.name.slice(0, 8)}
+                      </span>
+                    ))}
+                    {tmpl.orders.length > 4 && <span className="text-[10px] text-muted-foreground">+{tmpl.orders.length - 4}</span>}
+                  </div>
+                  <button
+                    onClick={() => handleApplyTemplate(tmpl.id)}
+                    className="w-full py-1.5 rounded text-xs bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30 transition-colors"
+                  >
+                    Apply Template
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Outcome History ──────────────────────────────────────────────────── */}
+      {outcomes.length > 0 && (
+        <Card>
+          <CardContent className="p-5 space-y-4">
+            <h2 className="font-semibold text-sm flex items-center gap-2">
+              <History className="w-4 h-4 text-amber-400" />
+              Outcome Tracking — Projected vs Actual
+            </h2>
+            <div className="space-y-3">
+              {outcomes.map(oc => (
+                <div key={oc.order_id} className="rounded-lg border border-white/8 bg-white/3 p-4 space-y-3">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className={`text-[10px] px-2 py-0.5 rounded border ${oc.action === "buy" ? "border-emerald-500/30 text-emerald-400" : "border-rose-500/30 text-rose-400"}`}>
+                      {oc.action.toUpperCase()}
+                    </span>
+                    {oc.ticker && <span className="font-mono text-sm font-semibold">{oc.ticker}</span>}
+                    <span className="text-sm text-muted-foreground">{oc.name}</span>
+                    <span className="text-sm font-semibold">{formatCurrency(oc.estimated_value, oc.currency)}</span>
+                    {oc.executed_at && (
+                      <span className="text-[11px] text-muted-foreground/60 ml-auto">Executed {new Date(oc.executed_at).toLocaleDateString()}</span>
+                    )}
+                  </div>
+                  {oc.projected && (
+                    <div className="grid grid-cols-3 gap-2 text-[11px]">
+                      {oc.projected.portfolio_value_base != null && (
+                        <div className="rounded bg-white/5 px-2 py-1.5 text-center">
+                          <div className="text-muted-foreground">Projected Portfolio</div>
+                          <div className="font-semibold">{formatCurrency(oc.projected.portfolio_value_base)}</div>
+                        </div>
+                      )}
+                      {oc.projected.goal_name && oc.projected.goal_progress_pct != null && (
+                        <div className="rounded bg-purple-500/10 px-2 py-1.5 text-center col-span-2">
+                          <div className="text-muted-foreground">{oc.projected.goal_name}</div>
+                          <div className="font-semibold text-purple-300">{oc.projected.goal_progress_pct.toFixed(1)}% projected</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {oc.snapshots.length > 0 ? (
+                    <div className="flex gap-2 flex-wrap">
+                      {oc.snapshots.map((snap, i) => (
+                        <div key={i} className="rounded bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-[11px] text-center min-w-[80px]">
+                          <div className="text-amber-400 font-semibold">{snap.days}d</div>
+                          {snap.portfolio_value != null && (
+                            <div className="font-semibold text-foreground">{formatCurrency(snap.portfolio_value)}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-muted-foreground/50 italic">
+                      Outcome snapshots will populate at 30d / 90d / 180d after execution.
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

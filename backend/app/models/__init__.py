@@ -40,6 +40,7 @@ from app.models.financial_twin_snapshot import FinancialTwinSnapshot, FinancialH
 from app.models.market_signal import MarketSignal
 from app.models.command_center_checkpoint import CommandCenterCheckpoint
 from app.models.staged_order import StagedOrder
+from app.models.order_template import OrderTemplate
 
 __all__ = [
     "InvestorProfile",
@@ -99,4 +100,5 @@ __all__ = [
     "MarketSignal",
     "CommandCenterCheckpoint",
     "StagedOrder",
+    "OrderTemplate",
 ]

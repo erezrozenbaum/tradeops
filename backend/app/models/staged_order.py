@@ -37,6 +37,7 @@ class StagedOrder(Base, UUIDMixin, TimestampMixin):
     projected_metrics: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     actual_outcome: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    outcome_snapshots: Mapped[list | None] = mapped_column(JSONB, nullable=True)  # list of {days, snapshot_at, metrics}
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     investor: Mapped["InvestorProfile"] = relationship("InvestorProfile")  # type: ignore[name-defined]

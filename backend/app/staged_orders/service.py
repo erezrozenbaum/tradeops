@@ -385,6 +385,36 @@ def cancel_order(db: Session, investor_id: uuid.UUID, order_id: uuid.UUID) -> St
     return _to_out(order)
 
 
+# ── outcome comparisons ───────────────────────────────────────────────────────
+
+def list_outcome_comparisons(
+    db: Session,
+    investor_id: uuid.UUID,
+) -> list[dict[str, Any]]:
+    """Return executed orders with projected vs actual outcome data."""
+    orders = (
+        db.query(StagedOrder)
+        .filter(StagedOrder.investor_id == investor_id, StagedOrder.status == "executed")
+        .order_by(StagedOrder.executed_at.desc())
+        .all()
+    )
+    result = []
+    for o in orders:
+        snapshots = o.outcome_snapshots or []
+        result.append({
+            "order_id": str(o.id),
+            "ticker": o.ticker,
+            "name": o.name,
+            "action": o.action,
+            "estimated_value": o.estimated_value,
+            "currency": o.currency,
+            "executed_at": o.executed_at.isoformat() if o.executed_at else None,
+            "projected": o.projected_metrics,
+            "snapshots": snapshots,
+        })
+    return result
+
+
 # ── minimum-trade rebalancing ──────────────────────────────────────────────────
 
 def generate_minimum_rebalance(

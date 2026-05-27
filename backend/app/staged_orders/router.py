@@ -4,12 +4,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.staged_orders import service
+from app.staged_orders import service, templates as tmpl_svc
 from app.staged_orders.schemas import (
     GenerateRebalanceResult,
+    OrderTemplateOut,
+    OutcomeComparisonOut,
     StagedOrderCreate,
     StagedOrderList,
     StagedOrderOut,
+    TemplateApplyResult,
+    TemplateSaveRequest,
 )
 
 router = APIRouter()
@@ -71,3 +75,52 @@ def cancel_order(
         return service.cancel_order(db, investor_id, order_id)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+# ── Templates ─────────────────────────────────────────────────────────────────
+
+@router.get("/templates", response_model=list[OrderTemplateOut])
+def list_templates(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+    return tmpl_svc.list_templates(db, investor_id)
+
+
+@router.post("/templates", response_model=OrderTemplateOut, status_code=201)
+def save_template(
+    investor_id: uuid.UUID,
+    payload: TemplateSaveRequest,
+    db: Session = Depends(get_db),
+):
+    return tmpl_svc.save_template(db, investor_id, payload.name, payload.description, payload.order_ids)
+
+
+@router.post("/templates/{template_id}/apply", response_model=TemplateApplyResult)
+def apply_template(
+    investor_id: uuid.UUID,
+    template_id: uuid.UUID,
+    db: Session = Depends(get_db),
+):
+    try:
+        orders = tmpl_svc.apply_template(db, investor_id, template_id)
+        return TemplateApplyResult(template_id=template_id, orders_created=len(orders), orders=orders)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.delete("/templates/{template_id}", status_code=204)
+def delete_template(
+    investor_id: uuid.UUID,
+    template_id: uuid.UUID,
+    db: Session = Depends(get_db),
+):
+    try:
+        tmpl_svc.delete_template(db, investor_id, template_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+# ── Outcome comparison ────────────────────────────────────────────────────────
+
+@router.get("/outcomes", response_model=list[OutcomeComparisonOut])
+def get_outcomes(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Return executed orders with their projected vs actual outcome snapshots."""
+    return service.list_outcome_comparisons(db, investor_id)

@@ -84,3 +84,64 @@ class GenerateRebalanceResult(BaseModel):
     currency: str
     orders: list[StagedOrderOut]
     notes: list[str]
+
+
+# ── Template schemas ───────────────────────────────────────────────────────────
+
+class TemplateSaveRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    description: str | None = None
+    order_ids: list[uuid.UUID] = Field(..., min_length=1)
+
+
+class TemplateOrderItem(BaseModel):
+    ticker: str | None = None
+    name: str
+    action: str
+    quantity: float
+    unit_price: float
+    currency: str
+    asset_type: str | None = None
+
+
+class OrderTemplateOut(BaseModel):
+    id: uuid.UUID
+    investor_id: uuid.UUID
+    name: str
+    description: str | None
+    orders: list[dict]
+    times_applied: int
+    last_applied_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class TemplateApplyResult(BaseModel):
+    template_id: uuid.UUID
+    orders_created: int
+    orders: list[StagedOrderOut]
+
+
+# ── Outcome snapshot schema ────────────────────────────────────────────────────
+
+class OutcomeSnapshot(BaseModel):
+    days: int
+    snapshot_at: str
+    portfolio_value: float | None = None
+    low_risk_pct: float | None = None
+    growth_pct: float | None = None
+    high_risk_pct: float | None = None
+
+
+class OutcomeComparisonOut(BaseModel):
+    order_id: uuid.UUID
+    ticker: str | None
+    name: str
+    action: str
+    estimated_value: float
+    currency: str
+    executed_at: str | None
+    projected: dict | None
+    snapshots: list[OutcomeSnapshot]

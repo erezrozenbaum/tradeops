@@ -8,6 +8,13 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.14.0] — 2026-05-27
+
+### Added
+- **Template Library** on `/order-builder` — save any set of pending orders as a named reusable template (e.g. "Monthly DCA", "60/40 Rebalance"); templates persist per investor; one-click "Apply Template" re-stages all orders in the set with full pre-flight review; delete button with usage counter and last-applied date
+- **Outcome Tracking** — after marking an order executed, `projected_metrics` JSONB (portfolio value, tier allocation, goal progress) is captured at staging time as a baseline; `outcome_snapshots` JSONB stores actual portfolio metrics at 30d/90d/180d intervals; Outcome History section on the order-builder page shows projected vs actual side-by-side per executed order; snapshots displayed as amber cards labelled by day count
+- Backend: `OrderTemplate` model + `order_templates` table (migration 0051); `staged_orders.outcome_snapshots` JSONB column; `app/staged_orders/templates.py` (save/apply/delete); `GET /staged-orders/outcomes` endpoint; template endpoints (`GET/POST /templates`, `POST /templates/{id}/apply`, `DELETE /templates/{id}`)
+
 ## [3.13.0] — 2026-05-27
 
 ### Added

@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 3.13.0  
+**Version:** 3.14.0  
 **Last updated:** 2026-05-27
 
 ---
@@ -204,9 +204,10 @@ backend/app/
 │   └── router.py               # GET/POST/DELETE /investors/{id}/crypto-staking
 │
 ├── staged_orders/              # Staged Allocations & Order Builder (v3.13.0)
-│   ├── schemas.py              # StagedOrderCreate, StagedOrderOut, StagedOrderList, PreFlightReview, ProjectedMetrics, GenerateRebalanceResult
-│   ├── service.py              # create/list/execute/cancel, pre-flight review, tax analysis, minimum-trade rebalancing
-│   └── router.py               # GET/POST /staged-orders, POST /staged-orders/{id}/execute, DELETE /{id}, POST /generate-rebalance
+│   ├── schemas.py              # StagedOrderCreate/Out/List, PreFlightReview, ProjectedMetrics, GenerateRebalanceResult, OrderTemplateOut, OutcomeComparisonOut
+│   ├── service.py              # create/list/execute/cancel, pre-flight review, tax analysis, minimum-trade rebalancing, outcome comparisons
+│   ├── templates.py            # save/apply/delete named order templates (v3.14.0)
+│   └── router.py               # GET/POST /staged-orders, POST /generate-rebalance, POST /{id}/execute, DELETE /{id}, GET/POST/DELETE /templates, POST /templates/{id}/apply, GET /outcomes
 │
 ├── action_feed/                # Daily action feed — morning briefing (TASK 84)
 │   ├── engine.py               # Aggregates 5 signal sources; priority 1/2/3; dedup; cap 12
