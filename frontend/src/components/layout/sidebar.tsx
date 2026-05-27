@@ -54,12 +54,26 @@ import {
   Sun,
   Moon,
   Scale,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 
-const sections = [
+type NavItem = {
+  label: string;
+  href: string;
+  icon: React.ElementType;
+  secondary?: boolean;
+};
+
+type NavSection = {
+  label?: string;
+  items: NavItem[];
+};
+
+const sections: NavSection[] = [
   {
     items: [
       { label: "Command Center", href: "/command-center", icon: Cpu },
@@ -70,21 +84,21 @@ const sections = [
     label: "Personal",
     items: [
       { label: "Profile", href: "/profile", icon: User },
-      { label: "Family", href: "/family", icon: Users },
-      { label: "Household", href: "/household", icon: Home },
       { label: "Financial", href: "/financial", icon: Wallet },
       { label: "Goals", href: "/goals", icon: Target },
       { label: "Net Worth", href: "/net-worth", icon: PiggyBank },
+      { label: "Family", href: "/family", icon: Users, secondary: true },
+      { label: "Household", href: "/household", icon: Home, secondary: true },
     ],
   },
   {
     label: "Strategy",
     items: [
       { label: "Risk Model", href: "/risk", icon: Shield },
-      { label: "Strategies", href: "/strategies", icon: Lightbulb },
       { label: "Backtesting", href: "/backtesting", icon: BarChart2 },
       { label: "Paper Trading", href: "/paper-trading", icon: TrendingUp },
       { label: "Live Trading", href: "/live-trading", icon: Flame },
+      { label: "Strategies", href: "/strategies", icon: Lightbulb, secondary: true },
     ],
   },
   {
@@ -94,39 +108,39 @@ const sections = [
       { label: "Order Builder", href: "/order-builder", icon: Layers },
       { label: "Rebalance", href: "/rebalance", icon: Scale },
       { label: "Performance", href: "/performance", icon: Activity },
-      { label: "Stress Test", href: "/stress-test", icon: Zap },
       { label: "Transactions", href: "/transactions", icon: ClipboardList },
-      { label: "Watchlist", href: "/watchlist", icon: Eye },
-      { label: "Debt Planner", href: "/debt-planner", icon: CreditCard },
-      { label: "PDF Import", href: "/pdf-import", icon: FileUp },
-      { label: "Crypto Staking", href: "/crypto-staking", icon: Coins },
-      { label: "FX Impact", href: "/fx-impact", icon: Globe },
-      { label: "Tax Summary", href: "/tax-summary", icon: Receipt },
+      { label: "Stress Test", href: "/stress-test", icon: Zap, secondary: true },
+      { label: "Watchlist", href: "/watchlist", icon: Eye, secondary: true },
+      { label: "Debt Planner", href: "/debt-planner", icon: CreditCard, secondary: true },
+      { label: "PDF Import", href: "/pdf-import", icon: FileUp, secondary: true },
+      { label: "Crypto Staking", href: "/crypto-staking", icon: Coins, secondary: true },
+      { label: "FX Impact", href: "/fx-impact", icon: Globe, secondary: true },
+      { label: "Tax Summary", href: "/tax-summary", icon: Receipt, secondary: true },
     ],
   },
   {
     label: "Intelligence",
     items: [
       { label: "AI Agent", href: "/agent", icon: Bot },
-      { label: "Recommendations", href: "/recommendations", icon: Wand2 },
-      { label: "Market Research", href: "/market-research", icon: Microscope },
-      { label: "Market Scan", href: "/market-scan", icon: ScanSearch },
-      { label: "AI Report", href: "/reports", icon: Sparkles },
-      { label: "News Feed", href: "/news", icon: Newspaper },
-      { label: "Pairs Trading", href: "/pairs-trading", icon: ArrowLeftRight },
       { label: "AI Coach", href: "/insights", icon: Brain },
-      { label: "AI Memory", href: "/ai-history", icon: Brain },
-      { label: "Score History", href: "/score-history", icon: Activity },
-      { label: "Decision Provenance", href: "/decisions", icon: GitBranch },
-      { label: "Decision Timeline", href: "/timeline", icon: Clock },
-      { label: "Strategy Drift", href: "/strategy-drift", icon: Crosshair },
+      { label: "Market Research", href: "/market-research", icon: Microscope },
+      { label: "Simulation", href: "/futures", icon: Layers },
+      { label: "AI Report", href: "/reports", icon: Sparkles },
       { label: "Behavioral Intel", href: "/behavioral", icon: Gauge },
-      { label: "Attribution", href: "/attribution", icon: PieChart },
-      { label: "Investor Maturity", href: "/maturity", icon: Trophy },
-      { label: "Financial Twin", href: "/twin", icon: Cpu },
-      { label: "Health Radar", href: "/health-radar", icon: Activity },
-      { label: "Behavioral Risk", href: "/behavioral-risk", icon: AlertTriangle },
-      { label: "Financial Futures", href: "/futures", icon: Layers },
+      { label: "Recommendations", href: "/recommendations", icon: Wand2, secondary: true },
+      { label: "Market Scan", href: "/market-scan", icon: ScanSearch, secondary: true },
+      { label: "News Feed", href: "/news", icon: Newspaper, secondary: true },
+      { label: "Pairs Trading", href: "/pairs-trading", icon: ArrowLeftRight, secondary: true },
+      { label: "AI Memory", href: "/ai-history", icon: Brain, secondary: true },
+      { label: "Score History", href: "/score-history", icon: Activity, secondary: true },
+      { label: "Decision Provenance", href: "/decisions", icon: GitBranch, secondary: true },
+      { label: "Decision Timeline", href: "/timeline", icon: Clock, secondary: true },
+      { label: "Strategy Drift", href: "/strategy-drift", icon: Crosshair, secondary: true },
+      { label: "Attribution", href: "/attribution", icon: PieChart, secondary: true },
+      { label: "Investor Maturity", href: "/maturity", icon: Trophy, secondary: true },
+      { label: "Financial Twin", href: "/twin", icon: Cpu, secondary: true },
+      { label: "Health Radar", href: "/health-radar", icon: Activity, secondary: true },
+      { label: "Behavioral Risk", href: "/behavioral-risk", icon: AlertTriangle, secondary: true },
     ],
   },
   {
@@ -136,16 +150,71 @@ const sections = [
       { label: "Setup Guide", href: "/onboarding", icon: Sparkles },
       { label: "Audit Log", href: "/audit", icon: FileText },
       { label: "Settings", href: "/settings", icon: Settings },
-      { label: "Help & Guide", href: "/help", icon: HelpCircle },
+      { label: "Help & Guide", href: "/help", icon: HelpCircle, secondary: true },
     ],
   },
 ];
+
+function NavLink({ item, pathname, onNav }: { item: NavItem; pathname: string; onNav?: () => void }) {
+  const active = pathname === item.href;
+  return (
+    <li>
+      <Link
+        href={item.href}
+        onClick={onNav}
+        className={cn(
+          "group flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] transition-all duration-150",
+          active
+            ? ["bg-cyber-cyan/10 text-cyber-cyan font-medium", "border border-cyber-cyan/20", "shadow-[0_0_12px_hsl(199_95%_52%/0.08)]"]
+            : "text-muted-foreground hover:bg-cyber-rule/60 hover:text-foreground border border-transparent"
+        )}
+      >
+        <item.icon
+          className={cn(
+            "h-3.5 w-3.5 shrink-0 transition-colors",
+            active ? "text-cyber-cyan" : "text-muted-foreground/70 group-hover:text-foreground"
+          )}
+        />
+        {item.label}
+      </Link>
+    </li>
+  );
+}
 
 function SidebarContent({ onNav }: { onNav?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [isAdmin, setIsAdmin] = useState(false);
+
+  const [sectionOpen, setSectionOpen] = useState<Record<string, boolean>>(() => {
+    const result: Record<string, boolean> = {};
+    sections.forEach(s => {
+      if (s.label) result[s.label] = s.items.some(item => item.href === pathname);
+    });
+    return result;
+  });
+
+  const [moreOpen, setMoreOpen] = useState<Record<string, boolean>>(() => {
+    const result: Record<string, boolean> = {};
+    sections.forEach(s => {
+      if (s.label) result[s.label] = s.items.some(item => item.secondary && item.href === pathname);
+    });
+    return result;
+  });
+
+  // Auto-open section and "more" when navigating to a route in it
+  useEffect(() => {
+    sections.forEach(s => {
+      if (!s.label) return;
+      if (s.items.some(item => item.href === pathname)) {
+        setSectionOpen(prev => ({ ...prev, [s.label!]: true }));
+      }
+      if (s.items.some(item => item.secondary && item.href === pathname)) {
+        setMoreOpen(prev => ({ ...prev, [s.label!]: true }));
+      }
+    });
+  }, [pathname]);
 
   useEffect(() => {
     fetch("/api/v1/auth/me")
@@ -168,49 +237,70 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
   return (
     <>
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
-        {sections.map((section, i) => (
-          <div key={i}>
-            {section.label && (
-              <p className="px-3 mb-1.5 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">
-                {section.label}
-              </p>
-            )}
-            <ul className="space-y-0.5">
-              {section.items.map((item) => {
-                const active = pathname === item.href;
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={onNav}
-                      className={cn(
-                        "group flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] transition-all duration-150",
-                        active
-                          ? [
-                              "bg-cyber-cyan/10 text-cyber-cyan font-medium",
-                              "border border-cyber-cyan/20",
-                              "shadow-[0_0_12px_hsl(199_95%_52%/0.08)]",
-                            ]
-                          : "text-muted-foreground hover:bg-cyber-rule/60 hover:text-foreground border border-transparent"
-                      )}
-                    >
-                      <item.icon
-                        className={cn(
-                          "h-3.5 w-3.5 shrink-0 transition-colors",
-                          active ? "text-cyber-cyan" : "text-muted-foreground/70 group-hover:text-foreground"
-                        )}
-                      />
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+        {sections.map((section, i) => {
+          if (!section.label) {
+            return (
+              <div key={i}>
+                <ul className="space-y-0.5">
+                  {section.items.map(item => (
+                    <NavLink key={item.href} item={item} pathname={pathname} onNav={onNav} />
+                  ))}
+                </ul>
+              </div>
+            );
+          }
+
+          const isOpen = sectionOpen[section.label] ?? false;
+          const isMoreExpanded = moreOpen[section.label] ?? false;
+          const primaryItems = section.items.filter(item => !item.secondary);
+          const secondaryItems = section.items.filter(item => item.secondary);
+
+          return (
+            <div key={i}>
+              <button
+                onClick={() => setSectionOpen(prev => ({ ...prev, [section.label!]: !isOpen }))}
+                className="w-full flex items-center justify-between px-3 mb-1.5 group"
+              >
+                <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">
+                  {section.label}
+                </p>
+                {isOpen
+                  ? <ChevronDown className="h-2.5 w-2.5 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors" />
+                  : <ChevronRight className="h-2.5 w-2.5 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors" />
+                }
+              </button>
+
+              {isOpen && (
+                <ul className="space-y-0.5">
+                  {primaryItems.map(item => (
+                    <NavLink key={item.href} item={item} pathname={pathname} onNav={onNav} />
+                  ))}
+
+                  {secondaryItems.length > 0 && (
+                    <>
+                      {isMoreExpanded && secondaryItems.map(item => (
+                        <NavLink key={item.href} item={item} pathname={pathname} onNav={onNav} />
+                      ))}
+                      <li>
+                        <button
+                          onClick={() => setMoreOpen(prev => ({ ...prev, [section.label!]: !isMoreExpanded }))}
+                          className="flex items-center gap-1.5 px-3 py-1 text-[11px] text-muted-foreground/45 hover:text-muted-foreground/75 transition-colors w-full"
+                        >
+                          {isMoreExpanded
+                            ? <><ChevronDown className="h-2.5 w-2.5" /> Show less</>
+                            : <><ChevronRight className="h-2.5 w-2.5" /> {secondaryItems.length} more</>
+                          }
+                        </button>
+                      </li>
+                    </>
+                  )}
+                </ul>
+              )}
+            </div>
+          );
+        })}
       </nav>
 
-      {/* Admin + actions */}
       <div className="border-t border-cyber-rule/60 p-2 shrink-0 space-y-0.5">
         {isAdmin && (
           <Link
@@ -269,7 +359,6 @@ export function Sidebar() {
           borderRight: "1px solid hsl(217 30% 12%)",
         }}
       >
-        {/* Logo */}
         <div className="h-14 flex items-center px-5 shrink-0"
           style={{ borderBottom: "1px solid hsl(217 30% 10%)" }}
         >
