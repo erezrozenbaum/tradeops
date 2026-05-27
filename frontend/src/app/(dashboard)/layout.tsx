@@ -1,9 +1,18 @@
+import dynamic from "next/dynamic";
 import { Sidebar } from "@/components/layout/sidebar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { AuthFetchPatch } from "@/components/layout/auth-fetch-patch";
 import { ChatDrawer } from "@/components/ChatDrawer";
-import { NotificationBell } from "@/components/layout/NotificationBell";
-import { NextBestActionBar } from "@/components/layout/NextBestActionBar";
+
+// Client-only: both components read localStorage — SSR would cause hydration mismatch
+const NotificationBell = dynamic(
+  () => import("@/components/layout/NotificationBell").then(m => m.NotificationBell),
+  { ssr: false }
+);
+const NextBestActionBar = dynamic(
+  () => import("@/components/layout/NextBestActionBar").then(m => m.NextBestActionBar),
+  { ssr: false }
+);
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (

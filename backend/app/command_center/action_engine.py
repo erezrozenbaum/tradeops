@@ -65,12 +65,13 @@ def _behavioral_actions(active_risks: list[BehavioralRiskEvent], style: str) -> 
 
 
 def _concentration_actions(db: Session, investor_id: uuid.UUID, style: str) -> list[_Candidate]:
-    from app.models.investment_account import InvestmentHolding
+    from app.models.investment_account import InvestmentAccount, InvestmentHolding
     from sqlalchemy import func
 
     rows = (
         db.query(InvestmentHolding.ticker, func.sum(InvestmentHolding.current_value).label("val"))
-        .filter(InvestmentHolding.investor_id == investor_id)
+        .join(InvestmentAccount, InvestmentHolding.account_id == InvestmentAccount.id)
+        .filter(InvestmentAccount.investor_id == investor_id)
         .group_by(InvestmentHolding.ticker)
         .all()
     )

@@ -8,6 +8,12 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.12.1] — 2026-05-27
+
+### Fixed
+- **Command Center HTTP 500** — `action_engine.py` and `command_center_checkpoint.py` were querying `InvestmentHolding.investor_id` which does not exist; fixed by joining through `InvestmentAccount` (`InvestmentHolding.account_id → InvestmentAccount.id`) and filtering on `InvestmentAccount.investor_id`
+- **React hydration errors #418/#423** — `NotificationBell` and `NextBestActionBar` read `localStorage` which is unavailable during SSR; fixed by importing both with `next/dynamic({ ssr: false })` in `layout.tsx`
+
 ## [3.12.0] — 2026-05-27
 
 ### Added

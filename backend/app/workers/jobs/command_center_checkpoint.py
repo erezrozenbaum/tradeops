@@ -43,7 +43,7 @@ def _write_one(investor_id: uuid.UUID, checkpoint_at: datetime) -> None:
     from app.models.financial_twin_snapshot import FinancialTwinSnapshot
     from app.models.investor_maturity_snapshot import InvestorMaturitySnapshot
     from app.models.behavioral_risk_event import BehavioralRiskEvent
-    from app.models.investment_account import InvestmentHolding
+    from app.models.investment_account import InvestmentAccount, InvestmentHolding
     from app.models.portfolio_snapshot import PortfolioSnapshot
     from sqlalchemy import func
 
@@ -91,7 +91,8 @@ def _write_one(investor_id: uuid.UUID, checkpoint_at: datetime) -> None:
         # Top concentration pct
         rows = (
             db.query(InvestmentHolding.ticker, func.sum(InvestmentHolding.current_value).label("val"))
-            .filter(InvestmentHolding.investor_id == investor_id)
+            .join(InvestmentAccount, InvestmentHolding.account_id == InvestmentAccount.id)
+            .filter(InvestmentAccount.investor_id == investor_id)
             .group_by(InvestmentHolding.ticker)
             .all()
         )
