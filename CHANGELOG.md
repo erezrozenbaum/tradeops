@@ -8,6 +8,15 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.17.0] — 2026-05-27
+
+### Added
+- **Notification / Alert Engine** — `GET /investors/{id}/notifications` now surfaces goal milestone notifications (50%, 75%, complete) alongside existing danger/warning alerts; fixed field-name bug (`g.id`/`g.name` in `center.py`) that was silently swallowing goal notifications; price alert triggers (above/below) show as `warning` notifications in the feed; behavioral risk + drift insight + option-expiry notifications fully wired
+- **Broker Sync Status Dashboard** (`/broker-sync`) — new page showing per-account sync health cards (name, provider, last synced, holding count, Fresh/Stale/Outdated/Never badge, auto-sync toggle state) plus a **Pending Order Drift** table matching each pending staged order against the current holding quantity/value; last global price refresh timestamp shown in header
+- **Price Alerts Management UI** — Price Alerts section added to the Notifications page: create form (ticker, asset name, condition above/below, target price, currency), active alerts list with delete, triggered alerts history; calls existing `GET/POST/DELETE /investors/{id}/price-alerts` endpoints
+- **Backend: Broker Sync Status service** (`app/broker_sync/status.py`) — `get_sync_status()` aggregates per-account sync metadata, pending order drift, and last `PriceSnapshot` fetch time; `_sync_status_label()` classifies freshness as fresh (<25h), stale (<72h), outdated (≥72h), never
+- **Sidebar** — "Sync Status" link added to Portfolio section secondary items pointing to `/broker-sync`
+
 ## [3.16.0] — 2026-05-27
 
 ### Added

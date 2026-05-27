@@ -56,6 +56,7 @@ import {
   Scale,
   ChevronDown,
   ChevronRight,
+  RefreshCw,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
@@ -109,6 +110,7 @@ const sections: NavSection[] = [
       { label: "Rebalance", href: "/rebalance", icon: Scale },
       { label: "Performance", href: "/performance", icon: Activity },
       { label: "Transactions", href: "/transactions", icon: ClipboardList },
+      { label: "Sync Status", href: "/broker-sync", icon: RefreshCw, secondary: true },
       { label: "Stress Test", href: "/stress-test", icon: Zap, secondary: true },
       { label: "Watchlist", href: "/watchlist", icon: Eye, secondary: true },
       { label: "Debt Planner", href: "/debt-planner", icon: CreditCard, secondary: true },

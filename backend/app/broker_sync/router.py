@@ -106,3 +106,10 @@ def ibkr_rest_sync(
     result = service.sync_holdings(db, account_id, investor_id, rows, "ibkr_rest")
     result.errors.extend(errors)
     return result
+
+
+@router.get("/{investor_id}/broker-sync/status")
+def get_broker_sync_status(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Sync health dashboard: per-account status, last price refresh, pending order drift."""
+    from app.broker_sync.status import get_sync_status
+    return get_sync_status(db, investor_id)

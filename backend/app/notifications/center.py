@@ -75,16 +75,43 @@ def get_notifications(db: Session, investor_id: uuid.UUID) -> list[AppNotificati
         from app.goals_analysis.service import get_analysis
         goals_result = get_analysis(db, investor_id)
         if goals_result:
-            at_risk = [g for g in goals_result.goals if g.status == "at_risk"]
-            for g in at_risk:
-                notifications.append(AppNotification(
-                    id=f"goal_at_risk_{g.goal_id}",
-                    type="goal",
-                    severity="warning",
-                    title=f"Goal at risk: {g.goal_name}",
-                    message=f"You need {_fmt(g.monthly_contribution_needed, 'ILS')} / mo but only have {_fmt(g.monthly_surplus_available, 'ILS')} available. Gap: {_fmt(abs(g.gap or 0), 'ILS')}.",
-                    link="/goals",
-                ))
+            for g in goals_result.goals:
+                if g.status == "at_risk":
+                    notifications.append(AppNotification(
+                        id=f"goal_at_risk_{g.id}",
+                        type="goal",
+                        severity="warning",
+                        title=f"Goal at risk: {g.name}",
+                        message=f"You need {_fmt(g.monthly_contribution_needed, g.currency)} / mo. Gap: {_fmt(abs(g.gap or 0), g.currency)}.",
+                        link="/goals",
+                    ))
+                elif g.status == "complete":
+                    notifications.append(AppNotification(
+                        id=f"goal_complete_{g.id}",
+                        type="goal",
+                        severity="info",
+                        title=f"Goal reached: {g.name}",
+                        message=f"Congratulations — {g.name} is 100% funded.",
+                        link="/goals",
+                    ))
+                elif g.progress_pct >= 75:
+                    notifications.append(AppNotification(
+                        id=f"goal_75pct_{g.id}",
+                        type="goal",
+                        severity="info",
+                        title=f"75% milestone: {g.name}",
+                        message=f"{g.name} is {g.progress_pct:.0f}% funded — you're almost there.",
+                        link="/goals",
+                    ))
+                elif g.progress_pct >= 50:
+                    notifications.append(AppNotification(
+                        id=f"goal_50pct_{g.id}",
+                        type="goal",
+                        severity="info",
+                        title=f"Halfway: {g.name}",
+                        message=f"{g.name} is {g.progress_pct:.0f}% funded.",
+                        link="/goals",
+                    ))
     except Exception:
         pass
 
