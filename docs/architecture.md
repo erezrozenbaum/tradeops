@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 3.11.0  
+**Version:** 3.12.0  
 **Last updated:** 2026-05-27
 
 ---
@@ -588,6 +588,7 @@ frontend/src/
 ├── components/layout/              # Layout shell components
 │   ├── sidebar.tsx                 # Sidebar nav + mobile drawer + theme toggle + mobile notification bell
 │   ├── NotificationBell.tsx        # Bell icon + badge count + dismissable dropdown panel (v3.11.0)
+│   ├── NextBestActionBar.tsx       # Persistent contextual action strip — highest P1/P2 action, cycle/dismiss (v3.12.0)
 │   ├── BottomNav.tsx               # Mobile bottom navigation bar
 │   └── auth-fetch-patch.ts        # Patches fetch to inject Authorization header
 └── lib/

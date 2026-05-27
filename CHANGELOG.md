@@ -8,6 +8,19 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.12.0] — 2026-05-27
+
+### Added
+- **Next Best Action bar** (`NextBestActionBar`) — persistent contextual strip shown on every page except Dashboard, Command Center, and Onboarding:
+  - Fetches `/action-feed` and surfaces the single highest-priority unactioned item (P1 or P2 only)
+  - Shows: priority dot (red/amber), action-type badge with icon, title + ticker, item counter (`n/total`)
+  - Expand chevron reveals full reasoning text inline
+  - "Act →" CTA routes to the relevant page based on signal source (`rebalancing → /rebalance`, `goals → /goals`, `proactive_insights → /insights`, `price_alerts → /investments`, `market_signals → /market-scan`)
+  - "next" button cycles through remaining urgent items
+  - Per-item dismiss (×) with `localStorage` persistence (`tradeops_dismissed_nba`)
+  - Severity-coded background accent per action type
+  - Zero new backend calls — reuses existing `/action-feed` endpoint
+
 ## [3.11.0] — 2026-05-27
 
 ### Added

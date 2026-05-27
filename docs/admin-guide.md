@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 3.11.0  
+**Version:** 3.12.0  
 **Last updated:** 2026-05-27
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -783,6 +783,7 @@ kubectl describe ingress tradeops
 | Notification Bell | `components/layout/NotificationBell.tsx` + `layout.tsx` + `sidebar.tsx` | Bell icon with red badge count in the desktop header strip and mobile topbar. Opens a dropdown panel showing up to 6 notifications with severity icons (danger/warning/info), dismissable per-item (× button), dismissed IDs stored in `localStorage` (`tradeops_dismissed_notifications`), "View all" footer link to `/notifications`. Desktop layout gains a fixed 48px header bar (`lg:pt-12`). Feeds from existing `GET /investors/{id}/notifications` — zero new backend calls. Applied in v3.11.0. |
 | Setup Guide nav link | `components/layout/sidebar.tsx` | `/onboarding` added to System section as "Setup Guide" (Sparkles icon). Applied in v3.11.0. |
 | Goals MetricTooltip | `app/(dashboard)/goals/page.tsx` | "Total monthly needed" summary banner and per-goal "Needs X/mo" contribution line both wrapped with MetricTooltip explaining the funding gap concept. Applied in v3.11.0. |
+| Next Best Action bar | `components/layout/NextBestActionBar.tsx` + `layout.tsx` | Persistent contextual strip on all dashboard pages except `/dashboard`, `/command-center`, and `/onboarding`. Fetches `/action-feed`, surfaces highest-priority P1/P2 item; expand chevron reveals reasoning; "Act →" CTA routes to the relevant page by signal source (rebalancing→/rebalance, goals→/goals, proactive_insights→/insights, price_alerts→/investments, market_signals→/market-scan). Dismiss and cycle buttons with `localStorage` persistence. Zero new backend calls. Applied in v3.12.0. |
 | Audit Event Index | Migration 0036 | `ix_audit_events_investor_profile_id` index on `audit_events` table. Required for efficient per-investor audit log queries at scale. |
 | Pct Field Constraints | Migration 0036 | `CHECK` constraints: `investable_capital_pct` (0–100) on `financial_profiles`, `max_trade_size_pct` (0–100) on `risk_models`. |
 | Net Worth Dashboard | `net_worth/` + migration 0040 | `GET /investors/{id}/net-worth` — aggregates portfolio value + financial assets − liabilities + FI projection (binary search, 4% SWR, 7% real return). `GET /investors/{id}/net-worth/history` — 12-month trend from `net_worth_snapshots`. Daily snapshot at 21:15 UTC. Frontend: 4 stat cards, line chart, FI date, assets/liabilities breakdown. |

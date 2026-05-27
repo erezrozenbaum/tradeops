@@ -3,6 +3,7 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { AuthFetchPatch } from "@/components/layout/auth-fetch-patch";
 import { ChatDrawer } from "@/components/ChatDrawer";
 import { NotificationBell } from "@/components/layout/NotificationBell";
+import { NextBestActionBar } from "@/components/layout/NextBestActionBar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -22,6 +23,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         >
           <NotificationBell />
         </div>
+        {/* Next Best Action bar — one-line contextual prompt, hidden on dashboard/command-center */}
+        <NextBestActionBar />
         <div className="flex-1">{children}</div>
         <footer
           className="px-6 py-2.5 text-center text-[11px] text-muted-foreground/50 tracking-wide"
