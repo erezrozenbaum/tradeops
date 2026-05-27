@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 3.12.1  
+**Version:** 3.13.0  
 **Last updated:** 2026-05-27
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -784,6 +784,7 @@ kubectl describe ingress tradeops
 | Setup Guide nav link | `components/layout/sidebar.tsx` | `/onboarding` added to System section as "Setup Guide" (Sparkles icon). Applied in v3.11.0. |
 | Goals MetricTooltip | `app/(dashboard)/goals/page.tsx` | "Total monthly needed" summary banner and per-goal "Needs X/mo" contribution line both wrapped with MetricTooltip explaining the funding gap concept. Applied in v3.11.0. |
 | Next Best Action bar | `components/layout/NextBestActionBar.tsx` + `layout.tsx` | Persistent contextual strip on all dashboard pages except `/dashboard`, `/command-center`, and `/onboarding`. Fetches `/action-feed`, surfaces highest-priority P1/P2 item; expand chevron reveals reasoning; "Act →" CTA routes to the relevant page by signal source (rebalancing→/rebalance, goals→/goals, proactive_insights→/insights, price_alerts→/investments, market_signals→/market-scan). Dismiss and cycle buttons with `localStorage` persistence. Zero new backend calls. Applied in v3.12.0. |
+| Order Builder | `app/(dashboard)/order-builder/page.tsx` + `app/staged_orders/` + migration 0050 | `/order-builder` — full staged allocations platform. Portfolio Surgery panel shows before/after tier allocation bars (actual vs target, gap amount). "Generate Minimum Orders" button calls `POST /staged-orders/generate-rebalance` — computes minimum trade set from rebalance engine, sequences sells before buys (tax-efficient). Manual order creation form: ticker, name, BUY/SELL toggle, quantity, unit price, currency, asset type, goal link. Every order gets a deterministic pre-flight review (reasons-to-proceed, risks, verdict) and a tax note (loss-harvest opportunity, wash-sale warning). Goal-linked orders show projected goal progress. Order Queue tabbed view (Pending/Executed/Cancelled) with Mark Executed and Cancel actions. Outcome projection stored in `projected_metrics` JSONB. Audit events for all create/execute/cancel actions. Applied in v3.13.0. |
 | Audit Event Index | Migration 0036 | `ix_audit_events_investor_profile_id` index on `audit_events` table. Required for efficient per-investor audit log queries at scale. |
 | Pct Field Constraints | Migration 0036 | `CHECK` constraints: `investable_capital_pct` (0–100) on `financial_profiles`, `max_trade_size_pct` (0–100) on `risk_models`. |
 | Net Worth Dashboard | `net_worth/` + migration 0040 | `GET /investors/{id}/net-worth` — aggregates portfolio value + financial assets − liabilities + FI projection (binary search, 4% SWR, 7% real return). `GET /investors/{id}/net-worth/history` — 12-month trend from `net_worth_snapshots`. Daily snapshot at 21:15 UTC. Frontend: 4 stat cards, line chart, FI date, assets/liabilities breakdown. |

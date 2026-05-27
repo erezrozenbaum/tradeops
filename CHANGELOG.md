@@ -8,6 +8,22 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.13.0] — 2026-05-27
+
+### Added
+- **Order Builder** (`/order-builder`) — full staged allocations and portfolio surgery platform:
+  - **Portfolio Surgery panel**: visual before/after allocation bars per risk tier (Low Risk / Growth / High Risk) with target marker; shows actual %, gap amount, and overweight/underweight direction
+  - **Minimum-Trade Rebalancing**: "Generate Minimum Orders" button calls `/staged-orders/generate-rebalance` — computes minimum set of trades to reach risk-model targets, sequences sells before buys (tax-efficient), creates all orders atomically
+  - **Pre-flight AI Review**: every staged order gets a structured deterministic analysis — reasons to proceed, risks, alternative suggestion, and a proceed/caution/reconsider verdict; sourced from portfolio + risk model data, no raw AI call
+  - **Tax-Optimized Sequencing**: sell orders flagged with P&L direction (loss-harvest opportunity vs taxable gain), wash-sale proximity warning (repurchase within 30 days of same ticker sell)
+  - **Goal-Linked Execution**: each order optionally links to a `FinancialGoal`; projected goal progress shown on the order card
+  - **Outcome Tracking (seed)**: `projected_metrics` JSONB stored at staging time — portfolio value, tier allocation percentages, goal progress; feeds v3.14.0 outcome comparison
+  - **Order Queue**: tabbed view (Pending / Executed / Cancelled) with counts; per-order "Mark Executed" and "Cancel" actions; buy/sell total summary strip
+  - **Audit logging**: all create / execute / cancel actions emit `staged_order_*` audit events
+  - Backend: migration 0050 (`staged_orders` table), `app/staged_orders/` module (schemas, service, router)
+  - API: `GET /staged-orders`, `POST /staged-orders`, `POST /staged-orders/generate-rebalance`, `POST /staged-orders/{id}/execute`, `DELETE /staged-orders/{id}`
+  - Sidebar: "Order Builder" link added to Portfolio section (between Investments and Rebalance)
+
 ## [3.12.1] — 2026-05-27
 
 ### Fixed

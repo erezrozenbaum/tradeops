@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 3.12.1  
+**Version:** 3.13.0  
 **Last updated:** 2026-05-27
 
 ---
@@ -203,6 +203,11 @@ backend/app/
 │   ├── service.py              # build_staking_report, enable/disable staking
 │   └── router.py               # GET/POST/DELETE /investors/{id}/crypto-staking
 │
+├── staged_orders/              # Staged Allocations & Order Builder (v3.13.0)
+│   ├── schemas.py              # StagedOrderCreate, StagedOrderOut, StagedOrderList, PreFlightReview, ProjectedMetrics, GenerateRebalanceResult
+│   ├── service.py              # create/list/execute/cancel, pre-flight review, tax analysis, minimum-trade rebalancing
+│   └── router.py               # GET/POST /staged-orders, POST /staged-orders/{id}/execute, DELETE /{id}, POST /generate-rebalance
+│
 ├── action_feed/                # Daily action feed — morning briefing (TASK 84)
 │   ├── engine.py               # Aggregates 5 signal sources; priority 1/2/3; dedup; cap 12
 │   ├── schemas.py              # ActionItem, DailyActionFeed
@@ -377,6 +382,7 @@ All routes are under `/api/v1/`. Assembled in `app/api/v1/router.py`.
 | `/investors/{id}/pdf-import` | pdf_import | pdf-import |
 | `/investors/{id}/crypto-staking` | crypto_staking | crypto-staking |
 | `/investors/{id}/action-feed` | action_feed | action-feed |
+| `/investors/{id}/staged-orders` | staged_orders | staged-orders |
 | `/investors/{id}/pairs-trading` | pairs_trading | pairs-trading |
 | `/investors/{id}/market-signals` | market_signals | market-signals |
 | `/investors/{id}/pension-simulation` | pension_simulation | pension-simulation |
@@ -481,6 +487,8 @@ Managed by Alembic. Migrations in `backend/alembic/versions/`.
 | `0046` | command_center_checkpoints table (investor_id, checkpoint_at, twin_score, maturity_score, active_risks, notes JSONB) |
 | `0047` | ai_memory_entries table (investor_id, summary_at, verbosity, portfolio_assessment TEXT, key_metrics JSONB) — longitudinal AI memory (v3.1.0) |
 | `0048` | households table + investor_profiles.household_id FK (nullable, SET NULL on delete) — Partner/Household View (v3.2.0) |
+| `0049` | advisor_share_tokens table — shareable read-only advisor report links (v3.7.0) |
+| `0050` | staged_orders table (investor_id, ticker, name, action, quantity, unit_price, currency, estimated_value, asset_type, status, goal_id, pre_flight_review JSONB, projected_metrics JSONB, tax_note, executed_at, actual_outcome JSONB) — Staged Allocations & Order Builder (v3.13.0) |
 
 ### Core tables
 

@@ -91,6 +91,7 @@ const sections = [
     label: "Portfolio",
     items: [
       { label: "Investments", href: "/investments", icon: Briefcase },
+      { label: "Order Builder", href: "/order-builder", icon: Layers },
       { label: "Rebalance", href: "/rebalance", icon: Scale },
       { label: "Performance", href: "/performance", icon: Activity },
       { label: "Stress Test", href: "/stress-test", icon: Zap },

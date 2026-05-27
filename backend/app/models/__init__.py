@@ -39,6 +39,7 @@ from app.models.investor_maturity_snapshot import InvestorMaturitySnapshot
 from app.models.financial_twin_snapshot import FinancialTwinSnapshot, FinancialHealthScore
 from app.models.market_signal import MarketSignal
 from app.models.command_center_checkpoint import CommandCenterCheckpoint
+from app.models.staged_order import StagedOrder
 
 __all__ = [
     "InvestorProfile",
@@ -97,4 +98,5 @@ __all__ = [
     "FinancialHealthScore",
     "MarketSignal",
     "CommandCenterCheckpoint",
+    "StagedOrder",
 ]
