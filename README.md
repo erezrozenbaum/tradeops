@@ -11,8 +11,13 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://postgresql.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white)](infra/docker-compose.yml)
+[![GitHub Stars](https://img.shields.io/github/stars/erezrozenbaum/tradeops?style=flat-square&logo=github)](https://github.com/erezrozenbaum/tradeops/stargazers)
 
 *Understand your finances. Model risk accurately. Validate strategies. Simulate before you invest.*
+
+<a href="https://buymeacoffee.com/erezrozenbaum">
+  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="40">
+</a>
 
 </div>
 
@@ -38,6 +43,7 @@
 ## Table of Contents
 
 - [What it is](#what-it-is)
+- [Highlights](#highlights)
 - [Philosophy](#philosophy)
 - [Features](#features)
 - [Architecture](#architecture)
@@ -64,6 +70,25 @@ TradeOps AI is **not a trading bot**. It is a personal and family financial inte
 | Simulate strategies before committing capital | Override deterministic risk controls |
 | Track net worth, goals, tax, and FX impact | Operate in place of a financial professional |
 | Gate live trading behind 5 safety checks | Allow live trading for minors |
+
+---
+
+## Highlights
+
+<div align="center">
+  <img src="docs/screenshots/command-center.png" width="48%" alt="Command Center — daily financial intelligence screen">
+  <img src="docs/screenshots/order-builder.png" width="48%" alt="Order Builder — staged allocations with pre-flight review">
+</div>
+<div align="center">
+  <img src="docs/screenshots/dashboard.png" width="48%" alt="Dashboard — portfolio overview with health radar">
+  <img src="docs/screenshots/simulation.png" width="48%" alt="Simulation Engine — Monte Carlo p10/p50/p90 scenarios">
+</div>
+
+- **Command Center** — A single daily intelligence screen that answers "What should I focus on today?": top actions, 7-day evolution feed, behavioral warnings, futures preview, and AI summary in one view.
+- **Order Builder** — Stage BUY/SELL orders with deterministic pre-flight review (reasons, risks, verdict), tax-optimised sequencing (loss harvest, wash-sale warnings), goal linkage, and outcome tracking at 30/90/180 days.
+- **Financial Twin** — An 8-dimensional behavioral mirror updated daily: Stability, Discipline, Emotional Risk, Consistency, Resilience, Risk Alignment, Long-Term Discipline, Contribution Momentum — with a 9-dimension Health Radar.
+- **5-gate live trading safety model** — Live execution requires: paper track record (Sharpe ≥ 0.5, ≥ 30 days) + explicit risk acknowledgment + admin approval + order risk limits + verified broker connection.
+- **Full simulation engine** — 6 scenarios including Monte Carlo (1,000-iteration, seeded, reproducible) with p10/p50/p90 trajectories; counterfactual replay shows what would have happened if you had followed the recommendation.
 
 ---
 
