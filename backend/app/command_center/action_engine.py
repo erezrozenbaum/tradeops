@@ -120,13 +120,13 @@ def _contribution_actions(db: Session, investor_id: uuid.UUID, style: str) -> li
     from app.models.holding_transaction import HoldingTransaction
     from datetime import datetime, timedelta, timezone
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=45)
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=45)).date()
     recent = (
         db.query(HoldingTransaction)
         .filter(
             HoldingTransaction.investor_id == investor_id,
             HoldingTransaction.transaction_type == "buy",
-            HoldingTransaction.executed_at >= cutoff,
+            HoldingTransaction.transaction_date >= cutoff,
         )
         .count()
     )
