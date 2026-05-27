@@ -9,6 +9,7 @@ from app.staged_orders.schemas import (
     GenerateRebalanceResult,
     OrderTemplateOut,
     OutcomeComparisonOut,
+    SmartSuggestResult,
     StagedOrderCreate,
     StagedOrderList,
     StagedOrderOut,
@@ -124,3 +125,13 @@ def delete_template(
 def get_outcomes(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     """Return executed orders with their projected vs actual outcome snapshots."""
     return service.list_outcome_comparisons(db, investor_id)
+
+
+# ── Smart Allocation Assistant ────────────────────────────────────────────────
+
+@router.post("/smart-suggest", response_model=SmartSuggestResult)
+def smart_suggest(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+    """AI-powered allocation suggestions based on portfolio state, risk model, and goals."""
+    from app.staged_orders.smart_suggest import smart_suggest as _suggest
+    result = _suggest(db, investor_id)
+    return SmartSuggestResult(**result)

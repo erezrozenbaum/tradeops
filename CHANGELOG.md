@@ -8,6 +8,13 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.16.0] — 2026-05-27
+
+### Added
+- **Outcome Snapshot Worker** (`workers/jobs/outcome_tracking.py`) — daily job at 22:00 UTC that populates `outcome_snapshots` on executed staged orders at the 30 / 90 / 180-day milestones; reads the latest portfolio snapshot and computes actual tier allocation (low_risk / growth / high_risk) from `asset_allocation`; closes the projected-vs-actual loop in Outcome Tracking
+- **Smart Allocation Assistant** — new `POST /staged-orders/smart-suggest` endpoint backed by Claude Haiku; gathers portfolio state, risk model, goals, behavioral risk events, and maturity stage; returns 3-5 prioritised allocation suggestions with rationale, ticker, estimated value, and goal linkage; deterministic rule-based fallback when `ANTHROPIC_API_KEY` is absent; AI usage logged to `ai_usage` table
+- **Order Builder UI** — "Smart Assist" button (violet, `Wand2` icon) added to Portfolio Surgery panel; opens `SmartAssistPanel` below showing AI narrative + suggestion cards with action badge, priority chip, rationale, and per-suggestion "Stage" button that creates a staged order directly from the suggestion
+
 ## [3.15.0] — 2026-05-27
 
 ### Added

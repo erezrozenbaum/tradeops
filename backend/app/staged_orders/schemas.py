@@ -145,3 +145,25 @@ class OutcomeComparisonOut(BaseModel):
     executed_at: str | None
     projected: dict | None
     snapshots: list[OutcomeSnapshot]
+
+
+# ── Smart Allocation Assistant schemas ────────────────────────────────────────
+
+class SmartSuggestion(BaseModel):
+    action: str
+    asset_type: str
+    ticker: str | None = None
+    name: str
+    rationale: str
+    estimated_value: float
+    currency: str
+    priority: str  # "high" | "medium" | "low"
+    goal_name: str | None = None
+    tax_note: str | None = None
+
+
+class SmartSuggestResult(BaseModel):
+    suggestions: list[SmartSuggestion]
+    narrative: str
+    generated_at: str
+    has_data: bool = True

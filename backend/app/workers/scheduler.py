@@ -48,6 +48,7 @@ def _register_jobs() -> None:
     from app.workers.jobs.behavioral_risk_daily import detect_behavioral_risk_daily
     from app.workers.jobs.command_center_nightly import precompute_command_center_ai
     from app.workers.jobs.command_center_checkpoint import write_command_center_checkpoints
+    from app.workers.jobs.outcome_tracking import populate_outcome_snapshots
 
     _scheduler.add_job(
         refresh_all_prices,
@@ -191,6 +192,13 @@ def _register_jobs() -> None:
         replace_existing=True,
         misfire_grace_time=7200,
     )
+    _scheduler.add_job(
+        populate_outcome_snapshots,
+        CronTrigger(hour=22, minute=0),  # daily 22:00 UTC — after snapshot_writer (21:00)
+        id="outcome_tracking",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
 
 
 def start() -> None:
@@ -205,7 +213,7 @@ def start() -> None:
         "goal_evaluation, proactive_insights, notification_alerts, broker_auto_sync, weekly_digest, "
         "market_prewarm, research_prewarm, sentiment_signals, fx_history_sync, net_worth_snapshot, "
         "coach_refresh, data_quality_check, maturity_weekly, twin_daily, behavioral_risk_daily, "
-        "command_center_nightly, command_center_checkpoint)"
+        "command_center_nightly, command_center_checkpoint, outcome_tracking)"
     )
 
 

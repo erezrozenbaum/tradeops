@@ -9,7 +9,7 @@ import {
   Layers, TrendingUp, TrendingDown, CheckCircle2, XCircle,
   ChevronDown, ChevronUp, AlertTriangle, Zap, ShieldCheck,
   RefreshCw, Trash2, PlayCircle, Info, Target, Leaf,
-  BookMarked, Plus, BarChart3, History,
+  BookMarked, Plus, BarChart3, History, Wand2, Sparkles,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -119,6 +119,26 @@ interface OutcomeComparison {
   snapshots: OutcomeSnapshot[];
 }
 
+interface SmartSuggestion {
+  action: "buy" | "sell";
+  asset_type: string;
+  ticker: string | null;
+  name: string;
+  rationale: string;
+  estimated_value: number;
+  currency: string;
+  priority: "high" | "medium" | "low";
+  goal_name: string | null;
+  tax_note: string | null;
+}
+
+interface SmartSuggestResult {
+  suggestions: SmartSuggestion[];
+  narrative: string;
+  generated_at: string;
+  has_data: boolean;
+}
+
 // ── API base ───────────────────────────────────────────────────────────────────
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
@@ -175,6 +195,91 @@ function tierColor(tier: string) {
   if (tier === "low_risk") return { bar: "bg-blue-500", delta: "text-blue-400" };
   if (tier === "growth") return { bar: "bg-emerald-500", delta: "text-emerald-400" };
   return { bar: "bg-rose-500", delta: "text-rose-400" };
+}
+
+// ── Smart Allocation Assistant Panel ──────────────────────────────────────────
+
+function priorityChip(priority: string) {
+  if (priority === "high") return <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/25 font-semibold uppercase tracking-wide">High</span>;
+  if (priority === "medium") return <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/25 font-semibold uppercase tracking-wide">Med</span>;
+  return <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-500/15 text-slate-400 border border-slate-500/25 font-semibold uppercase tracking-wide">Low</span>;
+}
+
+function SmartAssistPanel({
+  result,
+  onStage,
+  onClose,
+  staging,
+}: {
+  result: SmartSuggestResult;
+  onStage: (s: SmartSuggestion) => void;
+  onClose: () => void;
+  staging: string | null;
+}) {
+  return (
+    <div className="rounded-lg border border-violet-500/25 bg-violet-500/5 p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-violet-400" />
+          <span className="text-sm font-semibold text-violet-300">Smart Allocation Suggestions</span>
+        </div>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+          <XCircle className="w-4 h-4" />
+        </button>
+      </div>
+
+      {result.narrative && (
+        <p className="text-xs text-muted-foreground leading-relaxed border-l-2 border-violet-500/40 pl-3">
+          {result.narrative}
+        </p>
+      )}
+
+      {result.suggestions.length === 0 ? (
+        <div className="text-sm text-muted-foreground text-center py-3">{result.narrative || "No suggestions available."}</div>
+      ) : (
+        <div className="space-y-2.5">
+          {result.suggestions.map((s, i) => (
+            <div key={i} className="rounded-md border border-white/8 bg-white/3 p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {actionBadge(s.action)}
+                  {s.ticker && <span className="text-sm font-mono font-semibold">{s.ticker}</span>}
+                  <span className="text-sm text-muted-foreground">{s.name}</span>
+                  {priorityChip(s.priority)}
+                </div>
+                <button
+                  onClick={() => onStage(s)}
+                  disabled={staging === `${i}`}
+                  className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded text-[11px] bg-violet-500/20 text-violet-300 border border-violet-500/30 hover:bg-violet-500/30 transition-colors disabled:opacity-50"
+                >
+                  {staging === `${i}` ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                  Stage
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">{s.rationale}</p>
+              <div className="flex items-center gap-3 text-[11px] text-muted-foreground/70">
+                <span>Est. {formatCurrency(s.estimated_value, s.currency)}</span>
+                {s.goal_name && (
+                  <span className="flex items-center gap-1 text-purple-400">
+                    <Target className="w-3 h-3" />{s.goal_name}
+                  </span>
+                )}
+                {s.tax_note && (
+                  <span className="flex items-center gap-1 text-amber-400">
+                    <Leaf className="w-3 h-3" />{s.tax_note}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="text-[10px] text-muted-foreground/50">
+        Suggestions are analytical only and do not constitute financial advice. Always review pre-flight analysis before executing.
+      </p>
+    </div>
+  );
 }
 
 // ── Portfolio Surgery Panel ────────────────────────────────────────────────────
@@ -400,6 +505,9 @@ export default function OrderBuilderPage() {
   const [genResult, setGenResult] = useState<GenerateResult | null>(null);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [smartLoading, setSmartLoading] = useState(false);
+  const [smartResult, setSmartResult] = useState<SmartSuggestResult | null>(null);
+  const [stagingIndex, setStagingIndex] = useState<string | null>(null);
 
   // Create form state
   const [form, setForm] = useState({
@@ -550,6 +658,50 @@ export default function OrderBuilderPage() {
     }
   };
 
+  const handleSmartSuggest = async () => {
+    if (!investorId) return;
+    setSmartLoading(true);
+    setSmartResult(null);
+    try {
+      const res = await apiFetch<SmartSuggestResult>(
+        `/investors/${investorId}/staged-orders/smart-suggest`,
+        { method: "POST" },
+      );
+      setSmartResult(res);
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : "Smart Assist failed");
+    } finally {
+      setSmartLoading(false);
+    }
+  };
+
+  const handleStageFromSuggestion = async (s: SmartSuggestion, index: number) => {
+    if (!investorId) return;
+    setStagingIndex(`${index}`);
+    try {
+      await apiFetch(`/investors/${investorId}/staged-orders`, {
+        method: "POST",
+        body: JSON.stringify({
+          ticker: s.ticker || null,
+          name: s.name,
+          action: s.action,
+          quantity: 1,
+          unit_price: s.estimated_value,
+          currency: s.currency,
+          asset_type: s.asset_type || null,
+          goal_id: null,
+          notes: s.rationale,
+        }),
+      });
+      fetchOrders();
+      setActiveTab("pending");
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : "Failed to stage order");
+    } finally {
+      setStagingIndex(null);
+    }
+  };
+
   const handleSaveTemplate = async () => {
     if (!investorId || !templateName.trim()) return;
     const pendingIds = orderList?.orders.filter(o => o.status === "pending").map(o => o.id) ?? [];
@@ -620,23 +772,29 @@ export default function OrderBuilderPage() {
           {/* Portfolio Surgery */}
           <Card>
             <CardContent className="p-5 space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <h2 className="font-semibold text-sm flex items-center gap-2">
                   <Zap className="w-4 h-4 text-amber-400" />
                   Portfolio Surgery
                 </h2>
-                <button
-                  onClick={handleGenerateRebalance}
-                  disabled={generating}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors disabled:opacity-50"
-                >
-                  {generating ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-3.5 h-3.5" />
-                  )}
-                  Generate Minimum Orders
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleSmartSuggest}
+                    disabled={smartLoading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs bg-violet-500/15 text-violet-300 border border-violet-500/30 hover:bg-violet-500/25 transition-colors disabled:opacity-50"
+                  >
+                    {smartLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                    Smart Assist
+                  </button>
+                  <button
+                    onClick={handleGenerateRebalance}
+                    disabled={generating}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors disabled:opacity-50"
+                  >
+                    {generating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                    Generate Minimum Orders
+                  </button>
+                </div>
               </div>
 
               {rebalance ? (
@@ -674,6 +832,16 @@ export default function OrderBuilderPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Smart Allocation Assistant Panel */}
+          {smartResult && (
+            <SmartAssistPanel
+              result={smartResult}
+              onStage={(s) => handleStageFromSuggestion(s, smartResult.suggestions.indexOf(s))}
+              onClose={() => setSmartResult(null)}
+              staging={stagingIndex}
+            />
+          )}
 
           {/* Create Order Form */}
           <Card>
