@@ -14,6 +14,7 @@ import {
   Calendar, DollarSign, Zap, Shield, TrendingDown, Flame,
 } from "lucide-react";
 import Link from "next/link";
+import { MetricTooltip } from "@/components/ui/metric-tooltip";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -381,7 +382,11 @@ export default function GoalsPage() {
       {analysis && analysis.goals.length > 0 && (
         <div className="flex flex-wrap items-center gap-6 p-4 rounded-lg border border-border bg-muted/40">
           <div>
-            <p className="text-xs text-muted-foreground">Total monthly needed</p>
+            <p className="text-xs text-muted-foreground">
+              <MetricTooltip content="The sum of monthly contributions required across all active goals. Compare this against your Monthly Surplus — if it exceeds your surplus, you have a funding gap and may need to extend timelines or increase income.">
+                Total monthly needed
+              </MetricTooltip>
+            </p>
             <p className="text-lg font-bold tracking-tight">
               {formatCurrency(analysis.total_monthly_contribution_needed, baseCurrency)}
             </p>
@@ -817,7 +822,9 @@ export default function GoalsPage() {
                             ? <TrendingUp className="h-3 w-3 text-green-500 shrink-0" />
                             : <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />}
                           <span className="text-muted-foreground">
-                            {mode === "debt_reduction" ? "Payment" : "Needs"}{" "}
+                            <MetricTooltip content={ga.on_track ? "You are contributing enough monthly to reach this goal on time." : "The amount you need to set aside each month to reach this goal by the target date. If this exceeds your surplus, consider extending the target date or increasing your income."}>
+                              {mode === "debt_reduction" ? "Payment" : "Needs"}
+                            </MetricTooltip>{" "}
                             <span className="font-medium text-foreground">
                               {formatCurrency(ga.monthly_contribution_needed, goal.currency)}/mo
                             </span>

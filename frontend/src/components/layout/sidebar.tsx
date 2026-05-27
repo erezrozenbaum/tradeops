@@ -57,6 +57,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 
 const sections = [
   {
@@ -131,6 +132,7 @@ const sections = [
     label: "System",
     items: [
       { label: "Notifications", href: "/notifications", icon: Bell },
+      { label: "Setup Guide", href: "/onboarding", icon: Sparkles },
       { label: "Audit Log", href: "/audit", icon: FileText },
       { label: "Settings", href: "/settings", icon: Settings },
       { label: "Help & Guide", href: "/help", icon: HelpCircle },
@@ -304,6 +306,9 @@ export function Sidebar() {
           <span className="text-sm font-bold tracking-tight">
             TradeOps <span className="text-cyber-cyan">AI</span>
           </span>
+        </div>
+        <div className="ml-auto pr-1">
+          <NotificationBell />
         </div>
       </div>
 

@@ -8,6 +8,20 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.11.0] — 2026-05-27
+
+### Added
+- **Notification Bell** — persistent bell icon in desktop header strip and mobile topbar, with:
+  - Red badge showing count of unread danger/warning alerts
+  - Dropdown panel (max 6 items) with severity icon, title, message, and optional deep-link
+  - Per-item dismiss (×) button; dismissed IDs persisted in `localStorage` (`tradeops_dismissed_notifications`)
+  - "View all notifications" footer link to `/notifications` page
+  - Zero new API calls — feeds from existing `GET /investors/{id}/notifications` endpoint
+- **Desktop header strip** — thin 48px `h-12` header bar added to the desktop layout (above all pages, `lg:pt-12`), housing the notification bell; replaces blank header space on desktop
+- **Setup Guide sidebar link** — `/onboarding` added to System section as "Setup Guide" entry (Sparkles icon)
+- **Goals page MetricTooltip** — "Total monthly needed" label and per-goal "Needs X/mo" line now have "Why this matters" tooltips explaining the funding gap concept
+- **Dashboard SmartEmptyState** — "Guided setup →" link (Sparkles icon) added alongside the get-started cards, pointing to `/onboarding`
+
 ## [3.10.0] — 2026-05-26
 
 ### Added

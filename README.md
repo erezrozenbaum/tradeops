@@ -4,7 +4,7 @@
 
 **Personal Financial Intelligence Platform**
 
-[![Version](https://img.shields.io/badge/version-3.10.0-blue?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-3.11.0-blue?style=flat-square)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org)
@@ -230,6 +230,16 @@ Risk-Controlled Live Execution (gated, opt-in)
 | **MetricTooltip expansion** | "Why this matters" inline tooltips now cover Risk Model page (Investable Capital, Max Drawdown, all three tiers), Backtesting page (Annualised, Max Drawdown, Sharpe, Win Rate), and Command Center status header (Twin Score, Stability) |
 | **AI Thought Partner depth** | Collapsible "What your AI is seeing right now" panel shows Twin score 7-day delta, active behavioral risk count, and up to 3 notable evolution items with severity-coded chips — sourced from existing report data, no new API calls |
 | **Onboarding wizard** | `/onboarding` — 4-step guided setup (Profile → Finances → Goals → Risk Model); detects completed steps automatically; progress bar; each step shows what it unlocks |
+
+### Notification & Navigation Surface *(v3.11.0)*
+
+| Feature | Description |
+|---|---|
+| **Notification Bell** | Bell icon in desktop header and mobile topbar; red badge count; dropdown with dismissable alert items; feeds from existing notifications API — no new backend calls |
+| **Desktop header strip** | Persistent 48px header bar on desktop layout housing the notification bell; ensures alerts are always accessible without navigating away |
+| **Setup Guide sidebar link** | `/onboarding` linked from sidebar System section as "Setup Guide" (Sparkles icon) |
+| **Goals MetricTooltip** | "Total monthly needed" and per-goal "Needs X/mo" now have "Why this matters" explanations |
+| **Dashboard guided setup CTA** | SmartEmptyState shows "Guided setup →" link to `/onboarding` alongside existing step cards |
 
 ### Observability & Data Integrity *(v2.7.1)*
 

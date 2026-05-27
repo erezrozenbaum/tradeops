@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 3.10.0  
-**Last updated:** 2026-05-26
+**Version:** 3.11.0  
+**Last updated:** 2026-05-27
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
@@ -780,6 +780,9 @@ kubectl describe ingress tradeops
 | MetricTooltip Expansion | `components/ui/metric-tooltip.tsx` + Risk / Backtesting / Command Center pages | "Why this matters" inline tooltips extended to: Risk Model page (Investable Capital, Max Drawdown, Low Risk / Growth / High Risk allocation tiers); Backtesting page (Annualised Return, Max Drawdown, Sharpe Ratio, Win Rate); Command Center StatusHeader (Financial Twin score — 8-dimension explanation, Stability score). Applied in v3.10.0. |
 | AI Thought Partner Depth | `components/command-center/AIThoughtPartnerCard.tsx` | Collapsible "What your AI is seeing right now" panel beneath the AI summary. Shows Twin score 7-day delta (with trend icon), active behavioral risk count (link to `/behavioral-risk`), and up to 3 notable evolution items (critical/alert/warning) as severity-coded chips. Data sourced entirely from existing Command Center report fields — zero additional API calls. Advisor view also updated. Applied in v3.10.0. |
 | Onboarding Wizard | `app/(dashboard)/onboarding/page.tsx` | `/onboarding` — guided 4-step setup page: Profile → Financial Data → Goals → Risk Model. Detects which steps are already complete by fetching `/dashboard` + `/risk-model` on load. Progress bar with percentage. Each `StepCard` shows icon, title, description, and an "Unlocks" box listing features that become available after completion. Finish/skip sets `tradeops_onboarding_dismissed` in localStorage and redirects to `/command-center`. Applied in v3.10.0. |
+| Notification Bell | `components/layout/NotificationBell.tsx` + `layout.tsx` + `sidebar.tsx` | Bell icon with red badge count in the desktop header strip and mobile topbar. Opens a dropdown panel showing up to 6 notifications with severity icons (danger/warning/info), dismissable per-item (× button), dismissed IDs stored in `localStorage` (`tradeops_dismissed_notifications`), "View all" footer link to `/notifications`. Desktop layout gains a fixed 48px header bar (`lg:pt-12`). Feeds from existing `GET /investors/{id}/notifications` — zero new backend calls. Applied in v3.11.0. |
+| Setup Guide nav link | `components/layout/sidebar.tsx` | `/onboarding` added to System section as "Setup Guide" (Sparkles icon). Applied in v3.11.0. |
+| Goals MetricTooltip | `app/(dashboard)/goals/page.tsx` | "Total monthly needed" summary banner and per-goal "Needs X/mo" contribution line both wrapped with MetricTooltip explaining the funding gap concept. Applied in v3.11.0. |
 | Audit Event Index | Migration 0036 | `ix_audit_events_investor_profile_id` index on `audit_events` table. Required for efficient per-investor audit log queries at scale. |
 | Pct Field Constraints | Migration 0036 | `CHECK` constraints: `investable_capital_pct` (0–100) on `financial_profiles`, `max_trade_size_pct` (0–100) on `risk_models`. |
 | Net Worth Dashboard | `net_worth/` + migration 0040 | `GET /investors/{id}/net-worth` — aggregates portfolio value + financial assets − liabilities + FI projection (binary search, 4% SWR, 7% real return). `GET /investors/{id}/net-worth/history` — 12-month trend from `net_worth_snapshots`. Daily snapshot at 21:15 UTC. Frontend: 4 stat cards, line chart, FI date, assets/liabilities breakdown. |

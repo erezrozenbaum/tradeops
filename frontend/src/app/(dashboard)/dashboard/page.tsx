@@ -851,7 +851,15 @@ function SmartEmptyState({ hasRiskModel }: { hasRiskModel: boolean }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Get started</p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Get started</p>
+        <Link
+          href="/onboarding"
+          className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+        >
+          <Sparkles className="h-3 w-3" /> Guided setup
+        </Link>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {steps.map((step) => (
           <Link

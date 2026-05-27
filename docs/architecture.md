@@ -1,7 +1,7 @@
 # TradeOps AI — Architecture
 
-**Version:** 3.10.0  
-**Last updated:** 2026-05-26
+**Version:** 3.11.0  
+**Last updated:** 2026-05-27
 
 ---
 
@@ -585,6 +585,11 @@ frontend/src/
 │   ├── ReplayHighlightCard.tsx     # Best counterfactual one-liner
 │   ├── AIThoughtPartnerCard.tsx    # AI summary + verbosity toggle + collapsible context panel (twin delta, behavioral risks, evolution chips) (v3.10.0)
 │   └── ProgressionCard.tsx         # Stage roadmap + unlocked features
+├── components/layout/              # Layout shell components
+│   ├── sidebar.tsx                 # Sidebar nav + mobile drawer + theme toggle + mobile notification bell
+│   ├── NotificationBell.tsx        # Bell icon + badge count + dismissable dropdown panel (v3.11.0)
+│   ├── BottomNav.tsx               # Mobile bottom navigation bar
+│   └── auth-fetch-patch.ts        # Patches fetch to inject Authorization header
 └── lib/
     ├── api.ts                      # Typed API client helpers
     └── utils.ts                    # formatCurrency, formatPercent, cn()
