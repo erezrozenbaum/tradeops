@@ -8,6 +8,19 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.15.0] — 2026-05-27
+
+### Added
+- **README screenshots** — four dark-mode screenshots added to the Highlights section: Command Center, Dashboard, Order Builder, Simulation (Monte Carlo)
+- **Collapsible sidebar** — all sections (Personal, Strategy, Portfolio, Intelligence, System) now collapse/expand on click; section containing the active route auto-expands on navigation; secondary items grouped behind a "X more" toggle per section
+- **Sidebar: Order Builder and Simulation prominent** — both now appear in the primary (always-visible) item list of their sections; "Financial Futures" renamed to "Simulation" for clarity
+
+### Fixed
+- **Command Center HTTP 500** — `action_engine.py` `_contribution_actions` referenced `HoldingTransaction.executed_at` which does not exist; correct field is `transaction_date` (`date` type); cutoff now uses `.date()` to match
+
+### Changed
+- **README** — GitHub Stars badge added; Buy Me a Coffee button added; Highlights section added with screenshot grid and 5 key feature callouts
+
 ## [3.14.1] — 2026-05-27
 
 ### Fixed
