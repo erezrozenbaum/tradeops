@@ -1,0 +1,548 @@
+<div dir="rtl">
+
+# TradeOps AI — מדריך מנהל מערכת
+
+**גרסה:** 3.14.1  
+**עודכן לאחרונה:** 27 במאי 2026
+
+מדריך זה מכסה התקנה, הגדרות, ניהול מסד נתונים, פריסת Kubernetes ותפעול שוטף של TradeOps AI.
+
+---
+
+## תוכן עניינים
+
+1. [דרישות מקדימות](#1-דרישות-מקדימות)
+2. [הגדרת סביבה](#2-הגדרת-סביבה)
+3. [פריסה אוטומטית — Windows](#3-פריסה-אוטומטית--windows)
+4. [פריסה אוטומטית — Linux ו-macOS](#4-פריסה-אוטומטית--linux-ו-macos)
+5. [הפעלה עם Docker Compose (פיתוח)](#5-הפעלה-עם-docker-compose-פיתוח)
+6. [ניהול מסד נתונים](#6-ניהול-מסד-נתונים)
+7. [אימות משתמשים וניהול חשבונות](#7-אימות-משתמשים-וניהול-חשבונות)
+8. [ניטור ולוגים](#8-ניטור-ולוגים)
+9. [עצירה ואיפוס](#9-עצירה-ואיפוס)
+10. [פריסת Kubernetes עם Helm](#10-פריסת-kubernetes-עם-helm)
+11. [פתרון תקלות](#11-פתרון-תקלות)
+12. [רשימת פיצ'רים](#12-רשימת-פיצרים)
+13. [רשימת תחזוקה](#13-רשימת-תחזוקה)
+
+---
+
+## 1. דרישות מקדימות
+
+### פריסת Docker Compose (פיתוח מקומי)
+
+| כלי | גרסה מינימלית |
+|------|----------------|
+| Docker Desktop | 24.x |
+| Docker Compose plugin | v2 |
+| Git | כל גרסה עדכנית |
+| מפתח Anthropic API | נדרש לפיצ'רים של AI |
+
+**אין צורך בהתקנת Python או Node.js באופן מקומי.**
+
+### פריסת Kubernetes
+
+| כלי | הערות |
+|------|-------|
+| Kubernetes cluster | 1.27+ (AKS, EKS, GKE, k3s, minikube — כולם תואמים) |
+| Helm | 3.12+ |
+| nginx-ingress controller | לניתוב Ingress |
+| cert-manager | אופציונלי — לחידוש TLS אוטומטי |
+| ArgoCD | אופציונלי — לפריסה GitOps |
+
+---
+
+## 2. הגדרת סביבה
+
+קובץ ההגדרות היחיד שנדרש עבור Docker Compose הוא `backend/.env`.
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+**משתני הסביבה של `backend/.env`:**
+
+```env
+# חובה
+DATABASE_URL=postgresql://tradeops:tradeops@db:5432/tradeops
+ANTHROPIC_API_KEY=sk-ant-...
+
+# אופציונלי — ערכי ברירת מחדל
+SECRET_KEY=change-me-in-production
+ENVIRONMENT=development
+ALLOWED_ORIGINS=http://localhost:3000
+AI_MONTHLY_BUDGET_USD=0
+REDIS_URL=redis://redis:6379/0
+```
+
+| משתנה | נדרש | תיאור |
+|----------|----------|-------------|
+| `DATABASE_URL` | כן | מחרוזת חיבור PostgreSQL. ב-Docker Compose השרת הוא `db`. |
+| `ANTHROPIC_API_KEY` | כן (לפיצ'רים של AI) | דוח AI, מחקר שוק, המלצות וסוכן AI — כולם דורשים מפתח זה. הפלטפורמה פועלת בלעדיו, אך פיצ'רים אלו יחזירו שגיאה. |
+| `SECRET_KEY` | מומלץ | החלף לפני כל פריסה חשופה לאינטרנט. |
+| `ALLOWED_ORIGINS` | ייצור | רשימת origins מורשים, מופרדים בפסיק. ברירת מחדל: `http://localhost:3000`. |
+| `AI_MONTHLY_BUDGET_USD` | לא | מגבלת הוצאה חודשית לכל משקיע בדולרים. `0` = ללא הגבלה (ברירת מחדל). |
+| `REDIS_URL` | לא | מחרוזת חיבור Redis לצורך rate limiting. ייפול ל-in-memory אם לא מוגדר. |
+| `LANGFUSE_PUBLIC_KEY` | לא | מפתח ציבורי של Langfuse לניטור קריאות AI. |
+| `LANGFUSE_SECRET_KEY` | לא | מפתח סודי של Langfuse. |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | לא | נקודת קצה gRPC לייצוא traces (למשל: `http://otel-collector:4317`). |
+
+---
+
+## 3. פריסה אוטומטית — Windows
+
+להפעלה בפקודה אחת על Windows 10 / 11:
+
+```powershell
+.\deploy.ps1
+```
+
+הסקריפט מבצע את כל השלבים אוטומטית:
+
+| שלב | מה קורה |
+|------|-------------|
+| בדיקת מערכת | גרסת Windows ≥ 19041, דיסק ≥ 15GB, RAM ≥ 6GB |
+| Docker Desktop | מזוהה אוטומטית; מוריד ומתקין אם חסר; מפעיל אם כבוי |
+| הפקת סודות | `POSTGRES_PASSWORD` ו-`JWT_SECRET_KEY` נוצרים אוטומטית |
+| מפתח Anthropic | פרומפט אינטראקטיבי עם הוראות שלב-אחר-שלב |
+| בנייה | `docker compose build` + `docker compose up -d` |
+| בדיקת בריאות | מצביא על `/health` וה-frontend עד שניהם עונים |
+
+**מצבים נוספים:**
+
+```powershell
+.\deploy.ps1 -Stop        # עצור את כל השירותים
+.\deploy.ps1 -Update      # בנה מחדש + הפעל מחדש (שמור סודות)
+.\deploy.ps1 -Reset       # אפס סודות ונתחל מחדש
+.\deploy.ps1 -Monitoring  # הפעל גם Prometheus + Grafana
+```
+
+---
+
+## 4. פריסה אוטומטית — Linux ו-macOS
+
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+
+הסקריפט מבצע אותם שלבים כמו גרסת Windows:
+
+| שלב | מה קורה |
+|------|-------------|
+| בדיקת מערכת | Docker, דיסק ≥ 15GB, RAM ≥ 6GB |
+| הפקת סודות | `openssl rand` מייצר JWT, DB וסיסמת Redis אוטומטית |
+| מפתח Anthropic | פרומפט אינטראקטיבי — ניתן לדלג (פיצ'רי AI יהיו לא זמינים) |
+| בנייה | `docker compose build` + `docker compose up -d` |
+| בדיקת בריאות | ממתין ל-backend וה-frontend לפני הצגת כתובות הגישה |
+
+**מצבים נוספים:**
+
+```bash
+./deploy.sh --stop        # עצור את כל השירותים
+./deploy.sh --update      # בנה מחדש + הפעל מחדש
+./deploy.sh --reset       # אפס סודות
+./deploy.sh --monitoring  # הפעל גם Prometheus + Grafana
+```
+
+---
+
+## 5. הפעלה עם Docker Compose (פיתוח)
+
+```bash
+docker compose -f infra/docker-compose.yml up -d
+```
+
+סדר הפעלה (מסודר אוטומטית לפי בדיקות בריאות):
+
+1. **PostgreSQL** — עולה ועובר בדיקת `pg_isready`
+2. **Backend** — מריץ `alembic upgrade head` (אידמפוטנטי), ואז `uvicorn --reload`
+3. **Frontend** — מתקין `npm` ומפעיל את שרת Next.js
+
+הפעלה ראשונה לוקחת 2–3 דקות בזמן שה-npm מוריד חבילות.
+
+| שירות | כתובת |
+|---------|-----|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:8000 |
+| Swagger UI | http://localhost:8000/docs |
+| Prometheus | http://localhost:9090 |
+| Grafana | http://localhost:3001 (admin / tradeops) |
+
+---
+
+## 6. ניהול מסד נתונים
+
+### הרצת migrations ידנית
+
+```bash
+docker compose -f infra/docker-compose.yml exec backend alembic upgrade head
+```
+
+Migrations רצים גם אוטומטית בכל הפעלת container.
+
+### היסטוריית Migrations (51 migrations נכון ל-v3.14.1)
+
+| # | תיאור |
+|---|-------------|
+| 0001 | Schema ראשוני (investor_profiles, financial_profiles, goals, risk_models) |
+| 0002-0006 | טבלאות אסטרטגיה, backtesting, paper trading, הרחבות פרופיל |
+| 0007-0010 | Holdings, שערי מטבע, price snapshots, portfolio snapshots |
+| 0011-0023 | מצבי מעקב אחר יעדים, פנסיה, קרן השתלמות, רכב, התראות, watchlist, משפחה, עסקאות, price alerts |
+| 0024 | **טבלת users + JWT auth** (email, password_hash, role) |
+| 0025-0033 | סנכרון auto, עמלות, אופציות, weekly digest, fx_rate, makdam, ai_usage_logs, family invites |
+| 0034-0036 | CHECK constraints, live_trading_sessions, אינדקסים |
+| 0037-0040 | fx_rate_history, paper_trading v2, market_research_reports, net_worth_snapshots, coach_insights |
+| 0041-0049 | recommendation_decisions, investor_maturity_snapshots, financial_twin_snapshots, behavioral_risk_events, simulation_runs, command_center_checkpoints, ai_memory_entries, households, advisor_share_tokens |
+| 0050 | **staged_orders** — Order Builder, pre-flight review, tax sequencing, goal-linked execution |
+| 0051 | **order_templates** + עמודת outcome_snapshots — Template Library ו-Outcome Tracking |
+
+### יצירת migration חדש
+
+```bash
+docker compose -f infra/docker-compose.yml exec backend alembic revision --autogenerate -m "תיאור"
+```
+
+סקור את הקובץ שנוצר ב-`backend/alembic/versions/` לפני הפעלתו.
+
+### חזרה לגרסה קודמת
+
+```bash
+docker compose -f infra/docker-compose.yml exec backend alembic downgrade -1
+```
+
+### חיבור ישיר ל-PostgreSQL
+
+```bash
+docker compose -f infra/docker-compose.yml exec db psql -U tradeops -d tradeops
+```
+
+שאילתות שימושיות:
+
+```sql
+-- רשימת כל המשקיעים
+SELECT id, full_name, country, base_currency, created_at FROM investor_profiles ORDER BY created_at;
+
+-- חשבונות שמסומנים כקרן חירום
+SELECT ia.provider_name, ia.account_type, ia.is_emergency_fund
+FROM investment_accounts ia
+WHERE ia.is_emergency_fund = true;
+
+-- אירועי audit אחרונים
+SELECT investor_profile_id, action, created_at FROM audit_events ORDER BY created_at DESC LIMIT 20;
+
+-- סטטוס staged orders לפי משקיע
+SELECT investor_id, status, COUNT(*) FROM staged_orders GROUP BY investor_id, status;
+```
+
+### גיבוי מסד הנתונים
+
+```bash
+docker compose -f infra/docker-compose.yml exec db pg_dump -U tradeops tradeops > backup_$(date +%Y%m%d).sql
+```
+
+שחזור:
+
+```bash
+cat backup_YYYYMMDD.sql | docker compose -f infra/docker-compose.yml exec -T db psql -U tradeops tradeops
+```
+
+---
+
+## 7. אימות משתמשים וניהול חשבונות
+
+### ארכיטקטורת אימות
+
+- **JWT HS256** עם HttpOnly cookie (`SameSite=Strict`)
+- **ביטול session**: Redis JTI blacklist בעת logout (עם fallback ל-in-memory)
+- **Rate limiting**: 5 ניסיונות כניסה לכל IP בחלון של 5 דקות (מגובה Redis)
+- **תפקידים**: `user` ו-`admin` — כל 35+ נתיבי משקיע אוכפים בעלות
+
+### יצירת חשבון ראשון
+
+1. עבור ל-http://localhost:3000
+2. לחץ **Register**
+3. הקלד אימייל וסיסמה
+4. המשתמש הראשון שנרשם מקבל תפקיד `user`. תפקיד `admin` מוקצה ידנית:
+
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'your@email.com';
+```
+
+### לוח בקרת מנהל (Admin Panel)
+
+ניתן לגשת אל `/admin` (דורש תפקיד `admin`):
+
+- ניהול משתמשים: הצגה, עדכון, מחיקה
+- מעקב עלויות AI לפי פיצ'ר ולפי משקיע
+- ניהול live trading: אישור / ביטול אישור עם אימות 5-שלבי
+- audit log: כל הפעולות עם הקשר מלא
+
+---
+
+## 8. ניטור ולוגים
+
+### לוגים
+
+```bash
+# כל השירותים
+docker compose -f infra/docker-compose.yml logs -f
+
+# backend בלבד
+docker compose -f infra/docker-compose.yml logs -f backend
+
+# N שורות אחרונות
+docker compose -f infra/docker-compose.yml logs --tail=100 backend
+```
+
+### Prometheus ו-Grafana
+
+הפעל עם `--monitoring` flag:
+
+```bash
+# Windows
+.\deploy.ps1 -Monitoring
+
+# Linux / macOS
+./deploy.sh --monitoring
+```
+
+| שירות | כתובת | אישורים |
+|---------|-------|---------|
+| Prometheus | http://localhost:9090 | ללא |
+| Grafana | http://localhost:3001 | admin / tradeops |
+
+dashboard של TradeOps מתוקנן מראש ב-Grafana ומציג:
+- קצב בקשות
+- אחוזוני latency (p50/p95/p99)
+- שיעור שגיאות
+- כמות בקשות בתהליך
+
+### נקודת קצה `GET /metrics` (Prometheus)
+
+```bash
+curl http://localhost:8000/metrics
+```
+
+### Great Expectations — בדיקות איכות נתונים
+
+5 suites לבדיקת שלמות הנתונים הפיננסיים רצות יומית בשעה 02:00 UTC:
+
+| Suite | מה נבדק |
+|-------|---------|
+| Investment Holdings | כמויות חיוביות, מחירים תקינים |
+| FX Rates | שערי מטבע חיוביים, קודים תקינים |
+| Portfolio Snapshots | ערכי תיק עקביים |
+| Financial Goals | סכומי יעד תקינים |
+| Financial Profiles | הכנסות ותשלומים חיוביים |
+
+כשלונות נרשמים ל-`audit_events`.
+
+---
+
+## 9. עצירה ואיפוס
+
+### עצירת השירותים
+
+```bash
+# Windows
+.\deploy.ps1 -Stop
+
+# Linux / macOS
+./deploy.sh --stop
+
+# ישיר
+docker compose -f infra/docker-compose.yml down
+```
+
+### עצירה ומחיקת volumes (אפס הכל)
+
+```bash
+docker compose -f infra/docker-compose.yml down -v
+```
+
+> **אזהרה:** פעולה זו מוחקת את מסד הנתונים וכל הנתונים. בצע גיבוי לפני ביצוע.
+
+### הפעלה מחדש עם איפוס סודות
+
+```bash
+# Windows
+.\deploy.ps1 -Reset
+
+# Linux / macOS
+./deploy.sh --reset
+```
+
+---
+
+## 10. פריסת Kubernetes עם Helm
+
+ה-Helm chart נמצא ב-`helm/tradeops/`.
+
+### התקנה בסיסית
+
+```bash
+helm install tradeops ./helm/tradeops \
+  --set secrets.jwtSecret="your-secret" \
+  --set secrets.dbPassword="your-db-password" \
+  --set secrets.anthropicKey="sk-ant-..." \
+  --namespace tradeops \
+  --create-namespace
+```
+
+### הגדרות Helm עיקריות (`values.yaml`)
+
+| מפתח | ברירת מחדל | תיאור |
+|------|-----------|-------|
+| `backend.replicaCount` | `2` | מספר replicas לbackend |
+| `frontend.replicaCount` | `1` | מספר replicas לfrontend |
+| `ingress.enabled` | `false` | הפעל nginx Ingress |
+| `ingress.tls.enabled` | `false` | הפעל TLS |
+| `networkPolicy.enabled` | `true` | הפעל NetworkPolicy (ממליץ להשאיר כן) |
+| `podDisruptionBudget.enabled` | `true` | PDB לzero-downtime upgrades |
+
+### עדכון פריסה
+
+```bash
+helm upgrade tradeops ./helm/tradeops --reuse-values
+```
+
+### הסרה
+
+```bash
+helm uninstall tradeops --namespace tradeops
+```
+
+---
+
+## 11. פתרון תקלות
+
+### Backend לא עולה
+
+```bash
+docker compose -f infra/docker-compose.yml logs backend
+```
+
+**שגיאות נפוצות:**
+
+| שגיאה | סיבה | פתרון |
+|-------|------|-------|
+| `connection refused` ל-DB | PostgreSQL לא מוכן עדיין | המתן — ה-healthcheck מסדר את הסדר |
+| `alembic.util.exc.CommandError` | migration נכשל | בדוק את `backend/alembic/versions/` וודא שאין קבצי migration שבורים |
+| `ModuleNotFoundError` | חבילה חסרה | בנה מחדש: `docker compose build backend` |
+| `permission denied` ל-yfinance cache | ה-container לא יכול לכתוב ל-`/nonexistent` | שגיאה לא קריטית — yfinance עובד ללא cache |
+
+### Frontend לא עולה
+
+```bash
+docker compose -f infra/docker-compose.yml logs frontend
+```
+
+| שגיאה | פתרון |
+|-------|-------|
+| `cannot find module` | מחק את `node_modules` ובנה מחדש |
+| פורט 3000 תפוס | `netstat -ano | findstr :3000` (Windows) או `lsof -i :3000` (Linux/macOS) |
+
+### Command Center מחזיר HTTP 500
+
+גרסה 3.14.1 תיקנה את הסיבה העיקרית — שיתוף SQLAlchemy Session בין threads מרובים.
+אם השגיאה חוזרת, בדוק את לוגי ה-backend:
+
+```bash
+docker compose -f infra/docker-compose.yml logs backend | grep -i "500\|error\|exception"
+```
+
+### AI features לא עובדים
+
+1. ודא ש-`ANTHROPIC_API_KEY` מוגדר ב-`backend/.env`
+2. ודא שהמפתח תקין: `sk-ant-...`
+3. בדוק מגבלת תקציב: `AI_MONTHLY_BUDGET_USD` לא אמור להיות נמוך מדי
+
+### 401 Unauthorized
+
+- הtoken פג — התחבר מחדש
+- ודא ש-`JWT_SECRET_KEY` זהה בין הפעלות (אל תאפס אותו תוך כדי sessions פעילים)
+
+### מסד הנתונים — ניקוי cache וחיבור מחדש
+
+```bash
+docker compose -f infra/docker-compose.yml restart backend
+```
+
+---
+
+## 12. רשימת פיצ'רים
+
+### פלטפורמת הליבה
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| פרופיל משקיע ומשפחה | ניהול פיננסי של משק בית, תלויים, מצב חינוך לקטינים |
+| פרופיל פיננסי | הכנסות, הוצאות, חסכונות, חובות, נכסים, התחייבויות |
+| ציון יציבות פיננסית | ציון דטרמיניסטי 0–100 — מגביל אסטרטגיות אגרסיביות בעת שבריריות |
+| מודל הקצאת סיכון | הקצאה אחוזית של הון לפי tier סיכון (לא "נמוך/בינוני/גבוה" סתמי) |
+| מנוע יעדים | חשבונות מקושרים, מעקב התקדמות, ניתוח פערי תרומה חודשית |
+| לוח מחוונים | שווי נקי, מגמות 12 חודשים, הקרנת עצמאות פיננסית |
+
+### אינטליגנציית תיק השקעות
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| חשבונות והחזקות | רב-חשבוני, רב-מטבעי, כל סוגי הנכסים |
+| רענון מחירים בזמן אמת | Alpha Vantage / yfinance עם cache 24 שעות |
+| ייחוס ביצועים | TWR, MWR (IRR), alpha מול benchmark |
+| מנוע איזון | הצעות BUY/SELL לפי tier; עמוד `/rebalance` עם פסי tier |
+| בדיקות עמידות | 5 תרחישי קריסה היסטוריים + Monte Carlo P10/P50/P90 |
+| קציר הפסדי מס | מועמדים ממוינים לפי חיסכון משוער, אזהרות wash-sale |
+| Order Builder | ניתוח תיק מפורט, pre-flight review, מעקב תוצאות |
+
+### AI Intelligence *(דורש `ANTHROPIC_API_KEY`)*
+
+> כל פיצ'רי ה-AI מייצרים **פלטי תמיכה בהחלטות בלבד**. אין AI שמבצע עסקאות או מהווה ייעוץ פיננסי.
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| AI Coach | תובנות פרואקטיביות על קרן חירום, מזומן סרק, פערי יעדים, סיכון ריכוז |
+| AI Report | ניתוח תיק מלא שנוצר על ידי Claude |
+| מחקר שוק עמוק | סריקת 63 מכשירים; תזות השקעה AI; היסטוריה מתמשכת |
+| AI Agent | עוזר פיננסי חופשי המבוסס על נתוני תיק אמיתיים |
+| ניטור אותות שוק | סנטימנט חדשות יומי + זיהוי אזכורי לווייתן |
+
+### Live Trading *(מוגן — מכובה כברירת מחדל)*
+
+| פיצ'ר | תיאור |
+|-------|-------|
+| בדיקת מוכנות 5 שלבים | רקורד paper trading (Sharpe > 0.5, ≥30 ימים), אישור סיכון, אישור admin, מגבלות סיכון להזמנה, חיבור IBKR |
+| kill switch | עוצר את הsession ומבטל את כל ההזמנות הפתוחות מיידית |
+
+---
+
+## 13. רשימת תחזוקה
+
+### יומי
+- [ ] בדוק לוגי backend לשגיאות: `docker logs infra-backend-1 --since 24h | grep ERROR`
+- [ ] ודא שכל containers רצים: `docker compose -f infra/docker-compose.yml ps`
+
+### שבועי
+- [ ] גבה את מסד הנתונים
+- [ ] בדוק שימוש בדיסק: `docker system df`
+- [ ] עיין בלוגי Great Expectations ב-`audit_events`
+
+### חודשי
+- [ ] בדוק עדכוני אבטחה: `pip-audit` (backend), `npm audit` (frontend)
+- [ ] עיין בעלויות AI: Admin Panel → AI Usage
+- [ ] בדוק לוגים של Great Expectations לכשלי איכות נתונים
+
+### לפני כל עדכון גרסה
+- [ ] גבה את מסד הנתונים
+- [ ] בדוק `CHANGELOG.md` לשינויי schema
+- [ ] הרץ: `docker compose -f infra/docker-compose.yml exec backend alembic current`
+- [ ] בנה מחדש: `docker compose -f infra/docker-compose.yml build`
+- [ ] עדכן: `docker compose -f infra/docker-compose.yml up -d`
+- [ ] ודא: `docker compose -f infra/docker-compose.yml logs backend --tail=50`
+
+---
+
+> לתיעוד נוסף ראה: [אנגלית — Admin Guide](admin-guide.md) | [ארכיטקטורה](architecture.md) | [Schema](schema.md)
+
+</div>

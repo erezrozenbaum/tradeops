@@ -4,7 +4,7 @@
 
 **Personal Financial Intelligence Platform**
 
-[![Version](https://img.shields.io/badge/version-3.14.0-blue?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-3.14.1-blue?style=flat-square)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org)
@@ -42,10 +42,12 @@
 - [Features](#features)
 - [Architecture](#architecture)
 - [Trust & Safety Architecture](#trust--safety-architecture)
+- [Deployment](#deployment)
 - [Quickstart](#quickstart)
 - [Environment Variables](#environment-variables)
 - [Documentation](#documentation)
 - [Safety Principles](#safety-principles)
+- [Contributing](#contributing)
 - [Legal](#legal)
 
 ---
@@ -231,6 +233,18 @@ Risk-Controlled Live Execution (gated, opt-in)
 | **AI Thought Partner depth** | Collapsible "What your AI is seeing right now" panel shows Twin score 7-day delta, active behavioral risk count, and up to 3 notable evolution items with severity-coded chips — sourced from existing report data, no new API calls |
 | **Onboarding wizard** | `/onboarding` — 4-step guided setup (Profile → Finances → Goals → Risk Model); detects completed steps automatically; progress bar; each step shows what it unlocks |
 
+### Staged Allocations & Order Builder *(v3.13.0–v3.14.0)*
+
+| Feature | Description |
+|---|---|
+| **Order Builder** | Portfolio Surgery panel: visual tier allocation bars with before/after deltas; stage BUY/SELL orders with deterministic pre-flight review (reasons, risks, verdict) |
+| **Minimum-trade rebalancing** | One-click "Generate Minimum Orders" creates the smallest set of trades to bring the portfolio within tier targets; sells sequenced before buys |
+| **Tax-optimised sequencing** | Each order tagged with tax context: loss-harvest candidates, wash-sale warnings (30-day rule), gain/loss classification |
+| **Goal-linked execution** | Link any staged order to a financial goal; projected goal progress shown inline |
+| **Projected metrics** | Before committing an order: projected portfolio value, tier allocation %, goal progress |
+| **Template Library** | Save a set of staged orders as a named template; apply to re-stage with fresh pre-flight; delete when done |
+| **Outcome Tracking** | For executed orders: projected metrics (captured at staging time) vs actual outcome at 30 / 90 / 180 days; closes the execution loop |
+
 ### Contextual Intelligence Surface *(v3.12.0)*
 
 | Feature | Description |
@@ -359,6 +373,36 @@ These features share a common foundation: all significant decisions are recorded
 
 ---
 
+## Deployment
+
+Fully automated one-command deployment via the included scripts.
+
+### Windows
+
+```powershell
+.\deploy.ps1
+```
+
+Modes: `.\deploy.ps1 -Stop` · `.\deploy.ps1 -Update` · `.\deploy.ps1 -Reset` · `.\deploy.ps1 -Monitoring`
+
+### Linux / macOS
+
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+
+Modes: `./deploy.sh --stop` · `./deploy.sh --update` · `./deploy.sh --reset` · `./deploy.sh --monitoring`
+
+Both scripts:
+- Verify Docker and system requirements (disk ≥ 15 GB, RAM ≥ 6 GB)
+- Generate cryptographic secrets (JWT key, DB password, Redis password) automatically
+- Prompt for your Anthropic API key (optional — AI features only)
+- Build and launch all Docker services
+- Wait for health checks and print access URLs
+
+---
+
 ## Quickstart
 
 ### Prerequisites
@@ -382,6 +426,16 @@ ANTHROPIC_API_KEY=sk-ant-...   # optional — AI features only
 ```
 
 ### 2. Start
+
+```bash
+# Windows
+.\deploy.ps1
+
+# Linux / macOS
+./deploy.sh
+```
+
+Or directly with Docker Compose:
 
 ```bash
 docker compose -f infra/docker-compose.yml up -d
@@ -426,10 +480,12 @@ Profile → Financial → Goals → Risk Model → Strategies → Paper Trade
 | Doc | Description |
 |-----|-------------|
 | [`docs/architecture.md`](docs/architecture.md) | Full module map, API routing, frontend structure, worker schedule |
-| [`docs/schema.md`](docs/schema.md) | Complete DB schema + 40-migration history |
+| [`docs/schema.md`](docs/schema.md) | Complete DB schema + 50-migration history |
 | [`docs/admin-guide.md`](docs/admin-guide.md) | Installation, Kubernetes, operations, troubleshooting |
 | [`CHANGELOG.md`](CHANGELOG.md) | Full version history |
 | [`LEGAL_DISCLAIMER.md`](LEGAL_DISCLAIMER.md) | Full legal disclaimer, risk disclosure, AI limitations |
+| [`SECURITY.md`](SECURITY.md) | Security policy, known CVEs, vulnerability reporting |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Development setup, code standards, PR process |
 
 ---
 
@@ -445,6 +501,14 @@ These are non-negotiable and enforced in code — not just policy:
 6. **The system can recommend "don't invest yet"** — financial stability score may block aggressive strategies
 7. **The system can recommend debt reduction first** — high-interest debt is flagged before investment
 8. **All significant actions are audit-logged** — full context, immutable
+
+---
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, and the PR process.
+
+For security issues, see [SECURITY.md](SECURITY.md) — please do not open a public issue for vulnerabilities.
 
 ---
 

@@ -8,6 +8,23 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.14.1] — 2026-05-27
+
+### Fixed
+- **Command Center HTTP 500** — `orchestrator.py` was sharing a single SQLAlchemy Session across 7 concurrent `ThreadPoolExecutor` threads; SQLAlchemy 2.x sessions are not thread-safe, causing intermittent 500 errors. All DB fetches now run sequentially on the request Session; the only blocking I/O (Claude AI call) is separately isolated and unchanged.
+
+### Security
+- Added `SECURITY.md` — vulnerability reporting policy, known CVE status and mitigations, threat model, security architecture reference; documents starlette PYSEC-2026-161 (cannot fix: `prometheus-fastapi-instrumentator 7.x` requires `starlette<1.0.0`; tracked for resolution when upstream ships starlette 1.x support) and Next.js 14.x CVEs (require Next.js 16 upgrade; mitigated by local-only deployment model)
+
+### Added
+- `CONTRIBUTING.md` — development setup, code standards, PR process, financial safety rules for contributors
+- `deploy.sh` — Linux / macOS bash equivalent of `deploy.ps1`: system checks (Docker, disk, RAM), automatic secret generation (JWT / DB / Redis), optional Anthropic API key prompt, Docker build + launch, health checks, stop / update / reset / monitoring modes
+- `docs/admin-guide-he.md` — full Hebrew admin guide with RTL layout (`<div dir="rtl">`): all 13 sections translated including migration history, deployment, troubleshooting, feature reference
+
+### Changed
+- Updated `deploy.ps1` banner version from v3.5.0 to v3.14.0
+- `README.md`: added Deployment section (Windows + Linux/macOS), Staged Allocations & Order Builder feature table, SECURITY.md and CONTRIBUTING.md links; schema.md reference updated from 40-migration to 50-migration history
+
 ## [3.14.0] — 2026-05-27
 
 ### Added

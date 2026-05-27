@@ -95,7 +95,7 @@ function Write-Banner {
     Write-Host '        | |  |  _  / / ___ \| | | |  __| | | | |  __/ ___) |' -ForegroundColor $cyan
     Write-Host '        |_|  |_| \_\/_/   \_\_| |_|_____||___/ |_|   |____/ ' -ForegroundColor $cyan
     Write-Host '                                                               ' -ForegroundColor $cyan
-    Write-Host '                 AI  —  Deployment Script v3.5.0              ' -ForegroundColor $dark
+    Write-Host '                 AI  —  Deployment Script v3.14.0             ' -ForegroundColor $dark
     Write-Host ''
     Write-Host '  Personal Financial Intelligence Platform                      ' -ForegroundColor $gray
     Write-Host '  Powered by Claude AI (Anthropic)                              ' -ForegroundColor $gray

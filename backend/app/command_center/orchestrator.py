@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
@@ -273,70 +272,48 @@ def _build_progression(maturity: InvestorMaturitySnapshot | None) -> InvestorPro
 
 def build(db: Session, investor_id: uuid.UUID, verbosity: str = "standard") -> CommandCenterReport:
     from datetime import timedelta
+    from app.goals_analysis.service import get_analysis
     from app.investment_agent import engine as agent_engine
 
     now = datetime.now(timezone.utc)
     week_ago = now - timedelta(days=8)
 
-    def _fetch_maturity():
-        return (
-            db.query(InvestorMaturitySnapshot)
-            .filter(InvestorMaturitySnapshot.investor_id == investor_id)
-            .order_by(InvestorMaturitySnapshot.computed_at.desc())
-            .first()
+    # SQLAlchemy sessions are not thread-safe — run all DB fetches sequentially.
+    # The only blocking I/O is the AI call below, which is isolated in its own block.
+    maturity = (
+        db.query(InvestorMaturitySnapshot)
+        .filter(InvestorMaturitySnapshot.investor_id == investor_id)
+        .order_by(InvestorMaturitySnapshot.computed_at.desc())
+        .first()
+    )
+    twin_current = (
+        db.query(FinancialTwinSnapshot)
+        .filter(FinancialTwinSnapshot.investor_id == investor_id)
+        .order_by(FinancialTwinSnapshot.computed_at.desc())
+        .first()
+    )
+    twin_prev = (
+        db.query(FinancialTwinSnapshot)
+        .filter(
+            FinancialTwinSnapshot.investor_id == investor_id,
+            FinancialTwinSnapshot.computed_at <= week_ago,
         )
-
-    def _fetch_twin_current():
-        return (
-            db.query(FinancialTwinSnapshot)
-            .filter(FinancialTwinSnapshot.investor_id == investor_id)
-            .order_by(FinancialTwinSnapshot.computed_at.desc())
-            .first()
+        .order_by(FinancialTwinSnapshot.computed_at.desc())
+        .first()
+    )
+    active_risks = (
+        db.query(BehavioralRiskEvent)
+        .filter(
+            BehavioralRiskEvent.investor_id == investor_id,
+            BehavioralRiskEvent.status == "active",
         )
-
-    def _fetch_twin_prev():
-        return (
-            db.query(FinancialTwinSnapshot)
-            .filter(
-                FinancialTwinSnapshot.investor_id == investor_id,
-                FinancialTwinSnapshot.computed_at <= week_ago,
-            )
-            .order_by(FinancialTwinSnapshot.computed_at.desc())
-            .first()
-        )
-
-    def _fetch_active_risks():
-        return (
-            db.query(BehavioralRiskEvent)
-            .filter(
-                BehavioralRiskEvent.investor_id == investor_id,
-                BehavioralRiskEvent.status == "active",
-            )
-            .order_by(BehavioralRiskEvent.detected_at.desc())
-            .limit(3)
-            .all()
-        )
-
-    def _fetch_goals():
-        from app.goals_analysis.service import get_analysis
-        return get_analysis(db, investor_id)
-
-    with ThreadPoolExecutor(max_workers=7) as executor:
-        f_maturity = executor.submit(_fetch_maturity)
-        f_twin = executor.submit(_fetch_twin_current)
-        f_twin_prev = executor.submit(_fetch_twin_prev)
-        f_risks = executor.submit(_fetch_active_risks)
-        f_evolution = executor.submit(generate_evolution_feed, db, investor_id)
-        f_replay = executor.submit(select_best_replay, db, investor_id)
-        f_goals = executor.submit(_fetch_goals)
-
-        maturity = f_maturity.result()
-        twin_current = f_twin.result()
-        twin_prev = f_twin_prev.result()
-        active_risks = f_risks.result()
-        evolution_feed = f_evolution.result()
-        replay_highlight = f_replay.result()
-        goals_result = f_goals.result()
+        .order_by(BehavioralRiskEvent.detected_at.desc())
+        .limit(3)
+        .all()
+    )
+    evolution_feed = generate_evolution_feed(db, investor_id)
+    replay_highlight = select_best_replay(db, investor_id)
+    goals_result = get_analysis(db, investor_id)
 
     stage = maturity.stage if maturity else "foundation"
 
