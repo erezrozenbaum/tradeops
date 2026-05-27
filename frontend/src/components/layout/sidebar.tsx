@@ -57,6 +57,7 @@ import {
   ChevronDown,
   ChevronRight,
   RefreshCw,
+  CalendarClock,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
@@ -107,6 +108,7 @@ const sections: NavSection[] = [
     items: [
       { label: "Investments", href: "/investments", icon: Briefcase },
       { label: "Order Builder", href: "/order-builder", icon: Layers },
+      { label: "Recurring Plans", href: "/recurring-plans", icon: CalendarClock },
       { label: "Rebalance", href: "/rebalance", icon: Scale },
       { label: "Performance", href: "/performance", icon: Activity },
       { label: "Transactions", href: "/transactions", icon: ClipboardList },

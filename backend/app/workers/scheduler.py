@@ -11,6 +11,7 @@ Jobs:
   - weekly_digest        : every Friday at 18:00 UTC (AI portfolio digest email)
   - market_prewarm       : every 30 minutes (keeps live market signal cache warm)
   - research_prewarm     : every 6 hours (keeps market research cache warm)
+  - recurring_plans      : daily at 06:30 UTC (auto-stage orders from due SIP plans)
 
 Set WORKERS_ENABLED=false in .env to disable all background jobs.
 """
@@ -49,6 +50,7 @@ def _register_jobs() -> None:
     from app.workers.jobs.command_center_nightly import precompute_command_center_ai
     from app.workers.jobs.command_center_checkpoint import write_command_center_checkpoints
     from app.workers.jobs.outcome_tracking import populate_outcome_snapshots
+    from app.workers.jobs.recurring_plans import run_due_recurring_plans
 
     _scheduler.add_job(
         refresh_all_prices,
@@ -196,6 +198,13 @@ def _register_jobs() -> None:
         populate_outcome_snapshots,
         CronTrigger(hour=22, minute=0),  # daily 22:00 UTC — after snapshot_writer (21:00)
         id="outcome_tracking",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+    _scheduler.add_job(
+        run_due_recurring_plans,
+        CronTrigger(hour=6, minute=30),  # daily 06:30 UTC — stage monthly/weekly orders for the day
+        id="recurring_plans",
         replace_existing=True,
         misfire_grace_time=3600,
     )

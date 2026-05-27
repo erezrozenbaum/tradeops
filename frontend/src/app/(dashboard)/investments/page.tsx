@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatPercent } from "@/lib/utils";
-import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronRight, Briefcase, RefreshCw, Scale, CheckCircle2, XCircle, ShieldCheck, Shield, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronRight, Briefcase, RefreshCw, Scale, CheckCircle2, XCircle, ShieldCheck, Shield, AlertTriangle, Download } from "lucide-react";
 import { FxImpactCard } from "@/components/FxImpactCard";
 import { ProactiveInsightsCard } from "@/components/ProactiveInsightsCard";
 import { PaydayCalendarCard } from "@/components/PaydayCalendarCard";
@@ -579,6 +579,36 @@ export default function InvestmentsPage() {
     }
   }
 
+  function exportHoldingsCsv() {
+    const allHoldings = accounts.flatMap(acc =>
+      (acc.holdings ?? []).map(h => ({
+        account: acc.account_name ?? acc.provider_name,
+        ...h,
+      }))
+    );
+    const header = "Account,Ticker,Name,Asset Type,Quantity,Avg Buy Price,Current Value,Currency";
+    const rows = allHoldings.map(h =>
+      [
+        `"${(h.account ?? "").replace(/"/g, '""')}"`,
+        h.ticker ?? "",
+        `"${(h.name ?? "").replace(/"/g, '""')}"`,
+        h.asset_type ?? "",
+        h.quantity,
+        h.avg_buy_price ?? "",
+        h.current_value ?? "",
+        h.currency ?? "",
+      ].join(",")
+    );
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `holdings-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function refreshPrices() {
     setRefreshing(true);
     setRefreshResult(null);
@@ -855,10 +885,16 @@ export default function InvestmentsPage() {
         </div>
         <div className="flex gap-2">
           {accounts.length > 0 && (
-            <Button variant="outline" onClick={refreshPrices} disabled={refreshing}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "Refreshing…" : "Refresh prices"}
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={exportHoldingsCsv}>
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+                Export CSV
+              </Button>
+              <Button variant="outline" onClick={refreshPrices} disabled={refreshing}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+                {refreshing ? "Refreshing…" : "Refresh prices"}
+              </Button>
+            </>
           )}
           <Button onClick={() => setShowAccountForm(true)}>
             <Plus className="h-4 w-4 mr-2" /> Add account

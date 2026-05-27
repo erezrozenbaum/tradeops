@@ -8,6 +8,18 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.18.0] — 2026-05-27
+
+### Added
+- **Recurring Investment Plans (SIP)** — `/recurring-plans` page; create monthly or weekly auto-staging plans with named allocations (ticker, asset type, amount, currency, goal link); each plan tracks next/last run; "Run now" button manually triggers staging; active/paused toggle; full CRUD via `GET/POST/PUT/DELETE /investors/{id}/recurring-plans`; background job `recurring_plans` at 06:30 UTC auto-stages orders for all due plans; orders are staged (not executed) — investor reviews in Order Builder before acting
+- **Backend: `app/recurring_plans/`** — migration 0052 (`recurring_investment_plans` table), `RecurringPlan` model, service (CRUD + `run_plan()` + `_compute_next_run()`), router; worker job `app/workers/jobs/recurring_plans.py`
+- **Sidebar** — "Recurring Plans" added to Portfolio section primary items (CalendarClock icon)
+- **Holdings CSV Export** — "Export CSV" button on Investments page; exports all accounts' holdings (ticker, name, type, quantity, avg buy price, current value, currency) as `holdings-{date}.csv`
+- **Transactions CSV Export** — "CSV" download button on Transactions page; exports complete transaction log (date, type, ticker, asset, qty, price, total, fees, currency, notes) as `transactions-{date}.csv`
+
+### Fixed
+- Price alerts URL bug in Notifications page — was calling `/price-alerts` (404), corrected to `/alerts`
+
 ## [3.17.0] — 2026-05-27
 
 ### Added

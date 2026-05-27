@@ -104,7 +104,7 @@ export default function NotificationsPage() {
   function loadAlerts() {
     if (!investorId) return;
     setAlertsLoading(true);
-    fetch(`/api/v1/investors/${investorId}/price-alerts`)
+    fetch(`/api/v1/investors/${investorId}/alerts`)
       .then(r => r.ok ? r.json() : [])
       .then(data => { setAlerts(data); setAlertsLoading(false); })
       .catch(() => setAlertsLoading(false));

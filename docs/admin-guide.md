@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 3.17.0  
+**Version:** 3.18.0  
 **Last updated:** 2026-05-27
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -819,6 +819,9 @@ kubectl describe ingress tradeops
 | Notification / Alert Engine | `notifications/center.py` | `GET /investors/{id}/notifications` now surfaces: goal milestone notifications (50%, 75%, 100% funded), price alert triggers (above/below threshold), behavioral risk HIGH events, portfolio rebalance needed, stale prices (>48h), option expiry warnings, proactive drift events. Field-name bug fixed (GoalAnalysis `id`/`name` fields). Applied v3.17.0. |
 | Broker Sync Status Dashboard | `broker_sync/status.py` + `GET /investors/{id}/broker-sync/status` + `/broker-sync` page | Per-account sync health cards: name, provider, last_synced_at, holding_count, Fresh/Stale/Outdated/Never badge, auto-sync status. Pending Order Drift table: matches each pending staged order against current holding quantity/value. Last global price refresh from newest PriceSnapshot. `_sync_status_label()`: fresh <25h, stale <72h, outdated ≥72h. Applied v3.17.0. |
 | Price Alerts Management UI | `app/(dashboard)/notifications/page.tsx` | Price Alerts section added to Notifications page: create form (ticker, asset name, above/below condition, target price, currency); active alerts list with delete; triggered-alerts history. Calls existing `GET/POST/DELETE /investors/{id}/price-alerts` endpoints. Applied v3.17.0. |
+| Recurring Investment Plans (SIP) | `recurring_plans/` + migration 0052 + `workers/jobs/recurring_plans.py` | `/recurring-plans` page: create monthly or weekly plans with named allocations (ticker, type, amount, currency, goal link); active/paused toggle; Run Now button; background job at 06:30 UTC auto-stages orders for due plans. Orders staged (not executed) — investor reviews in Order Builder. `_compute_next_run()` handles month-boundary edge cases (e.g. Feb). Applied v3.18.0. |
+| Holdings CSV Export | `app/(dashboard)/investments/page.tsx` | "Export CSV" button on Investments page; client-side export of all holdings across all accounts: ticker, name, type, quantity, avg buy price, current value, currency. Filename: `holdings-{date}.csv`. Applied v3.18.0. |
+| Transactions CSV Export | `app/(dashboard)/transactions/page.tsx` | "CSV" download button on Transactions page; client-side export of complete transaction log: date, type, ticker, asset, qty, price/unit, total, fees, currency, notes. Filename: `transactions-{date}.csv`. Applied v3.18.0. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.

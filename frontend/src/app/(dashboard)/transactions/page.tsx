@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import {
   ArrowUpCircle, ArrowDownCircle, DollarSign, FileText,
-  Plus, Trash2, X, AlertTriangle, ClipboardList,
+  Plus, Trash2, X, AlertTriangle, ClipboardList, Download,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
@@ -248,6 +248,32 @@ export default function TransactionsPage() {
     setTxList((prev) => prev.filter((t) => t.id !== id));
   }
 
+  function exportCsv() {
+    const header = "Date,Type,Ticker,Asset,Quantity,Price/Unit,Total,Fees,Currency,Notes";
+    const rows = txList.map(t =>
+      [
+        t.transaction_date,
+        t.transaction_type,
+        t.ticker ?? "",
+        `"${(t.asset_name ?? "").replace(/"/g, '""')}"`,
+        t.quantity ?? "",
+        t.price_per_unit ?? "",
+        t.total_amount,
+        t.fees,
+        t.currency,
+        `"${(t.notes ?? "").replace(/"/g, '""')}"`,
+      ].join(",")
+    );
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const filtered = txList.filter((t) => {
     if (filterType !== "all" && t.transaction_type !== filterType) return false;
     if (filterTicker && !(t.ticker ?? "").toLowerCase().includes(filterTicker.toLowerCase())) return false;
@@ -274,10 +300,18 @@ export default function TransactionsPage() {
             Complete record of all buy, sell, dividend, and fee events
           </p>
         </div>
-        <Button onClick={() => setShowAdd(true)} size="sm" disabled={showAdd}>
-          <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Add transaction
-        </Button>
+        <div className="flex items-center gap-2">
+          {txList.length > 0 && (
+            <Button variant="outline" size="sm" onClick={exportCsv}>
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+              CSV
+            </Button>
+          )}
+          <Button onClick={() => setShowAdd(true)} size="sm" disabled={showAdd}>
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            Add transaction
+          </Button>
+        </div>
       </div>
 
       {/* Summary cards */}
