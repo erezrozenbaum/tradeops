@@ -1,6 +1,8 @@
+import logging
 import uuid
 from datetime import datetime, timezone
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -11,7 +13,33 @@ from app.models.investor_profile import InvestorProfile
 from app.models.watchlist import WatchlistItem
 from app.watchlist.schemas import WatchlistItemCreate, WatchlistItemOut
 
+log = logging.getLogger(__name__)
 router = APIRouter()
+
+_YF_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
+_YF_HEADERS = {"User-Agent": "Mozilla/5.0"}
+
+
+def _fetch_sparkline(ticker: str) -> list[dict]:
+    """Fetch 30-day daily closes from Yahoo Finance. Returns [{date, price}]."""
+    try:
+        url = _YF_URL.format(ticker=ticker)
+        r = httpx.get(url, params={"interval": "1d", "range": "1mo"}, headers=_YF_HEADERS, timeout=5)
+        data = r.json()
+        result_obj = data.get("chart", {}).get("result", [])
+        if not result_obj:
+            return []
+        ts = result_obj[0].get("timestamp", [])
+        closes = result_obj[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
+        points = []
+        for t, c in zip(ts, closes):
+            if c is None:
+                continue
+            points.append({"date": datetime.utcfromtimestamp(t).strftime("%Y-%m-%d"), "price": round(c, 4)})
+        return points
+    except Exception as exc:
+        log.debug("Sparkline fetch failed for %s: %s", ticker, exc)
+        return []
 
 
 def _enrich(item: WatchlistItem, db: Session) -> WatchlistItemOut:
@@ -81,3 +109,18 @@ def remove_from_watchlist(
         raise HTTPException(status_code=404, detail="Watchlist item not found")
     db.delete(item)
     db.commit()
+
+
+@router.get("/sparklines")
+def get_sparklines(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Return 30-day daily price history for all watchlist tickers."""
+    items = (
+        db.query(WatchlistItem)
+        .filter(WatchlistItem.investor_id == investor_id)
+        .all()
+    )
+    result = []
+    for item in items:
+        points = _fetch_sparkline(item.ticker)
+        result.append({"ticker": item.ticker, "points": points})
+    return result

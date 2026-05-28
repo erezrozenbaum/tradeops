@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 3.18.0  
+**Version:** 3.19.0  
 **Last updated:** 2026-05-27
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -822,6 +822,9 @@ kubectl describe ingress tradeops
 | Recurring Investment Plans (SIP) | `recurring_plans/` + migration 0052 + `workers/jobs/recurring_plans.py` | `/recurring-plans` page: create monthly or weekly plans with named allocations (ticker, type, amount, currency, goal link); active/paused toggle; Run Now button; background job at 06:30 UTC auto-stages orders for due plans. Orders staged (not executed) — investor reviews in Order Builder. `_compute_next_run()` handles month-boundary edge cases (e.g. Feb). Applied v3.18.0. |
 | Holdings CSV Export | `app/(dashboard)/investments/page.tsx` | "Export CSV" button on Investments page; client-side export of all holdings across all accounts: ticker, name, type, quantity, avg buy price, current value, currency. Filename: `holdings-{date}.csv`. Applied v3.18.0. |
 | Transactions CSV Export | `app/(dashboard)/transactions/page.tsx` | "CSV" download button on Transactions page; client-side export of complete transaction log: date, type, ticker, asset, qty, price/unit, total, fees, currency, notes. Filename: `transactions-{date}.csv`. Applied v3.18.0. |
+| Goal Action Plan | `goals_analysis/router.py` → `GET /investors/{id}/goals-analysis/action-plan` + Goals page | Per-goal monthly action list: priority (high/medium/low), gap analysis, suggested asset type, action message; Goals page shows "This Month's Action Plan" card; "Stage" button creates a staged order linked to the goal. Applied v3.19.0. |
+| Watchlist Sparklines | `watchlist/router.py` → `GET /investors/{id}/watchlist/sparklines` + Watchlist page | 30-day daily closes fetched from Yahoo Finance for all watched tickers; inline SVG sparkline per card with 30-day % change (green/red trend); loads in background after initial data fetch. Applied v3.19.0. |
+| Watchlist Stage Buy | `app/(dashboard)/watchlist/page.tsx` | "Stage Buy" inline action on each watchlist card; opens amount input and stages a buy order for the ticker directly from the watchlist to `POST /investors/{id}/staged-orders`. Applied v3.19.0. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.

@@ -8,6 +8,13 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.19.0] — 2026-05-27
+
+### Added
+- **Goal Action Plan** — new `GET /investors/{id}/goals-analysis/action-plan` endpoint returns a prioritised per-goal monthly action list (priority high/medium/low, gap analysis, suggested asset type, message); Goals page now shows "This Month's Action Plan" card between the monthly summary banner and the budget plan; each row shows priority badge, goal name, message, monthly needed, and a "Stage" button that creates a staged order linked to the goal
+- **Watchlist Sparklines** — `GET /investors/{id}/watchlist/sparklines` endpoint fetches 30-day daily closes from Yahoo Finance for all watched tickers; Watchlist page renders inline SVG sparklines per card with 30-day % change (green/red); sparklines load in background after initial data fetch
+- **Watchlist Stage Buy** — each watchlist card now has a "Stage Buy" inline action: clicking opens an amount input and stages a buy order for the ticker directly from the watchlist
+
 ## [3.18.0] — 2026-05-27
 
 ### Added

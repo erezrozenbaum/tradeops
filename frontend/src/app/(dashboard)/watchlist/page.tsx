@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Trash2, Eye, Clock, Bell, BellOff, X, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Eye, Clock, Bell, BellOff, X, AlertTriangle, ShoppingCart } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -47,6 +47,32 @@ const ASSET_TYPE_OPTIONS = [
 ];
 
 const EMPTY_FORM = { ticker: "", name: "", asset_type: "stock", notes: "" };
+
+interface SparklinePoint { date: string; price: number; }
+
+function Sparkline({ points }: { points: SparklinePoint[] }) {
+  if (points.length < 2) return <span className="text-xs text-muted-foreground/40">—</span>;
+  const prices = points.map(p => p.price);
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const range = max - min || 1;
+  const W = 80, H = 28;
+  const coords = prices.map((p, i) =>
+    `${(i / (prices.length - 1)) * W},${H - ((p - min) / range) * (H - 2) - 1}`
+  ).join(" ");
+  const isUp = prices[prices.length - 1] >= prices[0];
+  const pct = ((prices[prices.length - 1] - prices[0]) / prices[0]) * 100;
+  return (
+    <div className="flex items-center gap-2">
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="shrink-0">
+        <polyline points={coords} fill="none" stroke={isUp ? "#22c55e" : "#ef4444"} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+      </svg>
+      <span className={`text-xs font-medium tabular-nums ${isUp ? "text-green-500" : "text-red-500"}`}>
+        {isUp ? "+" : ""}{pct.toFixed(1)}%
+      </span>
+    </div>
+  );
+}
 
 // ── Price alert modal ──────────────────────────────────────────────────────
 
@@ -196,6 +222,8 @@ export default function WatchlistPage() {
   const investorId = useInvestorId();
   const [items, setItems] = useState<WatchlistItem[]>([]);
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
+  const [sparklines, setSparklines] = useState<Record<string, SparklinePoint[]>>({});
+  const [stageBuy, setStageBuy] = useState<Record<string, { amount: string; open: boolean; staging: boolean }>>({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [alertModal, setAlertModal] = useState<WatchlistItem | null>(null);
@@ -209,6 +237,17 @@ export default function WatchlistPage() {
     if (r.ok) setAlerts(await r.json());
   }, [investorId]);
 
+  const loadSparklines = useCallback(async () => {
+    if (!investorId) return;
+    const r = await fetch(`/api/v1/investors/${investorId}/watchlist/sparklines`);
+    if (r.ok) {
+      const data: { ticker: string; points: SparklinePoint[] }[] = await r.json();
+      const map: Record<string, SparklinePoint[]> = {};
+      for (const d of data) map[d.ticker] = d.points;
+      setSparklines(map);
+    }
+  }, [investorId]);
+
   const load = useCallback(async () => {
     if (!investorId) return;
     setLoading(true);
@@ -216,7 +255,8 @@ export default function WatchlistPage() {
     if (r.ok) setItems(await r.json());
     await loadAlerts();
     setLoading(false);
-  }, [investorId, loadAlerts]);
+    loadSparklines();
+  }, [investorId, loadAlerts, loadSparklines]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -243,6 +283,39 @@ export default function WatchlistPage() {
   async function remove(id: string) {
     await fetch(`/api/v1/investors/${investorId}/watchlist/${id}`, { method: "DELETE" });
     setItems((prev) => prev.filter((i) => i.id !== id));
+  }
+
+  function openStageBuy(itemId: string) {
+    setStageBuy(prev => ({ ...prev, [itemId]: { amount: "", open: true, staging: false } }));
+  }
+
+  function closeStageBuy(itemId: string) {
+    setStageBuy(prev => { const n = { ...prev }; delete n[itemId]; return n; });
+  }
+
+  async function doStageBuy(item: WatchlistItem, amount: string) {
+    const price = parseFloat(amount);
+    if (isNaN(price) || price <= 0) return;
+    setStageBuy(prev => ({ ...prev, [item.id]: { ...prev[item.id], staging: true } }));
+    try {
+      await fetch(`/api/v1/investors/${investorId}/staged-orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticker: item.ticker,
+          name: item.name,
+          action: "buy",
+          quantity: 1.0,
+          unit_price: price,
+          currency: item.price_currency ?? "USD",
+          asset_type: item.asset_type,
+          notes: `Staged from watchlist: ${item.ticker}`,
+        }),
+      });
+      closeStageBuy(item.id);
+    } catch {
+      setStageBuy(prev => ({ ...prev, [item.id]: { ...prev[item.id], staging: false } }));
+    }
   }
 
   return (
@@ -346,8 +419,8 @@ export default function WatchlistPage() {
                 <CardContent className="pt-0">
                   <div className="flex items-center justify-between py-4 gap-4">
                     <div className="flex items-center gap-4 min-w-0">
-                      <div className="flex flex-col min-w-0">
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-col min-w-0 gap-1">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono font-semibold text-sm">{item.ticker}</span>
                           <Badge variant="muted" className="text-xs">
                             {ASSET_TYPE_LABELS[item.asset_type] ?? item.asset_type}
@@ -369,6 +442,42 @@ export default function WatchlistPage() {
                         {item.notes && (
                           <span className="text-xs text-muted-foreground/70 italic truncate">{item.notes}</span>
                         )}
+                        {sparklines[item.ticker] && (
+                          <Sparkline points={sparklines[item.ticker]} />
+                        )}
+                        {/* Stage Buy inline */}
+                        {(() => {
+                          const bs = stageBuy[item.id];
+                          return bs?.open ? (
+                            <div className="flex items-center gap-2 mt-1">
+                              <input
+                                type="number"
+                                placeholder="Amount"
+                                value={bs.amount}
+                                onChange={e => setStageBuy(prev => ({ ...prev, [item.id]: { ...prev[item.id], amount: e.target.value } }))}
+                                className="w-24 h-7 rounded border border-input bg-transparent px-2 text-xs"
+                              />
+                              <span className="text-xs text-muted-foreground">{item.price_currency ?? "USD"}</span>
+                              <button
+                                onClick={() => doStageBuy(item, bs.amount)}
+                                disabled={bs.staging || !bs.amount}
+                                className="px-2.5 py-1 rounded bg-primary text-primary-foreground text-xs font-medium disabled:opacity-60"
+                              >
+                                {bs.staging ? "…" : "Stage"}
+                              </button>
+                              <button onClick={() => closeStageBuy(item.id)} className="text-xs text-muted-foreground hover:text-foreground">
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => openStageBuy(item.id)}
+                              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-0.5 w-fit"
+                            >
+                              <ShoppingCart className="h-3 w-3" /> Stage Buy
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
 

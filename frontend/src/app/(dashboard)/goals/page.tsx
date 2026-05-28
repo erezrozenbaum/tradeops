@@ -65,6 +65,28 @@ interface GoalsAnalysisResult {
   monthly_surplus: number | null;
 }
 
+interface ActionPlanItem {
+  goal_id: string;
+  goal_name: string;
+  goal_type: string;
+  status: string;
+  progress_pct: number;
+  monthly_needed: number;
+  gap: number;
+  currency: string;
+  suggested_asset_type: string | null;
+  priority: "high" | "medium" | "low";
+  message: string;
+  on_track: boolean;
+}
+
+interface ActionPlanResult {
+  monthly_surplus: number;
+  total_needed: number;
+  surplus_remaining: number;
+  actions: ActionPlanItem[];
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const GOAL_TYPE_LABELS: Record<string, string> = {
@@ -292,6 +314,8 @@ export default function GoalsPage() {
   const investorId = useInvestorId();
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
   const [analysis, setAnalysis] = useState<GoalsAnalysisResult | null>(null);
+  const [actionPlan, setActionPlan] = useState<ActionPlanResult | null>(null);
+  const [stagingGoal, setStagingGoal] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<InvestmentAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -310,13 +334,39 @@ export default function GoalsPage() {
     Promise.all([
       fetch(`/api/v1/investors/${investorId}/goals/`).then((r) => r.json()),
       fetch(`/api/v1/investors/${investorId}/goals-analysis`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/v1/investors/${investorId}/goals-analysis/action-plan`).then((r) => (r.ok ? r.json() : null)),
     ])
-      .then(([goalsData, analysisData]) => {
+      .then(([goalsData, analysisData, planData]) => {
         setGoals(Array.isArray(goalsData) ? goalsData : []);
         setAnalysis(analysisData);
+        setActionPlan(planData);
         setLoading(false);
       })
       .catch(() => setLoading(false));
+  }
+
+  async function stageGoalOrder(a: ActionPlanItem) {
+    if (!investorId || stagingGoal) return;
+    setStagingGoal(a.goal_id);
+    try {
+      await fetch(`/api/v1/investors/${investorId}/staged-orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticker: null,
+          name: a.goal_name,
+          action: "buy",
+          quantity: 1.0,
+          unit_price: a.monthly_needed,
+          currency: a.currency,
+          asset_type: a.suggested_asset_type ?? "etf",
+          goal_id: a.goal_id,
+          notes: `Action plan: ${a.goal_name}`,
+        }),
+      });
+    } finally {
+      setStagingGoal(null);
+    }
   }
 
   async function createGoal() {
@@ -412,6 +462,54 @@ export default function GoalsPage() {
             </>
           )}
         </div>
+      )}
+
+      {/* Action Plan */}
+      {actionPlan && actionPlan.actions.length > 0 && (
+        <Card>
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+            <p className="text-sm font-medium">This Month&apos;s Action Plan</p>
+            <span className="text-xs text-muted-foreground">
+              Surplus after goals: {formatCurrency(actionPlan.surplus_remaining, baseCurrency)}
+            </span>
+          </div>
+          <div className="divide-y divide-border">
+            {actionPlan.actions.map((a) => (
+              <div key={a.goal_id} className="px-5 py-3 flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3 min-w-0">
+                  <span className={`mt-0.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide shrink-0 ${
+                    a.priority === "high" ? "bg-red-500/10 text-red-500" :
+                    a.priority === "medium" ? "bg-amber-500/10 text-amber-500" :
+                    "bg-emerald-500/10 text-emerald-600"
+                  }`}>
+                    {a.priority}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{a.goal_name}</p>
+                    <p className="text-xs text-muted-foreground">{a.message}</p>
+                    {a.suggested_asset_type && (
+                      <p className="text-xs text-muted-foreground/60 mt-0.5">
+                        Suggested: {a.suggested_asset_type.toUpperCase()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <p className="text-sm font-semibold tabular-nums">
+                    {formatCurrency(a.monthly_needed, a.currency)}/mo
+                  </p>
+                  <button
+                    onClick={() => stageGoalOrder(a)}
+                    disabled={stagingGoal === a.goal_id}
+                    className="px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
+                  >
+                    {stagingGoal === a.goal_id ? "Staging…" : "Stage"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
       )}
 
       {/* Monthly Budget Plan */}
