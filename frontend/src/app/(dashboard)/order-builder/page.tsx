@@ -10,6 +10,7 @@ import {
   ChevronDown, ChevronUp, AlertTriangle, Zap, ShieldCheck,
   RefreshCw, Trash2, PlayCircle, Info, Target, Leaf,
   BookMarked, Plus, BarChart3, History, Wand2, Sparkles,
+  Square, CheckSquare, Download,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -328,10 +329,14 @@ function OrderCard({
   order,
   onExecute,
   onCancel,
+  selected,
+  onToggleSelect,
 }: {
   order: StagedOrder;
   onExecute: (id: string) => void;
   onCancel: (id: string) => void;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const review = order.pre_flight_review;
@@ -344,11 +349,21 @@ function OrderCard({
           ? "border-emerald-500/20 bg-emerald-500/5"
           : order.status === "cancelled"
           ? "border-muted/30 bg-muted/5 opacity-60"
+          : selected
+          ? "border-primary/40 bg-primary/5"
           : "border-white/8 bg-white/3"
       }`}
     >
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
+        {order.status === "pending" && onToggleSelect && (
+          <button
+            onClick={() => onToggleSelect(order.id)}
+            className="mt-0.5 shrink-0 text-muted-foreground hover:text-primary transition-colors"
+          >
+            {selected ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
+          </button>
+        )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             {actionBadge(order.action)}
@@ -508,6 +523,8 @@ export default function OrderBuilderPage() {
   const [smartLoading, setSmartLoading] = useState(false);
   const [smartResult, setSmartResult] = useState<SmartSuggestResult | null>(null);
   const [stagingIndex, setStagingIndex] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkActing, setBulkActing] = useState(false);
 
   // Create form state
   const [form, setForm] = useState({
@@ -744,6 +761,74 @@ export default function OrderBuilderPage() {
   };
 
   const filteredOrders = orderList?.orders.filter(o => o.status === activeTab) ?? [];
+
+  const pendingOrders = filteredOrders.filter(o => o.status === "pending");
+  const selectedPending = pendingOrders.filter(o => selectedIds.has(o.id));
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAll() {
+    setSelectedIds(new Set(pendingOrders.map(o => o.id)));
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  async function bulkExecute() {
+    if (!investorId || selectedIds.size === 0) return;
+    setBulkActing(true);
+    try {
+      await apiFetch(`/investors/${investorId}/staged-orders/bulk-execute`, {
+        method: "POST",
+        body: JSON.stringify({ order_ids: Array.from(selectedIds) }),
+      });
+      clearSelection();
+      fetchOrders();
+    } catch { /* silent */ } finally {
+      setBulkActing(false);
+    }
+  }
+
+  async function bulkCancel() {
+    if (!investorId || selectedIds.size === 0) return;
+    setBulkActing(true);
+    try {
+      await apiFetch(`/investors/${investorId}/staged-orders/bulk-cancel`, {
+        method: "POST",
+        body: JSON.stringify({ order_ids: Array.from(selectedIds) }),
+      });
+      clearSelection();
+      fetchOrders();
+    } catch { /* silent */ } finally {
+      setBulkActing(false);
+    }
+  }
+
+  function exportSelectedCsv() {
+    const orders = filteredOrders.filter(o => selectedIds.has(o.id));
+    if (orders.length === 0) return;
+    const header = "ID,Ticker,Name,Action,Quantity,Unit Price,Estimated Value,Currency,Asset Type,Status,Goal,Notes";
+    const rows = orders.map(o =>
+      [o.id, o.ticker ?? "", o.name, o.action, o.quantity, o.unit_price, o.estimated_value, o.currency, o.asset_type ?? "", o.status, o.goal_name ?? "", o.notes ?? ""]
+        .map(v => `"${String(v).replace(/"/g, '""')}"`)
+        .join(",")
+    );
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const TAB_COUNTS: Record<string, number> = {
     pending: orderList?.pending_count ?? 0,
@@ -1033,6 +1118,49 @@ export default function OrderBuilderPage() {
                 ))}
               </div>
 
+              {/* Bulk action bar — pending tab only */}
+              {activeTab === "pending" && pendingOrders.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={selectedIds.size === pendingOrders.length ? clearSelection : selectAll}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {selectedIds.size === pendingOrders.length
+                      ? <CheckSquare className="w-3.5 h-3.5" />
+                      : <Square className="w-3.5 h-3.5" />}
+                    {selectedIds.size === pendingOrders.length ? "Deselect all" : "Select all"}
+                  </button>
+                  {selectedIds.size > 0 && (
+                    <>
+                      <span className="text-xs text-primary font-medium">{selectedIds.size} selected</span>
+                      <button
+                        onClick={bulkExecute}
+                        disabled={bulkActing}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 disabled:opacity-50 transition-colors"
+                      >
+                        <PlayCircle className="w-3.5 h-3.5" />
+                        Execute ({selectedIds.size})
+                      </button>
+                      <button
+                        onClick={bulkCancel}
+                        disabled={bulkActing}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 disabled:opacity-50 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Cancel ({selectedIds.size})
+                      </button>
+                      <button
+                        onClick={exportSelectedCsv}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs bg-muted/40 text-muted-foreground border border-border hover:bg-muted transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Export CSV
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
               {/* Order list */}
               <div className="flex-1 overflow-y-auto space-y-3 min-h-0 max-h-[600px] pr-1">
                 {filteredOrders.length === 0 ? (
@@ -1048,6 +1176,8 @@ export default function OrderBuilderPage() {
                       order={order}
                       onExecute={handleExecute}
                       onCancel={handleCancel}
+                      selected={selectedIds.has(order.id)}
+                      onToggleSelect={toggleSelect}
                     />
                   ))
                 )}

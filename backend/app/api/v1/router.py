@@ -65,6 +65,8 @@ from app.household.router import router as household_router
 from app.advisor_share.router import router as advisor_share_router, public_router as advisor_share_public_router
 from app.staged_orders.router import router as staged_orders_router
 from app.recurring_plans.router import router as recurring_plans_router
+from app.portfolio_comparison.router import router as portfolio_comparison_router
+from app.morning_brief.router import router as morning_brief_router
 
 api_router = APIRouter()
 
@@ -141,3 +143,5 @@ api_router.include_router(advisor_share_router, prefix="/investors/{investor_id}
 api_router.include_router(advisor_share_public_router, prefix="/advisor-share", tags=["advisor-share-public"])
 api_router.include_router(staged_orders_router, prefix="/investors/{investor_id}/staged-orders", tags=["staged-orders"], dependencies=_own)
 api_router.include_router(recurring_plans_router, prefix="/investors/{investor_id}/recurring-plans", tags=["recurring-plans"], dependencies=_own)
+api_router.include_router(portfolio_comparison_router, prefix="/investors/{investor_id}/portfolio", tags=["portfolio-comparison"], dependencies=_own)
+api_router.include_router(morning_brief_router, prefix="/investors/{investor_id}/morning-brief", tags=["morning-brief"], dependencies=_own)

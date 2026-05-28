@@ -1,6 +1,8 @@
 import uuid
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -117,6 +119,44 @@ def delete_template(
         tmpl_svc.delete_template(db, investor_id, template_id)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+# ── Bulk actions ──────────────────────────────────────────────────────────────
+
+class BulkOrderRequest(BaseModel):
+    order_ids: List[uuid.UUID]
+
+
+@router.post("/bulk-execute")
+def bulk_execute(
+    investor_id: uuid.UUID,
+    payload: BulkOrderRequest,
+    db: Session = Depends(get_db),
+):
+    succeeded, failed = [], []
+    for oid in payload.order_ids:
+        try:
+            service.mark_executed(db, investor_id, oid)
+            succeeded.append(str(oid))
+        except Exception:
+            failed.append(str(oid))
+    return {"succeeded": succeeded, "failed": failed, "count": len(succeeded)}
+
+
+@router.post("/bulk-cancel")
+def bulk_cancel(
+    investor_id: uuid.UUID,
+    payload: BulkOrderRequest,
+    db: Session = Depends(get_db),
+):
+    succeeded, failed = [], []
+    for oid in payload.order_ids:
+        try:
+            service.cancel_order(db, investor_id, oid)
+            succeeded.append(str(oid))
+        except Exception:
+            failed.append(str(oid))
+    return {"succeeded": succeeded, "failed": failed, "count": len(succeeded)}
 
 
 # ── Outcome comparison ────────────────────────────────────────────────────────

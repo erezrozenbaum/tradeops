@@ -109,6 +109,7 @@ const sections: NavSection[] = [
       { label: "Investments", href: "/investments", icon: Briefcase },
       { label: "Order Builder", href: "/order-builder", icon: Layers },
       { label: "Recurring Plans", href: "/recurring-plans", icon: CalendarClock },
+      { label: "Portfolio Compare", href: "/portfolio-comparison", icon: BarChart2 },
       { label: "Rebalance", href: "/rebalance", icon: Scale },
       { label: "Performance", href: "/performance", icon: Activity },
       { label: "Transactions", href: "/transactions", icon: ClipboardList },
@@ -150,6 +151,7 @@ const sections: NavSection[] = [
   {
     label: "System",
     items: [
+      { label: "Morning Brief", href: "/morning-brief", icon: Sun },
       { label: "Notifications", href: "/notifications", icon: Bell },
       { label: "Setup Guide", href: "/onboarding", icon: Sparkles },
       { label: "Audit Log", href: "/audit", icon: FileText },

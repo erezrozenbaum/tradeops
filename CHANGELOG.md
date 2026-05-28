@@ -8,6 +8,15 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.20.0] — 2026-05-28
+
+### Added
+- **Portfolio Snapshot Comparison** — `GET /investors/{id}/portfolio/comparison?period=1w|1m|3m` compares the latest portfolio snapshot against a prior one; returns value delta, % change, unrealized P&L delta, and per-asset-type allocation drift; new `/portfolio-comparison` page with period selector, value delta cards, P&L row, and allocation drift table
+- **Morning Brief** — `GET /investors/{id}/morning-brief` aggregates overnight portfolio delta, goals health (on_track / at_risk counts), triggered price alerts, next recurring plan run, and active behavioral risk signals into a single lightweight response; new `/morning-brief` page surfacing all sections with Sun icon
+- **Goal Progress Timeline** — `GET /investors/{id}/goals/{goal_id}/progress-timeline` returns last 12 months of GoalProgressLog data (planned vs actual), filling missing months with zeros; Goals page gains a BarChart2 button on each goal card that opens a modal with dual-bar month-by-month chart and legend
+- **Staged Order Bulk Actions** — `POST /staged-orders/bulk-execute` and `POST /staged-orders/bulk-cancel` accept `{order_ids:[...]}` and act on each in sequence; Order Builder pending tab gains per-order checkboxes, Select All / Deselect All toggle, and a bulk action bar with Execute (N), Cancel (N), and Export CSV buttons
+- **Sidebar** — "Portfolio Compare" (BarChart2) added to Portfolio section; "Morning Brief" (Sun) added to System section
+
 ## [3.19.0] — 2026-05-27
 
 ### Added

@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 3.19.0  
-**Last updated:** 2026-05-27
+**Version:** 3.20.0  
+**Last updated:** 2026-05-28
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
@@ -825,6 +825,10 @@ kubectl describe ingress tradeops
 | Goal Action Plan | `goals_analysis/router.py` → `GET /investors/{id}/goals-analysis/action-plan` + Goals page | Per-goal monthly action list: priority (high/medium/low), gap analysis, suggested asset type, action message; Goals page shows "This Month's Action Plan" card; "Stage" button creates a staged order linked to the goal. Applied v3.19.0. |
 | Watchlist Sparklines | `watchlist/router.py` → `GET /investors/{id}/watchlist/sparklines` + Watchlist page | 30-day daily closes fetched from Yahoo Finance for all watched tickers; inline SVG sparkline per card with 30-day % change (green/red trend); loads in background after initial data fetch. Applied v3.19.0. |
 | Watchlist Stage Buy | `app/(dashboard)/watchlist/page.tsx` | "Stage Buy" inline action on each watchlist card; opens amount input and stages a buy order for the ticker directly from the watchlist to `POST /investors/{id}/staged-orders`. Applied v3.19.0. |
+| Portfolio Snapshot Comparison | `portfolio_comparison/router.py` → `GET /investors/{id}/portfolio/comparison?period=1w\|1m\|3m` + `/portfolio-comparison` page | Compares latest vs prior snapshot: value delta, % change, unrealized P&L delta, per-asset allocation drift. Period selector: 1 week, 1 month, 3 months. Applied v3.20.0. |
+| Morning Brief | `morning_brief/router.py` → `GET /investors/{id}/morning-brief` + `/morning-brief` page | Aggregates: overnight portfolio delta (2 latest snapshots), goals health (on_track/at_risk counts), triggered price alerts, next recurring plan run, active behavioral risk signals. All deterministic — no AI API call. Applied v3.20.0. |
+| Goal Progress Timeline | `goals/progress_router.py` → `GET /investors/{id}/goals/{goal_id}/progress-timeline` + Goals page modal | Returns last 12 months of GoalProgressLog (planned vs actual), missing months filled with zeros; Goals page shows BarChart2 button per card → modal with dual-bar monthly chart. Applied v3.20.0. |
+| Staged Order Bulk Actions | `staged_orders/router.py` + Order Builder page | `POST /bulk-execute` + `POST /bulk-cancel` accept `{order_ids:[...]}` arrays; Order Builder gains per-order checkboxes, Select All/None, bulk Execute (N) / Cancel (N) / Export CSV bar on the pending tab. Applied v3.20.0. |
 
 **Performance Attribution** — `/portfolio/attribution`  
 Computes rolling returns (1M/3M/6M/1Y) from daily portfolio snapshots. Benchmark is dynamic: Israeli (ILS) investors compare against TA-35 (`^TA35`); all others compare against S&P 500 (SPY). Alpha = portfolio return − benchmark return. Top 5 contributors and top 5 detractors shown by holding.

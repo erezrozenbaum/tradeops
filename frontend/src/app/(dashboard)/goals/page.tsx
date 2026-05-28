@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/lib/utils";
 import {
   Plus, Trash2, Target, TrendingUp, AlertTriangle, ArrowRight,
-  Calendar, DollarSign, Zap, Shield, TrendingDown, Flame,
+  Calendar, DollarSign, Zap, Shield, TrendingDown, Flame, BarChart2, X,
 } from "lucide-react";
 import Link from "next/link";
 import { MetricTooltip } from "@/components/ui/metric-tooltip";
@@ -85,6 +85,22 @@ interface ActionPlanResult {
   total_needed: number;
   surplus_remaining: number;
   actions: ActionPlanItem[];
+}
+
+interface TimelineMonth {
+  year: number;
+  month: number;
+  label: string;
+  planned: number;
+  actual: number;
+}
+
+interface TimelineData {
+  goal_id: string;
+  goal_name: string;
+  currency: string;
+  monthly_contribution_needed: number | null;
+  timeline: TimelineMonth[];
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -316,6 +332,9 @@ export default function GoalsPage() {
   const [analysis, setAnalysis] = useState<GoalsAnalysisResult | null>(null);
   const [actionPlan, setActionPlan] = useState<ActionPlanResult | null>(null);
   const [stagingGoal, setStagingGoal] = useState<string | null>(null);
+  const [timelineGoalId, setTimelineGoalId] = useState<string | null>(null);
+  const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
+  const [timelineLoading, setTimelineLoading] = useState(false);
   const [accounts, setAccounts] = useState<InvestmentAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -343,6 +362,18 @@ export default function GoalsPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+  }
+
+  async function openTimeline(goalId: string) {
+    setTimelineGoalId(goalId);
+    setTimelineData(null);
+    setTimelineLoading(true);
+    try {
+      const r = await fetch(`/api/v1/investors/${investorId}/goals/${goalId}/progress-timeline`);
+      if (r.ok) setTimelineData(await r.json());
+    } finally {
+      setTimelineLoading(false);
+    }
   }
 
   async function stageGoalOrder(a: ActionPlanItem) {
@@ -410,8 +441,80 @@ export default function GoalsPage() {
   const preview = computePreview(form);
   const baseCurrency = goals[0]?.currency ?? "ILS";
 
+  const timelineMax = timelineData
+    ? Math.max(...timelineData.timeline.flatMap(m => [m.planned, m.actual]), 1)
+    : 1;
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6">
+      {/* Timeline modal */}
+      {timelineGoalId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <div>
+                <p className="text-sm font-semibold flex items-center gap-2">
+                  <BarChart2 className="h-4 w-4 text-primary" />
+                  {timelineData?.goal_name ?? "Goal"} — Progress Timeline
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">Last 12 months — planned vs actual contributions</p>
+              </div>
+              <button onClick={() => { setTimelineGoalId(null); setTimelineData(null); }} className="text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-5">
+              {timelineLoading && (
+                <div className="flex items-center justify-center py-10">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              )}
+              {!timelineLoading && timelineData && (
+                <>
+                  <div className="flex items-end gap-1 h-24 overflow-x-auto pb-1">
+                    {timelineData.timeline.map((m) => (
+                      <div key={m.label} className="flex flex-col items-center gap-0.5 flex-1 min-w-[32px]">
+                        <div className="flex items-end gap-0.5 h-20 w-full">
+                          <div
+                            className="flex-1 rounded-t bg-muted/50 border border-border/40 transition-all"
+                            style={{ height: `${(m.planned / timelineMax) * 100}%`, minHeight: m.planned > 0 ? "2px" : "0" }}
+                            title={`Planned: ${m.planned.toLocaleString()}`}
+                          />
+                          <div
+                            className="flex-1 rounded-t bg-primary/70 transition-all"
+                            style={{ height: `${(m.actual / timelineMax) * 100}%`, minHeight: m.actual > 0 ? "2px" : "0" }}
+                            title={`Actual: ${m.actual.toLocaleString()}`}
+                          />
+                        </div>
+                        <span className="text-[9px] text-muted-foreground/60 tabular-nums">{m.label.slice(5)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <span className="inline-block w-3 h-3 rounded-sm bg-muted/50 border border-border/40" />
+                      Planned
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="inline-block w-3 h-3 rounded-sm bg-primary/70" />
+                      Actual
+                    </span>
+                    {timelineData.currency && (
+                      <span className="ml-auto">Currency: {timelineData.currency}</span>
+                    )}
+                  </div>
+                  {timelineData.timeline.every(m => m.actual === 0) && (
+                    <p className="text-xs text-muted-foreground mt-3 text-center italic">
+                      No progress logs recorded yet. Use the log button on the goal to record contributions.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -863,6 +966,9 @@ export default function GoalsPage() {
                     <Badge variant={RISK_COLORS[goal.risk_suitability] ?? "default"}>
                       {goal.risk_suitability}
                     </Badge>
+                    <Button variant="ghost" size="icon" onClick={() => openTimeline(goal.id)} title="View progress timeline">
+                      <BarChart2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => deleteGoal(goal.id)}>
                       <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                     </Button>
