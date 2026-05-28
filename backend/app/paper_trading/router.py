@@ -1,9 +1,13 @@
+import logging
 import uuid
+from datetime import datetime, timezone
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.models.paper_trade import PaperPosition
 from app.paper_trading import service
 from app.schemas.paper_trade import (
     AdvanceTickRequest,
@@ -13,6 +17,38 @@ from app.schemas.paper_trade import (
     PaperPortfolioRename,
     PaperPortfolioSummaryOut,
 )
+
+log = logging.getLogger(__name__)
+
+_YF_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
+_YF_HEADERS = {"User-Agent": "Mozilla/5.0"}
+_PERIOD_RANGE = {"1m": "1mo", "3m": "3mo", "6m": "6mo"}
+
+
+def _fetch_price_history(ticker: str, yf_range: str) -> list[dict]:
+    """Fetch daily closes from Yahoo Finance. Returns [{date, price}]."""
+    try:
+        r = httpx.get(
+            _YF_URL.format(ticker=ticker),
+            params={"interval": "1d", "range": yf_range},
+            headers=_YF_HEADERS,
+            timeout=8,
+        )
+        data = r.json()
+        result_obj = data.get("chart", {}).get("result", [])
+        if not result_obj:
+            return []
+        ts = result_obj[0].get("timestamp", [])
+        closes = result_obj[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
+        points = []
+        for t, c in zip(ts, closes):
+            if c is None:
+                continue
+            points.append({"date": datetime.utcfromtimestamp(t).strftime("%Y-%m-%d"), "price": round(c, 4)})
+        return points
+    except Exception as exc:
+        log.debug("Price history fetch failed for %s: %s", ticker, exc)
+        return []
 
 router = APIRouter()
 
@@ -147,6 +183,52 @@ def promote_position(
 ):
     """Create a real staged buy order from a paper position."""
     return service.promote_position_to_real(db, investor_id, portfolio_id, position_id)
+
+
+@router.get("/{portfolio_id}/positions/{position_id}/price-history")
+def get_position_price_history(
+    investor_id: uuid.UUID,
+    portfolio_id: uuid.UUID,
+    position_id: uuid.UUID,
+    period: str = Query("3m", pattern="^(1m|3m|6m)$"),
+    db: Session = Depends(get_db),
+):
+    """Return real market price history for a paper position since its entry date."""
+    portfolio = service.get(db, investor_id, portfolio_id)
+    if not portfolio:
+        raise HTTPException(status_code=404, detail="Paper portfolio not found.")
+
+    position = db.get(PaperPosition, position_id)
+    if not position or position.portfolio_id != portfolio_id:
+        raise HTTPException(status_code=404, detail="Position not found.")
+
+    yf_range = _PERIOD_RANGE.get(period, "3mo")
+    points = _fetch_price_history(position.symbol, yf_range)
+
+    # Filter to only dates >= entry date
+    entry_date = position.created_at.strftime("%Y-%m-%d")
+    points = [p for p in points if p["date"] >= entry_date]
+
+    # Compute return_pct relative to entry price for each point
+    entry_price = position.avg_cost_per_share
+    enriched = []
+    for p in points:
+        ret = round((p["price"] - entry_price) / entry_price * 100, 4) if entry_price > 0 else 0.0
+        enriched.append({"date": p["date"], "price": p["price"], "return_pct": ret})
+
+    current_price = enriched[-1]["price"] if enriched else None
+    total_return_pct = enriched[-1]["return_pct"] if enriched else None
+
+    return {
+        "symbol": position.symbol,
+        "entry_date": entry_date,
+        "entry_price": entry_price,
+        "period": period,
+        "currency": position.currency,
+        "points": enriched,
+        "current_price": current_price,
+        "total_return_pct": total_return_pct,
+    }
 
 
 @router.delete("/{portfolio_id}", status_code=status.HTTP_204_NO_CONTENT)

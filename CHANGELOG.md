@@ -8,6 +8,12 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.22.0] — 2026-05-28
+
+### Added
+- **Paper Position Price History** — `GET /paper-portfolios/{id}/positions/{pid}/price-history?period=1m|3m|6m` fetches real daily closes from Yahoo Finance for a paper position's symbol, filtered to dates on or after the entry date; returns `{symbol, entry_date, entry_price, points: [{date, price, return_pct}], current_price, total_return_pct}`
+- **Inline position chart** — each position card now has a "Chart" toggle button; expands to show the stock's actual market price path since the paper buy date with a dashed entry-price reference line, green/red SVG polyline, period selector (1m/3m/6m), entry date + cumulative return label; results are cached client-side per position per period
+
 ## [3.21.0] — 2026-05-28
 
 ### Added

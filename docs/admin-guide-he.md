@@ -2,7 +2,7 @@
 
 # TradeOps AI — מדריך מנהל מערכת
 
-**גרסה:** 3.21.0  
+**גרסה:** 3.22.0  
 **עודכן לאחרונה:** 28 במאי 2026
 
 מדריך זה מכסה התקנה, הגדרות, ניהול מסד נתונים, פריסת Kubernetes ותפעול שוטף של TradeOps AI.
@@ -516,6 +516,7 @@ docker compose -f infra/docker-compose.yml restart backend
 | v3.20.0 | ציר זמן התקדמות יעד | `GET /goals/{id}/progress-timeline` — 12 חודשים planned vs actual; modal עם גרף עמודות כפולות לכל יעד |
 | v3.20.0 | פעולות bulk להזמנות | `POST /bulk-execute` + `POST /bulk-cancel`; Order Builder: checkboxes, Select All, Execute/Cancel/ייצוא CSV ל-N הזמנות בבת אחת |
 | v3.21.0 | Paper Trading גרסה 2 | שם מותאם אישית לתיק (migration 0053), rename בלחיצה על עיפרון, P&L חי לפוזיציה (מחיר נוכחי, רווח/הפסד, %), תאריך כניסה לפוזיציה, כפתור Reprice All, "Stage Real Order" לכל פוזיציה — מעבר להשקעה אמיתית, "End Test" במקום "Close" עם הסבר ואישור, גרף ticks SVG |
+| v3.22.0 | היסטוריית מחיר לפוזיציה | כפתור "Chart" לכל פוזיציה ב-Paper Trading — פותח גרף SVG של מחיר הנכס האמיתי בשוק מאז תאריך הכניסה; קו כניסה מקווקוו, תשואה מצטברת, בורר תקופה 1m/3m/6m; נתונים מ-Yahoo Finance; caching בצד הלקוח; ללא migration |
 
 ### AI Intelligence *(דורש `ANTHROPIC_API_KEY`)*
 

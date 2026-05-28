@@ -21,6 +21,8 @@ import {
   ExternalLink,
   X,
   CheckCircle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -171,6 +173,133 @@ function TicksChart({ ticks, currency }: { ticks: Tick[]; currency: string }) {
   );
 }
 
+interface PricePoint {
+  date: string;
+  price: number;
+  return_pct: number;
+}
+
+interface PriceHistory {
+  symbol: string;
+  entry_date: string;
+  entry_price: number;
+  period: string;
+  currency: string;
+  points: PricePoint[];
+  current_price: number | null;
+  total_return_pct: number | null;
+}
+
+type PeriodKey = "1m" | "3m" | "6m";
+
+function PositionHistoryChart({
+  history,
+  onPeriodChange,
+  period,
+  loading,
+}: {
+  history: PriceHistory | null;
+  onPeriodChange: (p: PeriodKey) => void;
+  period: PeriodKey;
+  loading: boolean;
+}) {
+  const periods: PeriodKey[] = ["1m", "3m", "6m"];
+  const W = 340;
+  const H = 72;
+  const pad = 4;
+
+  if (loading) {
+    return (
+      <div className="mt-3 h-20 flex items-center justify-center">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!history || history.points.length === 0) {
+    return (
+      <div className="mt-3 text-xs text-muted-foreground py-4 text-center">
+        No market data available for this period
+      </div>
+    );
+  }
+
+  const prices = history.points.map((p) => p.price);
+  const min = Math.min(...prices, history.entry_price);
+  const max = Math.max(...prices, history.entry_price);
+  const range = max - min || 1;
+
+  const toY = (v: number) => H - pad - ((v - min) / range) * (H - pad * 2);
+  const toX = (i: number) => pad + (i / Math.max(prices.length - 1, 1)) * (W - pad * 2);
+
+  const points = prices.map((v, i) => `${toX(i)},${toY(v)}`).join(" ");
+  const entryY = toY(history.entry_price);
+  const isPos = (history.total_return_pct ?? 0) >= 0;
+  const strokeColor = isPos ? "#22c55e" : "#ef4444";
+
+  return (
+    <div className="mt-3">
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-xs text-muted-foreground">
+          Bought @ {history.entry_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}{" "}
+          on {new Date(history.entry_date).toLocaleDateString()}
+          {history.total_return_pct !== null && (
+            <span className={`ml-2 font-medium ${isPos ? "text-green-500" : "text-red-500"}`}>
+              {isPos ? "+" : ""}{history.total_return_pct.toFixed(2)}% since entry
+            </span>
+          )}
+        </p>
+        <div className="flex gap-1">
+          {periods.map((p) => (
+            <button
+              key={p}
+              onClick={() => onPeriodChange(p)}
+              className={`text-xs px-2 py-0.5 rounded transition-colors ${
+                period === p
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-16">
+        {/* Entry price line */}
+        <line
+          x1={pad}
+          y1={entryY}
+          x2={W - pad}
+          y2={entryY}
+          stroke="#94a3b8"
+          strokeWidth="1"
+          strokeDasharray="4 3"
+          opacity="0.6"
+        />
+        {/* Price path */}
+        <polyline
+          points={points}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+        {/* Entry dot */}
+        <circle cx={toX(0)} cy={toY(prices[0])} r="3" fill={strokeColor} />
+        {/* Current dot */}
+        <circle cx={toX(prices.length - 1)} cy={toY(prices[prices.length - 1])} r="3" fill={strokeColor} />
+      </svg>
+      <div className="flex justify-between text-xs text-muted-foreground mt-0.5">
+        <span>{history.points[0]?.date}</span>
+        <span>
+          Now: {history.current_price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function PaperTradingPage() {
@@ -214,6 +343,12 @@ export default function PaperTradingPage() {
   const [repricing, setRepricing] = useState(false);
   const [promotingId, setPromotingId] = useState<string | null>(null);
   const [promoteSuccess, setPromoteSuccess] = useState<string | null>(null);
+
+  // Position price history
+  const [expandedPositionId, setExpandedPositionId] = useState<string | null>(null);
+  const [historyPeriod, setHistoryPeriod] = useState<PeriodKey>("3m");
+  const [historyData, setHistoryData] = useState<Record<string, PriceHistory>>({});
+  const [historyLoading, setHistoryLoading] = useState<string | null>(null);
 
   // Delete
   const [deleting, setDeleting] = useState(false);
@@ -375,6 +510,38 @@ export default function PaperTradingPage() {
     } finally {
       setTrading(false);
     }
+  }
+
+  async function fetchPositionHistory(positionId: string, period: PeriodKey) {
+    if (!investorId || !selected) return;
+    const key = `${positionId}-${period}`;
+    if (historyData[key]) return; // cached
+    setHistoryLoading(positionId);
+    try {
+      const res = await fetch(
+        `/api/v1/investors/${investorId}/paper-portfolios/${selected.id}/positions/${positionId}/price-history?period=${period}`
+      );
+      if (res.ok) {
+        const data: PriceHistory = await res.json();
+        setHistoryData((prev) => ({ ...prev, [key]: data }));
+      }
+    } finally {
+      setHistoryLoading(null);
+    }
+  }
+
+  function togglePositionHistory(positionId: string) {
+    if (expandedPositionId === positionId) {
+      setExpandedPositionId(null);
+    } else {
+      setExpandedPositionId(positionId);
+      fetchPositionHistory(positionId, historyPeriod);
+    }
+  }
+
+  function changeHistoryPeriod(positionId: string, period: PeriodKey) {
+    setHistoryPeriod(period);
+    fetchPositionHistory(positionId, period);
   }
 
   async function repriceAll() {
@@ -928,77 +1095,99 @@ export default function PaperTradingPage() {
                     <div className="space-y-3">
                       {selected.positions.map((pos) => {
                         const hasPnl = pos.unrealized_pnl !== null && pos.unrealized_pnl_pct !== null;
+                        const isExpanded = expandedPositionId === pos.id;
+                        const histKey = `${pos.id}-${historyPeriod}`;
+                        const history = historyData[histKey] ?? null;
+                        const isLoadingHistory = historyLoading === pos.id;
                         return (
                           <div
                             key={pos.id}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border border-border bg-muted/20"
+                            className="rounded-lg border border-border bg-muted/20"
                           >
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm font-semibold">{pos.symbol}</span>
-                                {pos.name && (
-                                  <span className="text-xs text-muted-foreground truncate max-w-32">
-                                    {pos.name}
-                                  </span>
-                                )}
-                                {hasPnl && (
-                                  <PnLBadge pnl={pos.unrealized_pnl!} pct={pos.unrealized_pnl_pct!} />
-                                )}
-                              </div>
-                              <div className="flex flex-wrap gap-3 mt-1 text-xs text-muted-foreground">
-                                <span>
-                                  {pos.quantity % 1 === 0 ? pos.quantity.toFixed(0) : pos.quantity.toFixed(4)} shares
-                                </span>
-                                <span>
-                                  Avg cost: {pos.avg_cost_per_share.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
-                                </span>
-                                {pos.current_price !== null && (
-                                  <span className="font-medium text-foreground">
-                                    Now: {pos.current_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
-                                  </span>
-                                )}
-                                <span>
-                                  Bought: {new Date(pos.created_at).toLocaleDateString()}
-                                </span>
-                              </div>
-                              {pos.unrealized_pnl !== null && (
-                                <div className="mt-0.5 text-xs">
-                                  <span className={pos.unrealized_pnl >= 0 ? "text-green-600" : "text-red-500"}>
-                                    Unrealized P&amp;L:{" "}
-                                    {pos.unrealized_pnl >= 0 ? "+" : ""}
-                                    {pos.unrealized_pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
-                                    {pos.currency}
-                                  </span>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-semibold">{pos.symbol}</span>
+                                  {pos.name && (
+                                    <span className="text-xs text-muted-foreground truncate max-w-32">
+                                      {pos.name}
+                                    </span>
+                                  )}
+                                  {hasPnl && (
+                                    <PnLBadge pnl={pos.unrealized_pnl!} pct={pos.unrealized_pnl_pct!} />
+                                  )}
                                 </div>
-                              )}
+                                <div className="flex flex-wrap gap-3 mt-1 text-xs text-muted-foreground">
+                                  <span>
+                                    {pos.quantity % 1 === 0 ? pos.quantity.toFixed(0) : pos.quantity.toFixed(4)} shares
+                                  </span>
+                                  <span>
+                                    Avg cost: {pos.avg_cost_per_share.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                                  </span>
+                                  {pos.current_price !== null && (
+                                    <span className="font-medium text-foreground">
+                                      Now: {pos.current_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                                    </span>
+                                  )}
+                                  <span>Bought: {new Date(pos.created_at).toLocaleDateString()}</span>
+                                </div>
+                                {pos.unrealized_pnl !== null && (
+                                  <div className="mt-0.5 text-xs">
+                                    <span className={pos.unrealized_pnl >= 0 ? "text-green-600" : "text-red-500"}>
+                                      Unrealized P&amp;L:{" "}
+                                      {pos.unrealized_pnl >= 0 ? "+" : ""}
+                                      {pos.unrealized_pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+                                      {pos.currency}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  onClick={() => togglePositionHistory(pos.id)}
+                                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground border border-border rounded px-2 py-1 hover:bg-muted/50 transition-colors"
+                                  title="Show real market price history since entry"
+                                >
+                                  {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                                  Chart
+                                </button>
+                                {selected.status === "active" && (
+                                  <>
+                                    <button
+                                      onClick={() => promotePosition(pos.id)}
+                                      disabled={promotingId === pos.id}
+                                      className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-400 font-medium border border-blue-500/30 rounded px-2 py-1 hover:bg-blue-500/10 transition-colors"
+                                      title="Stage as a real money order in Order Builder"
+                                    >
+                                      <ExternalLink className="h-3 w-3" />
+                                      {promotingId === pos.id ? "Staging…" : "Stage Real Order"}
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setTradeSide("sell");
+                                        setTradeSymbol(pos.symbol);
+                                        setTradeQty(String(pos.quantity));
+                                        setTradePrice("");
+                                        setShowTradeForm(true);
+                                      }}
+                                      className="text-xs text-red-500 hover:text-red-400 font-medium border border-red-500/30 rounded px-2 py-1 hover:bg-red-500/10 transition-colors"
+                                    >
+                                      Sell
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              {selected.status === "active" && (
-                                <>
-                                  <button
-                                    onClick={() => promotePosition(pos.id)}
-                                    disabled={promotingId === pos.id}
-                                    className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-400 font-medium border border-blue-500/30 rounded px-2 py-1 hover:bg-blue-500/10 transition-colors"
-                                    title="Stage as a real money order in Order Builder"
-                                  >
-                                    <ExternalLink className="h-3 w-3" />
-                                    {promotingId === pos.id ? "Staging…" : "Stage Real Order"}
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setTradeSide("sell");
-                                      setTradeSymbol(pos.symbol);
-                                      setTradeQty(String(pos.quantity));
-                                      setTradePrice("");
-                                      setShowTradeForm(true);
-                                    }}
-                                    className="text-xs text-red-500 hover:text-red-400 font-medium border border-red-500/30 rounded px-2 py-1 hover:bg-red-500/10 transition-colors"
-                                  >
-                                    Sell
-                                  </button>
-                                </>
-                              )}
-                            </div>
+                            {isExpanded && (
+                              <div className="px-3 pb-3 border-t border-border pt-2">
+                                <PositionHistoryChart
+                                  history={history}
+                                  period={historyPeriod}
+                                  loading={isLoadingHistory}
+                                  onPeriodChange={(p) => changeHistoryPeriod(pos.id, p)}
+                                />
+                              </div>
+                            )}
                           </div>
                         );
                       })}
