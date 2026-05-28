@@ -8,6 +8,19 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.21.0] — 2026-05-28
+
+### Added
+- **Paper Portfolio Name** — optional display name field on `PaperPortfolio`; `name` accepted in create form and via new `PATCH /investors/{id}/paper-portfolios/{id}` rename endpoint; name shown in list cards and detail header; migration `0053`
+- **Per-position live P&L** — `GET /paper-portfolios/{id}` now returns `current_price`, `unrealized_pnl`, and `unrealized_pnl_pct` per position (fetched from price cache, FX-converted to portfolio currency); P&L badge shown inline on each position row
+- **Position entry date** — `created_at` exposed in `PaperPositionOut`; displayed as "Bought: {date}" on each position row so users see exactly when they entered each paper trade
+- **Reprice All button** — "Reprice" button in the portfolio header calls `POST /reprice` to fetch live market prices for all positions and recompute portfolio value
+- **Stage Real Order** — "Stage Real Order" button per position calls `POST /positions/{id}/promote`; creates a `StagedOrder` (buy, live price, same quantity) in Order Builder for the user to review before committing real money
+- **Rename portfolio modal** — pencil icon next to portfolio name opens an inline input; saves via `PATCH`; clears name (reverts to strategy name) when left blank
+- **End Paper Test (renamed from Close)** — "Close" button renamed to "End Test" with an amber confirmation card explaining what the action does and suggesting "Stage Real Order" first; status shown as "Ended" in the list
+- **Tick history chart** — simulation ticks rendered as an SVG polyline in the portfolio summary card; shows tick-by-tick value path with start/end labels; green when finishing above start, red otherwise
+- **Promote audit trail** — `paper_trading.position_promoted` audit event logged when a position is staged as a real order
+
 ## [3.20.0] — 2026-05-28
 
 ### Added

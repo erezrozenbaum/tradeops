@@ -8,6 +8,7 @@ from app.schemas.strategy import StrategyTemplateOut
 
 
 class PaperPortfolioCreate(BaseModel):
+    name: str | None = Field(default=None, max_length=200, description="Optional display name")
     initial_cash: float = Field(..., gt=0, description="Starting virtual cash amount")
     currency: str = Field(..., min_length=3, max_length=3, description="ISO currency code, e.g. ILS or USD")
     strategy_template_id: uuid.UUID | None = Field(
@@ -18,6 +19,10 @@ class PaperPortfolioCreate(BaseModel):
         default=None,
         description="Optional link to a preceding backtest run",
     )
+
+
+class PaperPortfolioRename(BaseModel):
+    name: str | None = Field(default=None, max_length=200)
 
 
 class AdvanceTickRequest(BaseModel):
@@ -55,6 +60,9 @@ class PaperPositionOut(BaseModel):
     currency: str
     created_at: datetime
     updated_at: datetime
+    current_price: float | None = None
+    unrealized_pnl: float | None = None
+    unrealized_pnl_pct: float | None = None
 
     model_config = {"from_attributes": True}
 
@@ -78,6 +86,7 @@ class PaperPortfolioOut(BaseModel):
     risk_model_id: uuid.UUID | None
     backtest_run_id: uuid.UUID | None
     template: StrategyTemplateOut | None
+    name: str | None = None
     initial_capital: float
     cash_balance: float
     current_value: float
@@ -100,6 +109,7 @@ class PaperPortfolioSummaryOut(BaseModel):
     risk_model_id: uuid.UUID | None
     backtest_run_id: uuid.UUID | None
     template: StrategyTemplateOut | None
+    name: str | None = None
     initial_capital: float
     cash_balance: float
     current_value: float

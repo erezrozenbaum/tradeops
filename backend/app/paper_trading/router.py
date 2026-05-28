@@ -10,6 +10,7 @@ from app.schemas.paper_trade import (
     PaperOrderCreate,
     PaperPortfolioCreate,
     PaperPortfolioOut,
+    PaperPortfolioRename,
     PaperPortfolioSummaryOut,
 )
 
@@ -29,13 +30,14 @@ def create_portfolio(
         currency=body.currency,
         strategy_template_id=body.strategy_template_id,
         backtest_run_id=body.backtest_run_id,
+        name=body.name,
     )
     if portfolio is None:
         raise HTTPException(
             status_code=422,
             detail="Cannot create paper portfolio — investor not found or strategy template is inactive.",
         )
-    return portfolio
+    return service.build_enriched_out(db, portfolio)
 
 
 @router.get("", response_model=list[PaperPortfolioSummaryOut])
@@ -55,6 +57,19 @@ def get_portfolio(
     portfolio = service.get(db, investor_id, portfolio_id)
     if not portfolio:
         raise HTTPException(status_code=404, detail="Paper portfolio not found.")
+    return service.build_enriched_out(db, portfolio)
+
+
+@router.patch("/{portfolio_id}", response_model=PaperPortfolioSummaryOut)
+def rename_portfolio(
+    investor_id: uuid.UUID,
+    portfolio_id: uuid.UUID,
+    body: PaperPortfolioRename,
+    db: Session = Depends(get_db),
+):
+    portfolio = service.rename_portfolio(db, investor_id, portfolio_id, body.name)
+    if portfolio is None:
+        raise HTTPException(status_code=404, detail="Paper portfolio not found.")
     return portfolio
 
 
@@ -65,7 +80,7 @@ def place_order(
     body: PaperOrderCreate,
     db: Session = Depends(get_db),
 ):
-    return service.place_order(
+    portfolio = service.place_order(
         db,
         investor_id=investor_id,
         portfolio_id=portfolio_id,
@@ -74,6 +89,7 @@ def place_order(
         quantity=body.quantity,
         price_per_share=body.price_per_share,
     )
+    return service.build_enriched_out(db, portfolio)
 
 
 @router.post("/{portfolio_id}/reprice", response_model=PaperPortfolioOut)
@@ -86,7 +102,7 @@ def reprice_positions(
     portfolio = service.reprice_positions(db, investor_id=investor_id, portfolio_id=portfolio_id)
     if portfolio is None:
         raise HTTPException(status_code=404, detail="Paper portfolio not found.")
-    return portfolio
+    return service.build_enriched_out(db, portfolio)
 
 
 @router.post("/{portfolio_id}/tick", response_model=PaperPortfolioOut)
@@ -104,7 +120,7 @@ def advance_tick(
             status_code=422,
             detail="Cannot advance tick — portfolio not found, not active, or has no strategy template.",
         )
-    return portfolio
+    return service.build_enriched_out(db, portfolio)
 
 
 @router.post("/{portfolio_id}/close", response_model=PaperPortfolioOut)
@@ -116,7 +132,21 @@ def close_portfolio(
     portfolio = service.close_portfolio(db, investor_id=investor_id, portfolio_id=portfolio_id)
     if portfolio is None:
         raise HTTPException(status_code=404, detail="Paper portfolio not found.")
-    return portfolio
+    return service.build_enriched_out(db, portfolio)
+
+
+@router.post(
+    "/{portfolio_id}/positions/{position_id}/promote",
+    status_code=status.HTTP_201_CREATED,
+)
+def promote_position(
+    investor_id: uuid.UUID,
+    portfolio_id: uuid.UUID,
+    position_id: uuid.UUID,
+    db: Session = Depends(get_db),
+):
+    """Create a real staged buy order from a paper position."""
+    return service.promote_position_to_real(db, investor_id, portfolio_id, position_id)
 
 
 @router.delete("/{portfolio_id}", status_code=status.HTTP_204_NO_CONTENT)

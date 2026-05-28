@@ -2,8 +2,8 @@
 
 # TradeOps AI — מדריך מנהל מערכת
 
-**גרסה:** 3.14.1  
-**עודכן לאחרונה:** 27 במאי 2026
+**גרסה:** 3.21.0  
+**עודכן לאחרונה:** 28 במאי 2026
 
 מדריך זה מכסה התקנה, הגדרות, ניהול מסד נתונים, פריסת Kubernetes ותפעול שוטף של TradeOps AI.
 
@@ -495,6 +495,27 @@ docker compose -f infra/docker-compose.yml restart backend
 | בדיקות עמידות | 5 תרחישי קריסה היסטוריים + Monte Carlo P10/P50/P90 |
 | קציר הפסדי מס | מועמדים ממוינים לפי חיסכון משוער, אזהרות wash-sale |
 | Order Builder | ניתוח תיק מפורט, pre-flight review, מעקב תוצאות |
+| Paper Trading — מסחר מדומה | תיק ניסיוני בכסף וירטואלי; הזמנות קנייה/מכירה; reprice בזמן אמת; היסטוריית ticks; מעבר להזמנה אמיתית |
+
+### פיצ'רים חדשים — גרסאות v3.15.0 עד v3.21.0
+
+| גרסה | פיצ'ר | תיאור |
+|------|-------|-------|
+| v3.15.0 | מנוע התראות | `GET /notifications` — אירועי milestone לכל יעד (50%/75%/100%), התראות מחיר שהופעלו, סיכון התנהגותי HIGH, ריפרוף נדרש, אופציות הפוקעות תוך 7 ימים |
+| v3.15.0 | ניהול התראות מחיר | טופס יצירה/מחיקה בעמוד `/notifications`; רשימת התראות פעילות + היסטוריית התראות שהופעלו |
+| v3.15.0 | לוח סנכרון ברוקר | `/broker-sync` — כרטיסי בריאות לכל חשבון: Fresh/Stale/Outdated/Never, טבלת חריגות בין הזמנות ממתינות לחזקה בפועל |
+| v3.16.0 | מעקב תוצאות הזמנות | job יומי 22:00 UTC — מחשב ומשווה snapshots ב-30/90/180 יום לכל StagedOrder מבוצע עם projected_metrics |
+| v3.16.0 | עוזר הקצאה חכם | כפתור "Smart Assist" ב-Order Builder — Claude Haiku מציע 3–5 הקצאות עם עדיפות, הנמקה וקישור יעד; fallback דטרמיניסטי ללא API key |
+| v3.17.0 | תוכניות השקעה חוזרות (SIP) | `/recurring-plans` — תוכניות חודשיות/שבועיות לפי ticker ו-asset type; job 06:30 UTC מבצע staging אוטומטי; migration 0052 |
+| v3.18.0 | ייצוא CSV | ייצוא מהחזקות (`/investments`), עסקאות (`/transactions`), וסיכום מס שנתי — כולם בצד הלקוח, ללא endpoint חדש |
+| v3.19.0 | תוכנית פעולה לפי יעדים | `GET /goals-analysis/action-plan` — רשימת פעולות חודשית לפי עדיפות לכל יעד; כפתור "Stage" מחבר ישירות ל-Order Builder |
+| v3.19.0 | Sparklines ברשימת המעקב | sparklines SVG ל-30 יום לכל ticker ב-Watchlist מ-Yahoo Finance; % שינוי ירוק/אדום |
+| v3.19.0 | רכישה ישירה מרשימת המעקב | כפתור "Stage Buy" על כל כרטיס watchlist — staging ישיר מהרשימה ל-Order Builder |
+| v3.20.0 | השוואת תיק לאורך זמן | `GET /portfolio/comparison?period=1w\|1m\|3m` — השוואת snapshot נוכחי מול עבר: delta שווי, % שינוי, P&L, drift הקצאה לפי סוג נכס |
+| v3.20.0 | תקציר בוקר | `GET /morning-brief` — delta לילי, בריאות יעדים, התראות שהופעלו, תוכנית קרובה, סיגנלים התנהגותיים — ללא קריאת AI |
+| v3.20.0 | ציר זמן התקדמות יעד | `GET /goals/{id}/progress-timeline` — 12 חודשים planned vs actual; modal עם גרף עמודות כפולות לכל יעד |
+| v3.20.0 | פעולות bulk להזמנות | `POST /bulk-execute` + `POST /bulk-cancel`; Order Builder: checkboxes, Select All, Execute/Cancel/ייצוא CSV ל-N הזמנות בבת אחת |
+| v3.21.0 | Paper Trading גרסה 2 | שם מותאם אישית לתיק (migration 0053), rename בלחיצה על עיפרון, P&L חי לפוזיציה (מחיר נוכחי, רווח/הפסד, %), תאריך כניסה לפוזיציה, כפתור Reprice All, "Stage Real Order" לכל פוזיציה — מעבר להשקעה אמיתית, "End Test" במקום "Close" עם הסבר ואישור, גרף ticks SVG |
 
 ### AI Intelligence *(דורש `ANTHROPIC_API_KEY`)*
 

@@ -18,6 +18,119 @@ from app.models.paper_trade import (
 from app.models.strategy_template import StrategyTemplate
 from app.paper_trading.engine import simulate_tick
 from app.risk_modeling import service as rm_service
+from app.schemas.paper_trade import PaperPortfolioOut, PaperPositionOut
+from app.staged_orders.schemas import StagedOrderCreate
+from app.staged_orders import service as staged_orders_svc
+
+
+def rename_portfolio(
+    db: Session,
+    investor_id: uuid.UUID,
+    portfolio_id: uuid.UUID,
+    name: str | None,
+) -> PaperPortfolio | None:
+    portfolio = _get_owned(db, investor_id, portfolio_id)
+    if not portfolio:
+        return None
+    portfolio.name = name
+    db.commit()
+    db.refresh(portfolio)
+    return portfolio
+
+
+def build_enriched_out(db: Session, portfolio: PaperPortfolio) -> PaperPortfolioOut:
+    """Build PaperPortfolioOut with per-position live price and P&L fields."""
+    enriched_positions: list[PaperPositionOut] = []
+    for pos in portfolio.positions:
+        snapshot = market_data.get_cached_price(db, pos.symbol)
+        current_price: float | None = None
+        unrealized_pnl: float | None = None
+        unrealized_pnl_pct: float | None = None
+        if snapshot:
+            price = snapshot.price
+            if snapshot.currency.upper() != portfolio.currency.upper():
+                try:
+                    price = fx_convert(db, price, snapshot.currency, portfolio.currency)
+                except Exception:
+                    price = None
+            if price is not None:
+                current_price = round(price, 4)
+                unrealized_pnl = round((price - pos.avg_cost_per_share) * pos.quantity, 4)
+                if pos.avg_cost_per_share > 0:
+                    unrealized_pnl_pct = round(
+                        (price - pos.avg_cost_per_share) / pos.avg_cost_per_share * 100, 4
+                    )
+        enriched_positions.append(
+            PaperPositionOut(
+                id=pos.id,
+                symbol=pos.symbol,
+                name=pos.name,
+                quantity=pos.quantity,
+                avg_cost_per_share=pos.avg_cost_per_share,
+                currency=pos.currency,
+                created_at=pos.created_at,
+                updated_at=pos.updated_at,
+                current_price=current_price,
+                unrealized_pnl=unrealized_pnl,
+                unrealized_pnl_pct=unrealized_pnl_pct,
+            )
+        )
+    out = PaperPortfolioOut.model_validate(portfolio)
+    out.positions = enriched_positions
+    return out
+
+
+def promote_position_to_real(
+    db: Session,
+    investor_id: uuid.UUID,
+    portfolio_id: uuid.UUID,
+    position_id: uuid.UUID,
+) -> dict:
+    """Stage a real buy order for a paper position."""
+    portfolio = _get_owned(db, investor_id, portfolio_id)
+    if not portfolio:
+        raise HTTPException(status_code=404, detail="Paper portfolio not found.")
+
+    position = db.get(PaperPosition, position_id)
+    if not position or position.portfolio_id != portfolio_id:
+        raise HTTPException(status_code=404, detail="Position not found.")
+
+    snapshot = market_data.get_cached_price(db, position.symbol)
+    unit_price = position.avg_cost_per_share
+    if snapshot:
+        price = snapshot.price
+        if snapshot.currency.upper() != portfolio.currency.upper():
+            try:
+                price = fx_convert(db, price, snapshot.currency, portfolio.currency)
+            except Exception:
+                price = position.avg_cost_per_share
+        unit_price = round(price, 4)
+
+    payload = StagedOrderCreate(
+        ticker=position.symbol,
+        name=position.name or position.symbol,
+        action="buy",
+        quantity=position.quantity,
+        unit_price=unit_price,
+        currency=portfolio.currency,
+        asset_type="stock",
+        notes=f"Promoted from paper portfolio (avg cost {position.avg_cost_per_share:.4f})",
+    )
+    order = staged_orders_svc.create_staged_order(db, investor_id, payload)
+    audit.log_event(
+        db,
+        event_type="paper_trading.position_promoted",
+        description=(
+            f"Paper position {position.symbol} x{position.quantity} promoted to staged order."
+        ),
+        investor_profile_id=investor_id,
+        metadata={
+            "portfolio_id": str(portfolio_id),
+            "position_id": str(position_id),
+            "staged_order_id": str(order.id),
+        },
+    )
+    return {"staged_order_id": str(order.id), "symbol": position.symbol, "quantity": position.quantity}
 
 
 def create(
@@ -27,6 +140,7 @@ def create(
     currency: str,
     strategy_template_id: uuid.UUID | None = None,
     backtest_run_id: uuid.UUID | None = None,
+    name: str | None = None,
 ) -> PaperPortfolio | None:
     investor = db.get(InvestorProfile, investor_id)
     if not investor:
@@ -45,6 +159,7 @@ def create(
         strategy_template_id=strategy_template_id,
         risk_model_id=risk_model.id if risk_model else None,
         backtest_run_id=backtest_run_id,
+        name=name,
         initial_capital=initial_cash,
         cash_balance=initial_cash,
         current_value=initial_cash,

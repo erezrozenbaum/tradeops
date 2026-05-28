@@ -32,6 +32,7 @@ class PaperPortfolio(Base, UUIDMixin):
         PG_UUID(as_uuid=True), ForeignKey("backtest_runs.id"), nullable=True
     )
 
+    name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     initial_capital: Mapped[float] = mapped_column(Float, nullable=False)
     cash_balance: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     current_value: Mapped[float] = mapped_column(Float, nullable=False)
