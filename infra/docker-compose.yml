@@ -74,7 +74,7 @@ services:
     tmpfs:
       - /tmp
       - /root/.npm
-    command: sh -c "npm install --include=dev && npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public && node .next/standalone/server.js"
+    command: sh -c "npm install --include=dev --legacy-peer-deps && npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public && node .next/standalone/server.js"
 
   prometheus:
     image: prom/prometheus:v2.51.0

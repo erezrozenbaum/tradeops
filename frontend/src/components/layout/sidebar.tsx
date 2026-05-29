@@ -172,7 +172,7 @@ function NavLink({ item, pathname, onNav }: { item: NavItem; pathname: string; o
           "group flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] transition-all duration-150",
           active
             ? ["bg-cyber-cyan/10 text-cyber-cyan font-medium", "border border-cyber-cyan/20", "shadow-[0_0_12px_hsl(199_95%_52%/0.08)]"]
-            : "text-muted-foreground hover:bg-cyber-rule/60 hover:text-foreground border border-transparent"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent"
         )}
       >
         <item.icon
@@ -307,7 +307,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         })}
       </nav>
 
-      <div className="border-t border-cyber-rule/60 p-2 shrink-0 space-y-0.5">
+      <div className="border-t border-border p-2 shrink-0 space-y-0.5">
         {isAdmin && (
           <Link
             href="/admin"
@@ -316,7 +316,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
               "flex w-full items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] transition-all duration-150 border",
               pathname === "/admin"
                 ? "bg-cyber-purple/10 text-cyber-purple border-cyber-purple/20"
-                : "text-muted-foreground hover:bg-cyber-rule/60 hover:text-foreground border-transparent"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground border-transparent"
             )}
           >
             <ShieldCheck className="h-3.5 w-3.5" />
@@ -324,17 +324,17 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
           </Link>
         )}
       </div>
-      <div className="border-t border-cyber-rule/60 p-2 shrink-0 space-y-0.5">
+      <div className="border-t border-border p-2 shrink-0 space-y-0.5">
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="flex w-full items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] text-muted-foreground hover:bg-cyber-rule/60 hover:text-foreground transition-all duration-150 border border-transparent"
+          className="flex w-full items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 border border-transparent"
         >
           {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
           {theme === "dark" ? "Light mode" : "Dark mode"}
         </button>
         <button
           onClick={handleSwitchProfile}
-          className="flex w-full items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] text-muted-foreground hover:bg-cyber-rule/60 hover:text-foreground transition-all duration-150 border border-transparent"
+          className="flex w-full items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 border border-transparent"
         >
           <Users className="h-3.5 w-3.5" />
           Switch profile
@@ -361,12 +361,12 @@ export function Sidebar() {
       {/* Desktop sidebar */}
       <aside className="hidden lg:fixed lg:left-0 lg:top-0 lg:h-screen lg:w-56 lg:flex lg:flex-col lg:z-40"
         style={{
-          background: "linear-gradient(180deg, hsl(220 35% 6%) 0%, hsl(222 38% 5%) 100%)",
-          borderRight: "1px solid hsl(217 30% 12%)",
+          background: "linear-gradient(180deg, var(--sidebar-from) 0%, var(--sidebar-to) 100%)",
+          borderRight: "1px solid var(--sidebar-border)",
         }}
       >
         <div className="h-14 flex items-center px-5 shrink-0"
-          style={{ borderBottom: "1px solid hsl(217 30% 10%)" }}
+          style={{ borderBottom: "1px solid var(--sidebar-divider)" }}
         >
           <div className="flex items-center gap-2.5">
             <div className="w-6 h-6 rounded-md bg-gradient-to-br from-cyber-cyan to-cyber-blue flex items-center justify-center shadow-glow-cyan">
@@ -384,13 +384,13 @@ export function Sidebar() {
       <div
         className="lg:hidden fixed top-0 left-0 right-0 h-14 flex items-center px-4 z-40"
         style={{
-          background: "hsl(220 35% 6%)",
-          borderBottom: "1px solid hsl(217 30% 10%)",
+          background: "var(--sidebar-from)",
+          borderBottom: "1px solid var(--sidebar-divider)",
         }}
       >
         <button
           onClick={() => setMobileOpen(true)}
-          className="p-2 rounded-md text-muted-foreground hover:bg-cyber-rule/60 transition-colors"
+          className="p-2 rounded-md text-muted-foreground hover:bg-muted transition-colors"
           aria-label="Open navigation"
         >
           <Menu className="h-5 w-5" />
@@ -414,13 +414,13 @@ export function Sidebar() {
           <div
             className="w-64 h-full flex flex-col shadow-2xl"
             style={{
-              background: "linear-gradient(180deg, hsl(220 35% 6%) 0%, hsl(222 38% 5%) 100%)",
-              borderRight: "1px solid hsl(217 30% 12%)",
+              background: "linear-gradient(180deg, var(--sidebar-from) 0%, var(--sidebar-to) 100%)",
+              borderRight: "1px solid var(--sidebar-border)",
             }}
             onClick={e => e.stopPropagation()}
           >
             <div className="h-14 flex items-center justify-between px-5 shrink-0"
-              style={{ borderBottom: "1px solid hsl(217 30% 10%)" }}
+              style={{ borderBottom: "1px solid var(--sidebar-divider)" }}
             >
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 rounded bg-gradient-to-br from-cyber-cyan to-cyber-blue flex items-center justify-center shadow-glow-cyan">
@@ -432,7 +432,7 @@ export function Sidebar() {
               </div>
               <button
                 onClick={() => setMobileOpen(false)}
-                className="p-1.5 rounded-md text-muted-foreground hover:bg-cyber-rule/60 transition-colors"
+                className="p-1.5 rounded-md text-muted-foreground hover:bg-muted transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>

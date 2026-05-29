@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 3.22.0  
-**Last updated:** 2026-05-28
+**Version:** 3.23.0  
+**Last updated:** 2026-05-29
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 
@@ -830,6 +830,8 @@ kubectl describe ingress tradeops
 | Goal Progress Timeline | `goals/progress_router.py` → `GET /investors/{id}/goals/{goal_id}/progress-timeline` + Goals page modal | Returns last 12 months of GoalProgressLog (planned vs actual), missing months filled with zeros; Goals page shows BarChart2 button per card → modal with dual-bar monthly chart. Applied v3.20.0. |
 | Staged Order Bulk Actions | `staged_orders/router.py` + Order Builder page | `POST /bulk-execute` + `POST /bulk-cancel` accept `{order_ids:[...]}` arrays; Order Builder gains per-order checkboxes, Select All/None, bulk Execute (N) / Cancel (N) / Export CSV bar on the pending tab. Applied v3.20.0. |
 | Paper Position Price History | `paper_trading/router.py` → `GET /paper-portfolios/{id}/positions/{pid}/price-history?period=1m\|3m\|6m` | Fetches real daily closes from Yahoo Finance for a paper position's symbol filtered to dates ≥ entry date; returns entry_price, points with per-day return_pct, current_price, total_return_pct. Frontend: "Chart" toggle per position card → inline SVG line chart with dashed entry-price reference line, period selector (1m/3m/6m), results cached client-side. No DB migration. Applied v3.22.0. |
+| Next.js 16 Upgrade + Security | `frontend/package.json` + route handlers + `layout.tsx` | Upgraded Next.js 14 → 16.2.6 (Turbopack), ESLint 8 → 9, eslint-config-next 16, postcss ^8.5.10. Resolves 9 CVEs (SSRF CVSS 8.6, DoS, HTTP smuggling, XSS, cache poisoning). Breaking changes migrated: `params` in route handlers now `Promise<{...}>` (awaited); dashboard layout requires `"use client"` for `ssr: false` dynamic imports. Applied v3.23.0. |
+| Light Mode Fix | `globals.css` + `sidebar.tsx` + `layout.tsx` | Replaced hardcoded dark HSL inline styles with CSS variables (`--sidebar-from`, `--sidebar-to`, `--sidebar-border`, `--sidebar-divider`, `--topbar-bg`, `--topbar-border`); light-mode values added to `.light` block; scrollbar and `--narrative-*` also theme-aware; nav hover replaced `cyber-rule` with `muted`. Applied v3.23.0. |
 | Paper Trading v2 | `paper_trading/` + migration 0053 + Paper Trading page | **Name field** (`name VARCHAR(200)`) on `paper_portfolios`; PATCH rename endpoint; pencil icon inline rename modal in UI. **Live P&L** per position: `current_price`, `unrealized_pnl`, `unrealized_pnl_pct` returned by `build_enriched_out()` using price cache + FX conversion; P&L badge + "Now: {price}" on each position row. **Entry date** (`created_at`) shown as "Bought: {date}" per position. **Reprice All** button hits `POST /reprice`. **Stage Real Order** button per position calls `POST /positions/{id}/promote` → creates a pending `StagedOrder` in Order Builder at live price. **End Test** replaces "Close" — amber confirmation card with explanation. **Tick history chart** — SVG polyline of simulation ticks in summary card. Applied v3.21.0. |
 
 **Performance Attribution** — `/portfolio/attribution`  

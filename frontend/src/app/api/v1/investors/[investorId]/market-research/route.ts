@@ -4,9 +4,10 @@ const BACKEND = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http:
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { investorId: string } }
+  { params }: { params: Promise<{ investorId: string }> }
 ) {
-  const url = `${BACKEND}/api/v1/investors/${params.investorId}/market-research`;
+  const { investorId } = await params;
+  const url = `${BACKEND}/api/v1/investors/${investorId}/market-research`;
   const cookie = request.headers.get("cookie") ?? "";
 
   for (let attempt = 1; attempt <= 3; attempt++) {

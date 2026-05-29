@@ -6,7 +6,6 @@ Key XML element: <OpenPosition> with attributes:
 """
 import defusedxml
 import defusedxml.ElementTree as ET
-import xml.etree.ElementTree as _StdET
 
 from app.broker_sync.schemas import BrokerImportRow
 
@@ -29,7 +28,7 @@ def parse(content: bytes, filename: str) -> tuple[list[BrokerImportRow], list[st
 
     try:
         root = ET.fromstring(content)
-    except (_StdET.ParseError, defusedxml.DefusedXmlException, ValueError) as exc:
+    except (ET.ParseError, defusedxml.DefusedXmlException, ValueError) as exc:
         return [], [f"Invalid XML: {exc}"]
 
     positions = list(root.iter("OpenPosition"))

@@ -2,8 +2,8 @@
 
 # TradeOps AI — מדריך מנהל מערכת
 
-**גרסה:** 3.22.0  
-**עודכן לאחרונה:** 28 במאי 2026
+**גרסה:** 3.23.0  
+**עודכן לאחרונה:** 29 במאי 2026
 
 מדריך זה מכסה התקנה, הגדרות, ניהול מסד נתונים, פריסת Kubernetes ותפעול שוטף של TradeOps AI.
 
@@ -517,6 +517,7 @@ docker compose -f infra/docker-compose.yml restart backend
 | v3.20.0 | פעולות bulk להזמנות | `POST /bulk-execute` + `POST /bulk-cancel`; Order Builder: checkboxes, Select All, Execute/Cancel/ייצוא CSV ל-N הזמנות בבת אחת |
 | v3.21.0 | Paper Trading גרסה 2 | שם מותאם אישית לתיק (migration 0053), rename בלחיצה על עיפרון, P&L חי לפוזיציה (מחיר נוכחי, רווח/הפסד, %), תאריך כניסה לפוזיציה, כפתור Reprice All, "Stage Real Order" לכל פוזיציה — מעבר להשקעה אמיתית, "End Test" במקום "Close" עם הסבר ואישור, גרף ticks SVG |
 | v3.22.0 | היסטוריית מחיר לפוזיציה | כפתור "Chart" לכל פוזיציה ב-Paper Trading — פותח גרף SVG של מחיר הנכס האמיתי בשוק מאז תאריך הכניסה; קו כניסה מקווקוו, תשואה מצטברת, בורר תקופה 1m/3m/6m; נתונים מ-Yahoo Finance; caching בצד הלקוח; ללא migration |
+| v3.23.0 | שדרוג אבטחה — Next.js 16 | שדרוג Next.js 14 ל-16.2.6 (Turbopack), ESLint 8→9; תיקון 9 פרצות אבטחה (SSRF, DoS, HTTP smuggling, XSS, cache poisoning); הגירת שינויי שוברים: params ב-route handlers כ-Promise, תוספת "use client" ל-layout; תיקון מצב בהיר — sidebar, header, footer עם CSS variables במקום ערכי HSL קשיחים; scrollbar, narrative-bg נגישים לנושא |
 
 ### AI Intelligence *(דורש `ANTHROPIC_API_KEY`)*
 

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import NamedTuple
+
+_log = logging.getLogger(__name__)
 
 from sqlalchemy.orm import Session
 
@@ -374,7 +377,8 @@ def detect_and_persist(db: Session, investor_id: uuid.UUID) -> list[BehavioralRi
     for detect in detectors:
         try:
             result = detect()
-        except Exception:
+        except Exception as exc:
+            _log.warning("behavioral_risk detector failed: %s", exc)
             continue
 
         if result is None:

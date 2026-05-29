@@ -8,6 +8,22 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.23.0] — 2026-05-29
+
+### Security
+- **Next.js 14 → 16.2.6** — resolves 9 CVEs (SSRF CVSS 8.6, multiple high-severity DoS, HTTP request smuggling, XSS via CSP nonces and beforeInteractive scripts, cache poisoning); required async `params` migration in all 4 Next.js API route handlers; required `"use client"` on dashboard layout for `ssr: false` dynamic imports (Turbopack enforcement); ESLint updated 8 → 9; `eslint-config-next` updated to 16.2.6; `postcss` updated to `^8.5.10`
+- **docker-compose.yml** — added `--legacy-peer-deps` to frontend `npm install` command
+
+### Fixed
+- **Light mode** — sidebar, mobile top bar, header strip, and footer were all rendering with hardcoded dark HSL values in inline `style` props, breaking light mode entirely; replaced with CSS variables (`--sidebar-from`, `--sidebar-to`, `--sidebar-border`, `--sidebar-divider`, `--topbar-bg`, `--topbar-border`); dark-mode values defined in `:root`/`.dark`, light-mode values in `.light`
+- **Light mode narrative card** — `--narrative-bg` and `--narrative-border` now have `.light` values
+- **Scrollbar** — hardcoded dark scrollbar now theme-aware (light variants added)
+- **Sidebar nav hovers** — `bg-cyber-rule/60` (absolute dark navy) replaced with `bg-muted` (CSS-variable-driven) so hover states are readable in light mode
+- **Behavioral risk detector** — silent `except Exception: continue` now logs a warning before skipping a failing detector
+
+### Code Quality
+- **broker_sync/parsers/ibkr.py** — removed `import xml.etree.ElementTree as _StdET` (B405 false positive); replaced `_StdET.ParseError` with `ET.ParseError` (defusedxml exposes it); bandit scan now clean
+
 ## [3.22.0] — 2026-05-28
 
 ### Added

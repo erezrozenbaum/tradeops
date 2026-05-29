@@ -1,3 +1,5 @@
+"use client";
+
 import dynamic from "next/dynamic";
 import { Sidebar } from "@/components/layout/sidebar";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -26,8 +28,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           className="hidden lg:flex h-12 items-center justify-end px-6 shrink-0 fixed top-0 right-0 z-30"
           style={{
             left: "14rem",
-            background: "hsl(220 30% 5.5%)",
-            borderBottom: "1px solid hsl(217 30% 10%)",
+            background: "var(--topbar-bg)",
+            borderBottom: "1px solid var(--topbar-border)",
           }}
         >
           <NotificationBell />
@@ -37,7 +39,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex-1">{children}</div>
         <footer
           className="px-6 py-2.5 text-center text-[11px] text-muted-foreground/50 tracking-wide"
-          style={{ borderTop: "1px solid hsl(217 30% 10%)" }}
+          style={{ borderTop: "1px solid var(--topbar-border)" }}
         >
           TradeOps AI — educational &amp; analytical platform only &mdash; not financial advice &mdash;{" "}
           <a href="/help#disclaimer" className="underline underline-offset-2 hover:text-muted-foreground transition-colors">
