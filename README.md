@@ -135,6 +135,30 @@ The progression is not separate products. It is the same investor growing.
 
 ---
 
+## Why investors fail — and why tools don't help
+
+Most investors already know the theory:
+
+- Diversification reduces risk
+- Emotional decisions hurt long-term returns
+- Consistency and patience beat timing
+
+Yet the same investors still:
+
+- Chase performance after a strong quarter
+- Override risk controls when conviction is high
+- Abandon strategies after a short drawdown
+- Execute trades without a written thesis
+- Confuse a lucky outcome with a good decision
+
+The gap between knowing and doing is a behavioral gap — not an information gap. More charts, more AI summaries, and more portfolio analytics do not close it.
+
+TradeOps measures these behaviors directly. The DQS shows whether your discipline is improving. Behavioral Alpha shows whether it's paying off. The Monthly Review shows what your patterns looked like last month vs. the month before.
+
+The goal is not a better portfolio. The goal is a better investor.
+
+---
+
 ## Highlights
 
 <div align="center">
