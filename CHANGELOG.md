@@ -8,6 +8,20 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.24.0] — 2026-05-29
+
+### Added
+- **Trade Journal** — decision capture and post-execution reflection for every staged order
+  - Migration 0054: `rationale TEXT` and `reflection JSONB` columns on `staged_orders`
+  - `StagedOrderCreate`: optional `rationale` field — saved with every staged order
+  - `PATCH /investors/{id}/staged-orders/{order_id}/rationale` — add/edit rationale on an existing pending order
+  - `GET /investors/{id}/staged-orders/journal` — returns all orders as `JournalEntryOut` with `pre_flight_verdict`, `rationale`, and `reflection`
+  - `reflection` computed automatically on `mark_executed`: captures `preflight_verdict`, flagged risks, and whether a rationale was recorded; stored as JSONB for future analysis
+  - **Order Builder** — "Why this trade?" `<textarea>` added to the Stage Order form (2-row, 2000-char limit, BookOpen icon)
+  - **Paper Trading** — "Stage Real Order" button now opens a rationale capture modal before staging; rationale forwarded to the created `StagedOrder`
+  - **`/journal` page** — new dedicated Trade Journal page in the Intelligence section; stats bar (total, with rationale, executed, caution/reconsider count); filter by all / with rationale / without rationale; per-entry: ticker, action, P&L verdict badge, pre-flight verdict, rationale (editable inline for pending orders), reflection card (green when documented, amber when not); goal link shown
+  - **Sidebar** — "Trade Journal" (BookOpen icon) added to Intelligence section
+
 ## [3.23.0] — 2026-05-29
 
 ### Security

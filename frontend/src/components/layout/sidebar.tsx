@@ -58,6 +58,7 @@ import {
   ChevronRight,
   RefreshCw,
   CalendarClock,
+  BookOpen,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
@@ -127,6 +128,7 @@ const sections: NavSection[] = [
     label: "Intelligence",
     items: [
       { label: "AI Agent", href: "/agent", icon: Bot },
+      { label: "Trade Journal", href: "/journal", icon: BookOpen },
       { label: "AI Coach", href: "/insights", icon: Brain },
       { label: "Market Research", href: "/market-research", icon: Microscope },
       { label: "Simulation", href: "/futures", icon: Layers },

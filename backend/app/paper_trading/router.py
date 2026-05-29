@@ -1,9 +1,11 @@
 import logging
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -171,6 +173,10 @@ def close_portfolio(
     return service.build_enriched_out(db, portfolio)
 
 
+class PromoteRequest(BaseModel):
+    rationale: Optional[str] = None
+
+
 @router.post(
     "/{portfolio_id}/positions/{position_id}/promote",
     status_code=status.HTTP_201_CREATED,
@@ -179,10 +185,11 @@ def promote_position(
     investor_id: uuid.UUID,
     portfolio_id: uuid.UUID,
     position_id: uuid.UUID,
+    body: PromoteRequest = PromoteRequest(),
     db: Session = Depends(get_db),
 ):
     """Create a real staged buy order from a paper position."""
-    return service.promote_position_to_real(db, investor_id, portfolio_id, position_id)
+    return service.promote_position_to_real(db, investor_id, portfolio_id, position_id, rationale=body.rationale)
 
 
 @router.get("/{portfolio_id}/positions/{position_id}/price-history")

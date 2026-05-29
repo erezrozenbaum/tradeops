@@ -9,7 +9,7 @@ import {
   Layers, TrendingUp, TrendingDown, CheckCircle2, XCircle,
   ChevronDown, ChevronUp, AlertTriangle, Zap, ShieldCheck,
   RefreshCw, Trash2, PlayCircle, Info, Target, Leaf,
-  BookMarked, Plus, BarChart3, History, Wand2, Sparkles,
+  BookMarked, BookOpen, Plus, BarChart3, History, Wand2, Sparkles,
   Square, CheckSquare, Download,
 } from "lucide-react";
 
@@ -49,6 +49,8 @@ interface StagedOrder {
   projected_metrics: ProjectedMetrics | null;
   executed_at: string | null;
   notes: string | null;
+  rationale: string | null;
+  reflection: { preflight_verdict: string; preflight_risks: string[]; had_rationale: boolean; note: string } | null;
   created_at: string;
 }
 
@@ -537,6 +539,7 @@ export default function OrderBuilderPage() {
     asset_type: "etf",
     goal_id: "",
     notes: "",
+    rationale: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -621,9 +624,10 @@ export default function OrderBuilderPage() {
           asset_type: form.asset_type || null,
           goal_id: form.goal_id || null,
           notes: form.notes.trim() || null,
+          rationale: form.rationale.trim() || null,
         }),
       });
-      setForm({ ticker: "", name: "", action: "buy", quantity: "", unit_price: "", currency: "ILS", asset_type: "etf", goal_id: "", notes: "" });
+      setForm({ ticker: "", name: "", action: "buy", quantity: "", unit_price: "", currency: "ILS", asset_type: "etf", goal_id: "", notes: "", rationale: "" });
       fetchOrders();
       setActiveTab("pending");
     } catch (err: unknown) {
@@ -1046,6 +1050,21 @@ export default function OrderBuilderPage() {
                       ))}
                     </select>
                   </div>
+                </div>
+
+                {/* Why this trade — decision capture */}
+                <div className="space-y-1">
+                  <label className="text-[11px] text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                    <BookOpen className="w-3 h-3" /> Why this trade? <span className="normal-case text-muted-foreground/50">(optional — saved to journal)</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    className="w-full px-3 py-2 rounded bg-background border border-white/10 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 resize-none"
+                    placeholder="e.g. AAPL undervalued after earnings miss, adding on the dip to growth allocation"
+                    value={form.rationale}
+                    onChange={e => setForm(f => ({ ...f, rationale: e.target.value }))}
+                    maxLength={2000}
+                  />
                 </div>
 
                 {/* Estimated value preview */}

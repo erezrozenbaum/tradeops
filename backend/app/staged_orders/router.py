@@ -9,8 +9,10 @@ from app.db.session import get_db
 from app.staged_orders import service, templates as tmpl_svc
 from app.staged_orders.schemas import (
     GenerateRebalanceResult,
+    JournalEntryOut,
     OrderTemplateOut,
     OutcomeComparisonOut,
+    RationaleUpdate,
     SmartSuggestResult,
     StagedOrderCreate,
     StagedOrderList,
@@ -78,6 +80,26 @@ def cancel_order(
         return service.cancel_order(db, investor_id, order_id)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+# ── Trade Journal ─────────────────────────────────────────────────────────────
+
+@router.get("/journal", response_model=list[JournalEntryOut])
+def get_journal(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+    return service.get_journal(db, investor_id)
+
+
+@router.patch("/{order_id}/rationale", response_model=StagedOrderOut)
+def patch_rationale(
+    investor_id: uuid.UUID,
+    order_id: uuid.UUID,
+    body: RationaleUpdate,
+    db: Session = Depends(get_db),
+):
+    try:
+        return service.update_rationale(db, investor_id, order_id, body.rationale)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 # ── Templates ─────────────────────────────────────────────────────────────────

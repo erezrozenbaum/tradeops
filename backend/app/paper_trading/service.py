@@ -85,6 +85,7 @@ def promote_position_to_real(
     investor_id: uuid.UUID,
     portfolio_id: uuid.UUID,
     position_id: uuid.UUID,
+    rationale: str | None = None,
 ) -> dict:
     """Stage a real buy order for a paper position."""
     portfolio = _get_owned(db, investor_id, portfolio_id)
@@ -115,6 +116,7 @@ def promote_position_to_real(
         currency=portfolio.currency,
         asset_type="stock",
         notes=f"Promoted from paper portfolio (avg cost {position.avg_cost_per_share:.4f})",
+        rationale=rationale,
     )
     order = staged_orders_svc.create_staged_order(db, investor_id, payload)
     audit.log_event(

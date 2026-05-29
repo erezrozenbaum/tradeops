@@ -289,6 +289,7 @@ def create_staged_order(
         pre_flight_review=pre_flight,
         projected_metrics=projected,
         notes=payload.notes,
+        rationale=payload.rationale,
     )
     db.add(order)
     db.flush()
@@ -339,6 +340,27 @@ def get_order(db: Session, investor_id: uuid.UUID, order_id: uuid.UUID) -> Stage
     )
 
 
+def _compute_reflection(order: StagedOrder) -> dict:
+    preflight = order.pre_flight_review or {}
+    verdict = preflight.get("verdict", "unknown")
+    risks = [r.get("label", "") for r in preflight.get("risks", [])[:2] if isinstance(r, dict)]
+    note_parts = []
+    if order.rationale:
+        note_parts.append("Decision rationale was captured before execution.")
+    else:
+        note_parts.append("No rationale was recorded for this trade.")
+    note_parts.append(f"Pre-flight verdict: {verdict}.")
+    if risks:
+        note_parts.append(f"Flagged risks: {'; '.join(risks)}.")
+    return {
+        "reflected_at": datetime.now(timezone.utc).isoformat(),
+        "preflight_verdict": verdict,
+        "preflight_risks": risks,
+        "had_rationale": bool(order.rationale),
+        "note": " ".join(note_parts),
+    }
+
+
 def mark_executed(db: Session, investor_id: uuid.UUID, order_id: uuid.UUID) -> StagedOrderOut:
     order = get_order(db, investor_id, order_id)
     if not order:
@@ -348,6 +370,7 @@ def mark_executed(db: Session, investor_id: uuid.UUID, order_id: uuid.UUID) -> S
 
     order.status = "executed"
     order.executed_at = datetime.now(timezone.utc)
+    order.reflection = _compute_reflection(order)
     db.flush()
 
     audit_svc.log_event(
@@ -361,6 +384,59 @@ def mark_executed(db: Session, investor_id: uuid.UUID, order_id: uuid.UUID) -> S
     db.commit()
     db.refresh(order)
     return _to_out(order)
+
+
+def update_rationale(
+    db: Session,
+    investor_id: uuid.UUID,
+    order_id: uuid.UUID,
+    rationale: str,
+) -> StagedOrderOut:
+    order = get_order(db, investor_id, order_id)
+    if not order:
+        raise ValueError("Order not found")
+    order.rationale = rationale
+    db.commit()
+    db.refresh(order)
+    return _to_out(order)
+
+
+def get_journal(
+    db: Session,
+    investor_id: uuid.UUID,
+) -> list[Any]:
+    from app.staged_orders.schemas import JournalEntryOut
+    orders = (
+        db.query(StagedOrder)
+        .filter(
+            StagedOrder.investor_id == investor_id,
+            StagedOrder.status.in_(["pending", "executed", "cancelled"]),
+        )
+        .order_by(StagedOrder.created_at.desc())
+        .all()
+    )
+    result = []
+    for o in orders:
+        preflight = o.pre_flight_review or {}
+        result.append(JournalEntryOut(
+            id=o.id,
+            ticker=o.ticker,
+            name=o.name,
+            action=o.action,
+            quantity=o.quantity,
+            unit_price=o.unit_price,
+            currency=o.currency,
+            estimated_value=o.estimated_value,
+            asset_type=o.asset_type,
+            status=o.status,
+            goal_name=o.goal_name,
+            pre_flight_verdict=preflight.get("verdict"),
+            rationale=o.rationale,
+            reflection=o.reflection,
+            executed_at=o.executed_at,
+            created_at=o.created_at,
+        ))
+    return result
 
 
 def cancel_order(db: Session, investor_id: uuid.UUID, order_id: uuid.UUID) -> StagedOrderOut:

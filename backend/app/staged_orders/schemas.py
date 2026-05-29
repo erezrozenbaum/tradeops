@@ -35,6 +35,11 @@ class StagedOrderCreate(BaseModel):
     asset_type: str | None = None
     goal_id: uuid.UUID | None = None
     notes: str | None = None
+    rationale: str | None = None
+
+
+class RationaleUpdate(BaseModel):
+    rationale: str = Field(..., min_length=1, max_length=2000)
 
 
 class StagedOrderOut(BaseModel):
@@ -57,10 +62,31 @@ class StagedOrderOut(BaseModel):
     executed_at: datetime | None
     actual_outcome: dict | None
     notes: str | None
+    rationale: str | None
+    reflection: dict | None
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class JournalEntryOut(BaseModel):
+    id: uuid.UUID
+    ticker: str | None
+    name: str
+    action: str
+    quantity: float
+    unit_price: float
+    currency: str
+    estimated_value: float
+    asset_type: str | None
+    status: str
+    goal_name: str | None
+    pre_flight_verdict: str | None
+    rationale: str | None
+    reflection: dict | None
+    executed_at: datetime | None
+    created_at: datetime
 
 
 class StagedOrderList(BaseModel):

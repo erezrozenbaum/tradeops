@@ -343,6 +343,8 @@ export default function PaperTradingPage() {
   const [repricing, setRepricing] = useState(false);
   const [promotingId, setPromotingId] = useState<string | null>(null);
   const [promoteSuccess, setPromoteSuccess] = useState<string | null>(null);
+  const [promoteModal, setPromoteModal] = useState<{ positionId: string; symbol: string } | null>(null);
+  const [promoteRationale, setPromoteRationale] = useState("");
 
   // Position price history
   const [expandedPositionId, setExpandedPositionId] = useState<string | null>(null);
@@ -568,14 +570,20 @@ export default function PaperTradingPage() {
     }
   }
 
-  async function promotePosition(positionId: string) {
+  async function promotePosition(positionId: string, rationale?: string) {
     if (!investorId || !selected) return;
     setPromotingId(positionId);
     setPromoteSuccess(null);
+    setPromoteModal(null);
+    setPromoteRationale("");
     try {
       const res = await fetch(
         `/api/v1/investors/${investorId}/paper-portfolios/${selected.id}/positions/${positionId}/promote`,
-        { method: "POST" }
+        {
+          method: "POST",
+          headers: rationale ? { "Content-Type": "application/json" } : undefined,
+          body: rationale ? JSON.stringify({ rationale }) : undefined,
+        }
       );
       if (res.ok) {
         const data = await res.json();
@@ -646,6 +654,51 @@ export default function PaperTradingPage() {
           New Portfolio
         </Button>
       </div>
+
+      {/* Promote rationale modal */}
+      {promoteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-semibold text-base">Stage Real Order — {promoteModal.symbol}</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">Capture your decision rationale before committing real money</p>
+              </div>
+              <button onClick={() => { setPromoteModal(null); setPromoteRationale(""); }} className="text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Why are you making this trade?</label>
+              <textarea
+                autoFocus
+                rows={3}
+                className="w-full px-3 py-2 rounded-lg bg-background border border-border text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 resize-none"
+                placeholder="e.g. Strong Q4 earnings, adding to growth tier — paper test confirmed my thesis"
+                value={promoteRationale}
+                onChange={e => setPromoteRationale(e.target.value)}
+                maxLength={2000}
+              />
+              <p className="text-[11px] text-muted-foreground/60">Saved to Trade Journal. Leave blank to skip.</p>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => promotePosition(promoteModal.positionId, promoteRationale.trim() || undefined)}
+                disabled={!!promotingId}
+                className="flex-1 py-2 rounded-lg text-sm font-medium bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition-colors disabled:opacity-50"
+              >
+                {promotingId ? "Staging…" : "Stage Real Order"}
+              </button>
+              <button
+                onClick={() => { setPromoteModal(null); setPromoteRationale(""); }}
+                className="px-4 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground border border-border hover:bg-muted/50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Global error */}
       {error && (
@@ -1154,7 +1207,7 @@ export default function PaperTradingPage() {
                                 {selected.status === "active" && (
                                   <>
                                     <button
-                                      onClick={() => promotePosition(pos.id)}
+                                      onClick={() => setPromoteModal({ positionId: pos.id, symbol: pos.symbol })}
                                       disabled={promotingId === pos.id}
                                       className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-400 font-medium border border-blue-500/30 rounded px-2 py-1 hover:bg-blue-500/10 transition-colors"
                                       title="Stage as a real money order in Order Builder"
