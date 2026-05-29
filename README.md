@@ -13,8 +13,10 @@
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white)](infra/docker-compose.yml)
 [![GitHub Stars](https://img.shields.io/github/stars/erezrozenbaum/tradeops?style=flat-square&logo=github)](https://github.com/erezrozenbaum/tradeops/stargazers)
 
-*Most investing platforms measure portfolio performance.*
-*TradeOps measures decision quality.*
+*Most investing platforms track portfolios.*
+*TradeOps tracks decisions.*
+
+[**Read the vision →**](VISION.md)
 
 <a href="https://buymeacoffee.com/erezrozenbaum">
   <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="40">
@@ -553,6 +555,7 @@ Profile → Financial → Goals → Risk Model → Strategies → Paper Trade
 
 | Doc | Description |
 |-----|-------------|
+| [`VISION.md`](VISION.md) | The product story — the problem, why existing tools fail, DQS, Behavioral Alpha, Outcome Correlation. Start here if you're not an engineer. |
 | [`docs/architecture.md`](docs/architecture.md) | Full module map, API routing, frontend structure, worker schedule |
 | [`docs/schema.md`](docs/schema.md) | Complete DB schema + 50-migration history |
 | [`docs/admin-guide.md`](docs/admin-guide.md) | Installation, Kubernetes, operations, troubleshooting |
