@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**Personal Financial Intelligence Platform**
+**Decision Intelligence for Investors**
 
 [![Version](https://img.shields.io/badge/version-3.26.0-blue?style=flat-square)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
@@ -13,7 +13,8 @@
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white)](infra/docker-compose.yml)
 [![GitHub Stars](https://img.shields.io/github/stars/erezrozenbaum/tradeops?style=flat-square&logo=github)](https://github.com/erezrozenbaum/tradeops/stargazers)
 
-*Understand your finances. Model risk accurately. Validate strategies. Simulate before you invest.*
+*Most investing platforms measure portfolio performance.*
+*TradeOps measures decision quality.*
 
 <a href="https://buymeacoffee.com/erezrozenbaum">
   <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="40">
@@ -42,10 +43,12 @@
 
 ## Table of Contents
 
-- [What it is](#what-it-is)
+- [The Core Insight](#the-core-insight)
+- [The Decision Loop](#the-decision-loop)
+- [How it works](#how-it-works)
 - [Highlights](#highlights)
-- [Philosophy](#philosophy)
-- [Features](#features)
+- [Decision Intelligence](#decision-intelligence)
+- [Full Feature Reference](#full-feature-reference)
 - [Architecture](#architecture)
 - [Trust & Safety Architecture](#trust--safety-architecture)
 - [Deployment](#deployment)
@@ -58,18 +61,75 @@
 
 ---
 
-## What it is
+## The Core Insight
 
-TradeOps AI is **not a trading bot**. It is a personal and family financial intelligence platform that helps you:
+Most investing tools answer: **What happened to my money?**
 
-| What it does | What it does not do |
+TradeOps answers: **Why do I keep making the same decisions?**
+
+That is a harder problem. And a more interesting one.
+
+Portfolio performance is partly skill and partly luck. Decision quality is entirely within your control. A bad market can destroy a good portfolio. It cannot destroy a good decision process.
+
+TradeOps does not compete with portfolio trackers, robo-advisors, or AI stock pickers. It measures and improves the one thing those tools ignore: **how you decide**.
+
+| What TradeOps tracks | What it does not do |
 |---|---|
-| Analyse your complete financial position | Execute trades autonomously |
-| Model risk as actual percentages of capital | Provide licensed financial advice |
-| Surface AI-assisted insights and research | Guarantee returns or outcomes |
-| Simulate strategies before committing capital | Override deterministic risk controls |
-| Track net worth, goals, tax, and FX impact | Operate in place of a financial professional |
-| Gate live trading behind 5 safety checks | Allow live trading for minors |
+| Decision quality — documented, measured, over time | Execute trades autonomously |
+| Behavioral patterns from your own history | Provide licensed financial advice |
+| Whether your discipline actually improves returns | Guarantee outcomes |
+| Risk alignment between decisions and your model | Override deterministic risk controls |
+| Decision quality month-over-month, independent of markets | Operate in place of a financial professional |
+
+---
+
+## The Decision Loop
+
+Every investment decision becomes a data point. Over time, the system builds a behavioral fingerprint from your own history.
+
+```
+        Idea
+          ↓
+    Market Research
+          ↓
+    Pre-flight Review  ←  deterministic risk engine
+          ↓
+      Rationale        ←  write your thesis before you trade
+          ↓
+    Paper Testing      ←  validate before real capital
+          ↓
+    Stage → Execute
+          ↓
+  Outcome Tracking     ←  30 / 90 / 180-day results
+          ↓
+      Reflection       ←  auto-computed post-execution record
+          ↓
+  Behavioral Learning  ←  DQS, Behavioral Alpha, Monthly Review
+          ↓
+   Better Next Decision
+```
+
+After enough cycles, TradeOps answers questions like:
+- Do your documented decisions outperform undocumented ones? (measured on your actual returns)
+- What does your Decision Quality Score look like this month vs. last month?
+- Which behavioral patterns — blind overrides, reactive large trades, goal drift — are costing you?
+
+---
+
+## How it works
+
+TradeOps is not four products for four personas. It is one product for one investor — at every stage of the journey.
+
+**Stage 1 — Foundation**
+Before touching a strategy, the platform builds the data layer that makes decision intelligence meaningful: financial profile, stability score, risk allocation model, and goals. A beginner managing an emergency fund is building the same foundation a serious investor needs for a meaningful DQS.
+
+**Stage 2 — Validation**
+Strategy backtesting, paper trading, and pre-flight review gate every order. The platform enforces the sequence: understand before you invest, simulate before you commit, stage before you execute.
+
+**Stage 3 — Decision Intelligence**
+The layer that makes TradeOps different. Every staged order accumulates decision data — rationale, pre-flight verdict, outcome. Over time that data feeds the DQS, Behavioral Alpha, Monthly Review, and Coach. The longer you use it, the sharper your behavioral mirror becomes.
+
+The progression is not separate products. It is the same investor growing.
 
 ---
 
@@ -84,47 +144,36 @@ TradeOps AI is **not a trading bot**. It is a personal and family financial inte
   <img src="docs/screenshots/simulation.png" width="48%" alt="Simulation Engine — Monte Carlo p10/p50/p90 scenarios">
 </div>
 
-- **Command Center** — A single daily intelligence screen that answers "What should I focus on today?": top actions, 7-day evolution feed, behavioral warnings, futures preview, and AI summary in one view.
-- **Order Builder** — Stage BUY/SELL orders with deterministic pre-flight review (reasons, risks, verdict), tax-optimised sequencing (loss harvest, wash-sale warnings), goal linkage, and outcome tracking at 30/90/180 days.
-- **Financial Twin** — An 8-dimensional behavioral mirror updated daily: Stability, Discipline, Emotional Risk, Consistency, Resilience, Risk Alignment, Long-Term Discipline, Contribution Momentum — with a 9-dimension Health Radar.
-- **5-gate live trading safety model** — Live execution requires: paper track record (Sharpe ≥ 0.5, ≥ 30 days) + explicit risk acknowledgment + admin approval + order risk limits + verified broker connection.
-- **Full simulation engine** — 6 scenarios including Monte Carlo (1,000-iteration, seeded, reproducible) with p10/p50/p90 trajectories; counterfactual replay shows what would have happened if you had followed the recommendation.
+- **Decision Quality Score** — 0–100 score measuring HOW you make decisions, not whether markets cooperated. Improvable in a bear market.
+- **Behavioral Alpha** — Three original alpha dimensions (Documentation Alpha, Goal Alignment Alpha, Risk Compliance Alpha) measured on your actual trade returns. Not theory — your history.
+- **Command Center** — A single daily intelligence screen: top actions, 7-day evolution feed, behavioral warnings, futures preview, and AI summary.
+- **Order Builder** — Stage orders with deterministic pre-flight review, tax-optimised sequencing, goal linkage, and 30/90/180-day outcome tracking.
+- **5-gate live trading safety model** — Paper track record (Sharpe ≥ 0.5, ≥ 30 days) + risk acknowledgment + admin approval + order risk limits + verified broker connection.
 
 ---
 
-## Philosophy
+## Decision Intelligence
 
-```
-Financial safety → clarity → education → validation → automation
-```
+The features that make TradeOps different from every portfolio tracker and robo-advisor.
 
-The platform recommends the right foundations before investing: build an emergency fund, reduce high-interest debt, and establish a risk model based on your real situation — not a vague "high / medium / low" preference.
-
-The correct flow is:
-
-```
-Personal & Family Profile
-        ↓
-Financial Status (income, expenses, debts, assets)
-        ↓
-Financial Stability Score (deterministic 0–100)
-        ↓
-Risk Allocation Model (% of investable capital per tier)
-        ↓
-Strategy Recommendation (curated templates only)
-        ↓
-Backtesting (deterministic, seeded simulation)
-        ↓
-Paper Trading (real simulator, virtual cash)
-        ↓
-Risk-Controlled Live Execution (gated, opt-in)
-```
+| Feature | What it does |
+|---|---|
+| **Trade Journal** | Captures rationale (written thesis) and auto-computed reflection on every staged order — preflight verdict, risks flagged, whether thesis was documented |
+| **Decision Quality Score (DQS)** | 0–100 score measuring HOW decisions are made, independent of market performance; four components: Documentation Discipline, Risk Intelligence, Goal Alignment, Outcome Correlation; monthly trend |
+| **Outcome Correlation** | Shows whether your documented decisions outperform undocumented ones — using your actual returns from the live price cache, not theory |
+| **Behavioral Alpha** | Three original alpha dimensions: Documentation Alpha, Goal Alignment Alpha, Risk Compliance Alpha — each shows group avg return, win rate, and outperformance delta from your own history |
+| **Mistake Pattern Detection** | Automatically surfaces recurring failure modes: blind risk overrides, undocumented losses, large reactive trades, systematic goal drift |
+| **Monthly Investor Review** | Deterministic month-in-review: headline, DQS delta vs. prior month, decision quality narrative, behavioral narrative, improvement focus, achievements, watch list |
+| **Behavioral Insights** | Up to 6 pattern cards per DQS refresh categorised as strength / warning / pattern / opportunity |
+| **Coach Notes** | 2–3 data-derived, non-generic improvement nudges specific to your observed patterns |
+| **Financial Twin** | 8-dimensional behavioral mirror updated daily: Stability, Discipline, Emotional Risk, Consistency, Resilience, Risk Alignment, Long-Term Discipline, Contribution Momentum |
+| **Behavioral Risk Warnings** | 7 deterministic detection rules (panic selling, performance chasing, revenge trading, overtrading spike, concentration addiction, risk creep, strategy abandonment) |
 
 ---
 
-## Features
+## Full Feature Reference
 
-### Core Platform
+### Foundation — Build the data layer that makes Decision Intelligence meaningful
 
 | Feature | Description |
 |---|---|
@@ -135,7 +184,7 @@ Risk-Controlled Live Execution (gated, opt-in)
 | **Goals engine** | Linked accounts, progress tracking, monthly contribution gap analysis |
 | **Net Worth Dashboard** | Full balance sheet: portfolio + manual assets − liabilities, 12-month trend, FI projection |
 
-### Portfolio Intelligence
+### Portfolio Intelligence — Understand what's happening in your portfolio
 
 | Feature | Description |
 |---|---|
@@ -151,7 +200,7 @@ Risk-Controlled Live Execution (gated, opt-in)
 | **Liquidity runway** | T+2 / 1-week / locked tier breakdown, emergency liquidation path |
 | **Resilience simulator** | Job loss / expense shock survival score with depletion path |
 
-### Strategy & Simulation
+### Strategy & Simulation — Validate before you commit real capital
 
 | Feature | Description |
 |---|---|
@@ -302,7 +351,7 @@ Risk-Controlled Live Execution (gated, opt-in)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Browser (Next.js 14)                      │
+│                    Browser (Next.js 16)                      │
 │              REST/JSON + SSE · HttpOnly Cookie               │
 └─────────────────────────┬───────────────────────────────────┘
                           │
@@ -395,23 +444,6 @@ TradeOps goes beyond recommendations to build longitudinal financial understandi
 | **Maturity-Aware AI Thought Partner** | AI Investment Agent adapts communication style to the investor's maturity stage (Foundation → Advanced Cognition); injects twin snapshot + behavioral risk history into every prompt; `?verbosity=beginner\|standard\|advanced` override |
 
 These features share a common foundation: all significant decisions are recorded with deterministic inputs and AI outputs, making the entire decision history queryable, explainable, and auditable.
-
-### Decision Intelligence Platform (v3.25.0–v3.26.0)
-
-TradeOps' strongest differentiator: analyzing the **investor**, not just the assets. A behavioral feedback loop measuring decision quality and surfacing patterns from the investor's own history.
-
-| Feature | What it does |
-|---|---|
-| **Trade Journal** | Captures `rationale` (written thesis) and `reflection` (auto-computed post-execution record: preflight verdict, risks flagged, whether thesis was documented) on every staged order; inline editing for pending orders; filter by documented / undocumented |
-| **Decision Quality Score (DQS)** | 0–100 score measuring HOW decisions are made, independent of market performance; four components: Documentation Discipline (0–35), Risk Intelligence (0–30), Goal Alignment (0–20), Outcome Correlation (0–15); monthly DQS history with improving / stable / declining trend; improvable in a bear market |
-| **Outcome Correlation** | Live price cache (current price vs. entry price on executed buy orders) shows whether documented decisions outperform undocumented ones — using the investor's actual returns, not theory |
-| **Behavioral Insights** | Up to 6 pattern cards per DQS refresh: blind override detection, documentation gaps, goal alignment strength, outcome correlation finding, trend direction — categorised as strength / warning / pattern / opportunity |
-| **Behavioral Alpha Dashboard** | Measures how much decision-making behavior actually impacts returns; three alpha dimensions: Documentation Alpha, Goal Alignment Alpha, Risk Compliance Alpha — each showing group avg return, win rate, and outperformance delta; Best/Worst decisions table with return, rationale snippet, and verdict tags |
-| **Mistake Pattern Detection** | Automatically surfaces recurring failure modes: blind risk overrides, recurring undocumented losses, large reactive trades, systematic goal drift — with frequency count and estimated average return |
-| **Monthly Investor Review** | Deterministic month-in-review narrative: headline, DQS with delta vs. prior month, stats bar, decision quality narrative, behavioral narrative, improvement focus for next month, achievements, watch list; navigable month-by-month |
-| **Coach Notes** | 2–3 data-derived, non-generic improvement nudges per DQS refresh — specific to the investor's observed patterns |
-
-The core loop: **Idea → Pre-flight → Rationale → Paper test → Stage → Execute → Outcome → Reflection → Behavioral learning → Better next decision**.
 
 ---
 
