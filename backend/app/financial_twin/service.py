@@ -53,16 +53,17 @@ def _behavioral_and_emotional(db: Session, investor_id: uuid.UUID) -> tuple[floa
 
     behavioral_discipline = float(m.behavioral_score)
 
-    total = m.short_term_count + m.medium_term_count + m.long_term_count
+    hps = m.holding_period_stats
+    total = hps.short_term_count + hps.medium_term_count + hps.long_term_count
     if total > 0:
-        short_pct = m.short_term_count / total
+        short_pct = hps.short_term_count / total
         # High short-term pct → high emotional risk score (bad)
         emotional_risk = round(max(0.0, 100.0 - short_pct * 150), 2)
         emotional_risk = min(emotional_risk, 100.0)
     else:
         emotional_risk = 50.0
 
-    avg = m.avg_days_held or 0.0
+    avg = hps.avg_days or 0.0
     if avg >= 365:
         long_term_discipline = 100.0
     elif avg >= 180:
@@ -219,12 +220,13 @@ def _tax_efficiency(db: Session, investor_id: uuid.UUID) -> float:
     if m is None:
         return 50.0
 
-    total = m.short_term_count + m.medium_term_count + m.long_term_count
+    hps = m.holding_period_stats
+    total = hps.short_term_count + hps.medium_term_count + hps.long_term_count
     if total == 0:
         return 50.0
 
-    long_pct = m.long_term_count / total
-    medium_pct = m.medium_term_count / total
+    long_pct = hps.long_term_count / total
+    medium_pct = hps.medium_term_count / total
     return round(min((long_pct * 100 + medium_pct * 40), 100.0), 2)
 
 

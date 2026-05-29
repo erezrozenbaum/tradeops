@@ -377,8 +377,8 @@ def reprice_positions(
 ) -> PaperPortfolio | None:
     """Fetch live market prices for all held positions and recompute portfolio value."""
     portfolio = _get_owned(db, investor_id, portfolio_id)
-    if not portfolio or portfolio.status != PortfolioStatus.active:
-        return portfolio
+    if not portfolio:
+        return None
 
     positions = db.query(PaperPosition).filter(PaperPosition.portfolio_id == portfolio_id).all()
     positions_value = 0.0

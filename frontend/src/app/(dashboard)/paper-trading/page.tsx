@@ -864,18 +864,18 @@ export default function PaperTradingPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={repriceAll}
+                      disabled={repricing}
+                      title="Fetch live market prices for all positions"
+                    >
+                      <RefreshCw className={`h-3.5 w-3.5 ${repricing ? "animate-spin" : ""}`} />
+                      {repricing ? "…" : "Reprice"}
+                    </Button>
                     {selected.status === "active" && (
                       <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={repriceAll}
-                          disabled={repricing}
-                          title="Fetch live market prices for all positions"
-                        >
-                          <RefreshCw className={`h-3.5 w-3.5 ${repricing ? "animate-spin" : ""}`} />
-                          {repricing ? "…" : "Reprice"}
-                        </Button>
                         <Button
                           size="sm"
                           onClick={() => { setShowTradeForm((v) => !v); setTradeError(null); }}
@@ -1047,14 +1047,17 @@ export default function PaperTradingPage() {
                     )}
                     <div className="flex flex-wrap gap-3 items-end">
                       <div className="space-y-1">
-                        <label className="text-xs font-medium text-muted-foreground">Symbol</label>
+                        <label className="text-xs font-medium text-muted-foreground">
+                          Symbol
+                          <span className="ml-1.5 font-normal text-muted-foreground/60">stocks, ETFs, crypto</span>
+                        </label>
                         <div className="flex gap-1">
                           <input
                             type="text"
                             value={tradeSymbol}
                             onChange={(e) => { setTradeSymbol(e.target.value.toUpperCase()); setTradeAssetCurrency(""); }}
-                            placeholder="AAPL"
-                            className="h-9 w-24 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring uppercase"
+                            placeholder="AAPL / BTC / ETH"
+                            className="h-9 w-36 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring uppercase"
                           />
                           <Button
                             size="sm"
@@ -1126,7 +1129,7 @@ export default function PaperTradingPage() {
                     <CardTitle className="text-sm font-medium">
                       Open Positions ({selected.positions.length})
                     </CardTitle>
-                    {selected.status === "active" && selected.positions.length > 0 && (
+                    {selected.positions.length > 0 && (
                       <span className="text-xs text-muted-foreground">
                         Hit &ldquo;Reprice&rdquo; to refresh live P&amp;L
                       </span>
@@ -1138,9 +1141,13 @@ export default function PaperTradingPage() {
                     <div className="py-8 text-center">
                       <TrendingUp className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground">No positions yet</p>
-                      {selected.status === "active" && (
+                      {selected.status === "active" ? (
                         <p className="text-xs text-muted-foreground mt-1">
                           Click &ldquo;Trade&rdquo; → Buy to add your first holding.
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          This test has ended — create a new portfolio to continue trading.
                         </p>
                       )}
                     </div>
@@ -1166,8 +1173,12 @@ export default function PaperTradingPage() {
                                       {pos.name}
                                     </span>
                                   )}
-                                  {hasPnl && (
+                                  {hasPnl ? (
                                     <PnLBadge pnl={pos.unrealized_pnl!} pct={pos.unrealized_pnl_pct!} />
+                                  ) : (
+                                    <span className="text-[10px] text-muted-foreground/50 border border-dashed border-border rounded px-1.5 py-0.5">
+                                      no price — hit Reprice
+                                    </span>
                                   )}
                                 </div>
                                 <div className="flex flex-wrap gap-3 mt-1 text-xs text-muted-foreground">
@@ -1195,7 +1206,7 @@ export default function PaperTradingPage() {
                                   </div>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 shrink-0">
+                              <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                                 <button
                                   onClick={() => togglePositionHistory(pos.id)}
                                   className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground border border-border rounded px-2 py-1 hover:bg-muted/50 transition-colors"
@@ -1206,6 +1217,19 @@ export default function PaperTradingPage() {
                                 </button>
                                 {selected.status === "active" && (
                                   <>
+                                    <button
+                                      onClick={() => {
+                                        setTradeSide("buy");
+                                        setTradeSymbol(pos.symbol);
+                                        setTradeQty("");
+                                        setTradePrice("");
+                                        setShowTradeForm(true);
+                                      }}
+                                      className="text-xs text-green-500 hover:text-green-400 font-medium border border-green-500/30 rounded px-2 py-1 hover:bg-green-500/10 transition-colors"
+                                      title="Buy more of this position"
+                                    >
+                                      + Buy more
+                                    </button>
                                     <button
                                       onClick={() => setPromoteModal({ positionId: pos.id, symbol: pos.symbol })}
                                       disabled={promotingId === pos.id}

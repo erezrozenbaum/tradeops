@@ -59,6 +59,9 @@ import {
   RefreshCw,
   CalendarClock,
   BookOpen,
+  BrainCircuit,
+  Activity,
+  CalendarDays,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
@@ -128,6 +131,9 @@ const sections: NavSection[] = [
     label: "Intelligence",
     items: [
       { label: "AI Agent", href: "/agent", icon: Bot },
+      { label: "Decision Intelligence", href: "/decision-intelligence", icon: BrainCircuit },
+      { label: "Behavioral Alpha", href: "/behavioral-alpha", icon: Activity },
+      { label: "Monthly Review", href: "/reflection", icon: CalendarDays },
       { label: "Trade Journal", href: "/journal", icon: BookOpen },
       { label: "AI Coach", href: "/insights", icon: Brain },
       { label: "Market Research", href: "/market-research", icon: Microscope },

@@ -67,6 +67,9 @@ from app.staged_orders.router import router as staged_orders_router
 from app.recurring_plans.router import router as recurring_plans_router
 from app.portfolio_comparison.router import router as portfolio_comparison_router
 from app.morning_brief.router import router as morning_brief_router
+from app.decision_intelligence.router import router as decision_intelligence_router
+from app.behavioral_alpha.router import router as behavioral_alpha_router
+from app.reflection_report.router import router as reflection_report_router
 
 api_router = APIRouter()
 
@@ -145,3 +148,6 @@ api_router.include_router(staged_orders_router, prefix="/investors/{investor_id}
 api_router.include_router(recurring_plans_router, prefix="/investors/{investor_id}/recurring-plans", tags=["recurring-plans"], dependencies=_own)
 api_router.include_router(portfolio_comparison_router, prefix="/investors/{investor_id}/portfolio", tags=["portfolio-comparison"], dependencies=_own)
 api_router.include_router(morning_brief_router, prefix="/investors/{investor_id}/morning-brief", tags=["morning-brief"], dependencies=_own)
+api_router.include_router(decision_intelligence_router, prefix="/investors/{investor_id}/decision-intelligence", tags=["decision-intelligence"], dependencies=_own)
+api_router.include_router(behavioral_alpha_router, prefix="/investors/{investor_id}/behavioral-alpha", tags=["behavioral-alpha"], dependencies=_own)
+api_router.include_router(reflection_report_router, prefix="/investors/{investor_id}/reflection-report", tags=["reflection-report"], dependencies=_own)

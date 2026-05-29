@@ -241,10 +241,9 @@ def compute_attribution(
         note=snap_note,
     ))
 
-    # 2. Price data freshness
+    # 2. Price data freshness — PriceSnapshot is a global cache table (no investor_id)
     latest_price: PriceSnapshot | None = (
         db.query(PriceSnapshot)
-        .filter(PriceSnapshot.investor_id == investor_id)
         .order_by(PriceSnapshot.fetched_at.desc())
         .first()
     )
