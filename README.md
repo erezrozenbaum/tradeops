@@ -4,7 +4,7 @@
 
 **Personal Financial Intelligence Platform**
 
-[![Version](https://img.shields.io/badge/version-3.24.0-blue?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-3.26.0-blue?style=flat-square)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org)
@@ -395,6 +395,23 @@ TradeOps goes beyond recommendations to build longitudinal financial understandi
 | **Maturity-Aware AI Thought Partner** | AI Investment Agent adapts communication style to the investor's maturity stage (Foundation → Advanced Cognition); injects twin snapshot + behavioral risk history into every prompt; `?verbosity=beginner\|standard\|advanced` override |
 
 These features share a common foundation: all significant decisions are recorded with deterministic inputs and AI outputs, making the entire decision history queryable, explainable, and auditable.
+
+### Decision Intelligence Platform (v3.25.0–v3.26.0)
+
+TradeOps' strongest differentiator: analyzing the **investor**, not just the assets. A behavioral feedback loop measuring decision quality and surfacing patterns from the investor's own history.
+
+| Feature | What it does |
+|---|---|
+| **Trade Journal** | Captures `rationale` (written thesis) and `reflection` (auto-computed post-execution record: preflight verdict, risks flagged, whether thesis was documented) on every staged order; inline editing for pending orders; filter by documented / undocumented |
+| **Decision Quality Score (DQS)** | 0–100 score measuring HOW decisions are made, independent of market performance; four components: Documentation Discipline (0–35), Risk Intelligence (0–30), Goal Alignment (0–20), Outcome Correlation (0–15); monthly DQS history with improving / stable / declining trend; improvable in a bear market |
+| **Outcome Correlation** | Live price cache (current price vs. entry price on executed buy orders) shows whether documented decisions outperform undocumented ones — using the investor's actual returns, not theory |
+| **Behavioral Insights** | Up to 6 pattern cards per DQS refresh: blind override detection, documentation gaps, goal alignment strength, outcome correlation finding, trend direction — categorised as strength / warning / pattern / opportunity |
+| **Behavioral Alpha Dashboard** | Measures how much decision-making behavior actually impacts returns; three alpha dimensions: Documentation Alpha, Goal Alignment Alpha, Risk Compliance Alpha — each showing group avg return, win rate, and outperformance delta; Best/Worst decisions table with return, rationale snippet, and verdict tags |
+| **Mistake Pattern Detection** | Automatically surfaces recurring failure modes: blind risk overrides, recurring undocumented losses, large reactive trades, systematic goal drift — with frequency count and estimated average return |
+| **Monthly Investor Review** | Deterministic month-in-review narrative: headline, DQS with delta vs. prior month, stats bar, decision quality narrative, behavioral narrative, improvement focus for next month, achievements, watch list; navigable month-by-month |
+| **Coach Notes** | 2–3 data-derived, non-generic improvement nudges per DQS refresh — specific to the investor's observed patterns |
+
+The core loop: **Idea → Pre-flight → Rationale → Paper test → Stage → Execute → Outcome → Reflection → Behavioral learning → Better next decision**.
 
 ---
 

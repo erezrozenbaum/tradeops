@@ -8,6 +8,26 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.26.0] — 2026-05-29
+
+### Added
+- **Behavioral Alpha Dashboard** — measures how much decision-making behavior actually impacts returns using live price cache vs. entry price on executed buy orders; three alpha dimensions: Documentation Alpha (documented vs. undocumented), Goal Alignment Alpha (goal-linked vs. reactive), Risk Compliance Alpha (compliant vs. warning-override); Best/Worst decisions table with return %, rationale snippet, and badge tags; Mistake Pattern Detection (blind risk overrides, recurring undocumented losses, large reactive trades, systematic goal drift); `GET /investors/{id}/behavioral-alpha`; new `/behavioral-alpha` page in Intelligence section
+- **Monthly Investor Reflection Report** — deterministic month-in-review narrative for any month with order activity; sections: headline, Decision Quality Score with delta vs. prior month, stats bar (total/executed/documented/goal-linked/cancelled/overrides), decision quality narrative, behavioral narrative, improvement focus for next month, achievements, watch list; month navigation (prev/next) with available month list; `GET /investors/{id}/reflection-report?month=YYYY-MM`; new `/reflection` page ("Monthly Review") in Intelligence section
+- **Sidebar** — "Behavioral Alpha" (Activity icon) and "Monthly Review" (CalendarDays icon) added to Intelligence section
+
+## [3.25.0] — 2026-05-29
+
+### Added
+- **Decision Intelligence / Decision Quality Score (DQS)** — 0–100 score measuring how an investor makes decisions, independent of market performance; four components: Documentation Discipline (0–35), Risk Intelligence (0–30), Goal Alignment (0–20), Outcome Correlation (0–15); Outcome Correlation uses live price cache (current price vs. entry price on executed buy orders) to show whether documented trades outperform undocumented ones; monthly DQS history with trend detection (improving / stable / declining); behavioral insight cards (up to 6, categorised as strength / warning / pattern / opportunity); coach notes (2–3 data-derived, non-generic improvement nudges); `GET /investors/{id}/decision-intelligence`; new `/decision-intelligence` page in Intelligence section
+- **Paper Trading — Buy more button** — each open position on an active portfolio now has a "+ Buy more" button that pre-fills the trade form with the symbol and BUY side
+- **Paper Trading — Reprice on completed portfolios** — Reprice button now visible for all portfolio statuses (not only active); backend `reprice_positions` no longer gates on `portfolio.status == active`; useful for reviewing P&L after ending a test
+- **Paper Trading — Crypto support hint** — symbol field placeholder updated to `AAPL / BTC / ETH`; label extended with `stocks, ETFs, crypto`; backend has always supported BTC/ETH/SOL/etc. via CoinGecko routing
+- **Paper Trading — No-price hint** — positions without a cached live price now show a dashed `no price — hit Reprice` badge instead of silently rendering without P&L
+
+### Fixed
+- **Financial Twin + Health Radar (500)** — `financial_twin/service.py` was accessing `m.short_term_count`, `m.medium_term_count`, `m.long_term_count`, and `m.avg_days_held` directly on `BehavioralMetrics`; those fields are nested under `m.holding_period_stats`; same bug existed in both `_behavioral_and_emotional` and `_tax_efficiency` functions
+- **Performance Attribution (500)** — `attribution/service.py` was filtering `PriceSnapshot.investor_id == investor_id`; `PriceSnapshot` is a global cache table with no `investor_id` column; filter removed — query now fetches the most recently cached price globally
+
 ## [3.24.0] — 2026-05-29
 
 ### Added

@@ -60,7 +60,6 @@ import {
   CalendarClock,
   BookOpen,
   BrainCircuit,
-  Activity,
   CalendarDays,
 } from "lucide-react";
 import { useTheme } from "next-themes";
