@@ -97,7 +97,7 @@ def _risk_intelligence_score(
     compliance_rate = round(
         (len(non_reconsider) + reconsider_with_rationale) / len(executed), 4
     )
-    return score, compliance_rate, reconsider_total, reconsider_total
+    return score, compliance_rate, reconsider_total, reconsider_with_rationale
 
 
 def _goal_alignment_score(orders: list[StagedOrder]) -> tuple[float, float]:
@@ -130,7 +130,7 @@ def _outcome_correlation(
     results: list[dict[str, Any]] = []
     for o in executed_buys:
         snap = get_cached_price(db, o.ticker)
-        if snap is None:
+        if snap is None or snap.price <= 0:
             continue
         ret_pct = round((snap.price - o.unit_price) / o.unit_price * 100, 2)
         results.append({
@@ -198,6 +198,22 @@ def _outcome_or_process_score(
         if any(o.outcome_snapshots for o in executed):
             score = min(score + 3.0, 15.0)
         return round(score, 2)
+
+
+def compute_monthly_dqs(db: Session, orders: list[StagedOrder]) -> float | None:
+    """Compute DQS for any subset of orders (e.g. a single month).
+
+    Used by reflection_report to ensure monthly DQS is identical to the
+    full Decision Intelligence calculation — not a separate proxy formula.
+    """
+    if not orders:
+        return None
+    d_score, _ = _documentation_score(orders)
+    r_score, _, _, _ = _risk_intelligence_score(orders)
+    g_score, _ = _goal_alignment_score(orders)
+    oc = _outcome_correlation(db, orders)
+    op_score = _outcome_or_process_score(db, orders, oc)
+    return round(min(100.0, d_score + r_score + g_score + op_score), 1)
 
 
 # ─── insight generation ───────────────────────────────────────────────────────
@@ -410,12 +426,7 @@ def _dqs_history(
 
     history: list[DQSHistoryPoint] = []
     for month, month_orders in sorted(by_month.items()):
-        d_score, _ = _documentation_score(month_orders)
-        r_score, _, _, _ = _risk_intelligence_score(month_orders)
-        g_score, _ = _goal_alignment_score(month_orders)
-        oc = _outcome_correlation(db, month_orders)
-        op_score = _outcome_or_process_score(db, month_orders, oc)
-        monthly_dqs = round(min(100.0, d_score + r_score + g_score + op_score), 1)
+        monthly_dqs = compute_monthly_dqs(db, month_orders) or 0.0
         history.append(DQSHistoryPoint(
             month=month,
             score=monthly_dqs,

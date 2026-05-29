@@ -7,7 +7,6 @@ achievements, and watch items.  No external API calls.  Pure data → text.
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
-from statistics import mean
 
 from sqlalchemy.orm import Session
 
@@ -73,26 +72,10 @@ def _compute_stats(orders: list[StagedOrder]) -> MonthlyStats:
     )
 
 
-def _monthly_dqs(orders: list[StagedOrder]) -> float | None:
-    """Simple DQS proxy for a single month's orders (matches decision_intelligence logic)."""
-    if not orders:
-        return None
-    n = len(orders)
-    documented = sum(1 for o in orders if o.rationale)
-    doc_score = (documented / n) * 35
-
-    executed = [o for o in orders if o.status == "executed"]
-    if executed:
-        reconsider = sum(1 for o in executed if _verdict(o) == "reconsider")
-        non_rec = len(executed) - reconsider
-        risk_score = (non_rec / len(executed)) * 20 + (10.0 if reconsider == 0 else 5.0)
-    else:
-        risk_score = 15.0
-
-    goal_linked = sum(1 for o in orders if o.goal_id)
-    goal_score = (goal_linked / n) * 20
-
-    return round(min(100.0, doc_score + risk_score + goal_score + 7.5), 1)
+def _monthly_dqs(db: Session, orders: list[StagedOrder]) -> float | None:
+    """Compute DQS for a month's orders using the canonical Decision Intelligence formula."""
+    from app.decision_intelligence.service import compute_monthly_dqs
+    return compute_monthly_dqs(db, orders)
 
 
 # ─── Narrative generators ──────────────────────────────────────────────────────
@@ -288,7 +271,7 @@ def compute_reflection_report(
 
     orders = by_month.get(target, [])
     stats = _compute_stats(orders)
-    dqs = _monthly_dqs(orders)
+    dqs = _monthly_dqs(db, orders)
 
     # Previous month
     prev_month = None
@@ -297,7 +280,7 @@ def compute_reflection_report(
         idx = available.index(target) if target in available else -1
         if idx > 0:
             prev_month = available[idx - 1]
-            prev_dqs = _monthly_dqs(by_month.get(prev_month, []))
+            prev_dqs = _monthly_dqs(db, by_month.get(prev_month, []))
 
     dqs_change = round(dqs - prev_dqs, 1) if (dqs is not None and prev_dqs is not None) else None
     if prev_dqs is None and dqs is not None:

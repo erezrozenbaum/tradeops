@@ -8,6 +8,18 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.27.0] — 2026-05-29
+
+### Fixed
+- **DQS consistency** — `reflection_report/_monthly_dqs` was computing a different DQS than `decision_intelligence/compute_decision_intelligence` for the same orders (proxy formula with hardcoded 7.5 for outcome correlation); both now use the canonical `compute_monthly_dqs()` function extracted from the Decision Intelligence service; Monthly Review DQS values now match the Decision Intelligence page exactly
+- **`_risk_intelligence_score` return tuple** — 4th return value was `reconsider_total` duplicated; corrected to `reconsider_with_rationale` so callers can distinguish total overrides from documented overrides
+- **Price guard in outcome correlation** — added `snap.price <= 0` guard in both `decision_intelligence/_outcome_correlation` and `behavioral_alpha/_price_orders` to prevent a division-by-zero on malformed price cache entries; `snap is None` was already guarded but `snap.price == 0` was not
+- **`executed_at` filter on behavioral alpha** — `_get_executed_buys` now filters `executed_at IS NOT NULL`; orders marked executed without a timestamp can produce misleading price correlation results
+
+### Refactored
+- **`compute_monthly_dqs()`** — new public function in `decision_intelligence/service.py`; computes DQS for any subset of orders (single month or arbitrary slice) using the full four-component formula; `_dqs_history` and `_monthly_dqs` in reflection_report now both delegate to this function
+- **`_dqs_history`** — simplified to call `compute_monthly_dqs` instead of inline four-component calculation
+
 ## [3.26.0] — 2026-05-29
 
 ### Added

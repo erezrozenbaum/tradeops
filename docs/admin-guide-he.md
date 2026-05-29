@@ -2,7 +2,7 @@
 
 # TradeOps AI — מדריך מנהל מערכת
 
-**גרסה:** 3.26.0  
+**גרסה:** 3.27.0  
 **עודכן לאחרונה:** 29 במאי 2026
 
 מדריך זה מכסה התקנה, הגדרות, ניהול מסד נתונים, פריסת Kubernetes ותפעול שוטף של TradeOps AI.
@@ -521,6 +521,7 @@ docker compose -f infra/docker-compose.yml restart backend
 | v3.24.0 | יומן עסקאות | לכידת נימוק והשתקפות לכל פקודת staged: עמודות rationale + reflection ב-staged_orders (migration 0054); Order Builder — שדה "למה העסקה הזו?" לפני staging; Paper Trading — מודל לכידת נימוק לפני Stage Real Order; עמוד /journal עם פילטרים, עריכת נימוק inline, כרטיס השתקפות לאחר ביצוע |
 | v3.25.0 | Decision Intelligence + תיקוני באגים | ציון איכות החלטה (DQS) 0–100: מדוד תהליך, לא ביצועי שוק; רכיבים: תיעוד (0-35), אינטליגנציית סיכון (0-30), יישור מטרות (0-20), מתאם תוצאות (0-15); מתאם תוצאות מחשב תשואה מפועלת (מחיר נוכחי vs. מחיר כניסה) על פקודות BUY מבוצעות; היסטוריה חודשית; כרטיסי תובנות התנהגותיות. תיקונים: Financial Twin + Health Radar 500 (BehavioralMetrics.short_term_count נגישות שגויה); Attribution 500 (PriceSnapshot.investor_id לא קיים). Paper Trading: כפתור "Buy more", Reprice לכל הסטטוסים, רמז קריפטו. |
 | v3.26.0 | Behavioral Alpha + Monthly Review | **Behavioral Alpha**: מדידת השפעת הרגלי ההחלטה על התשואות — 3 ממדי אלפא (תיעוד, יישור מטרות, ציות לסיכון) עם ממוצע תשואה וwin rate לכל קבוצה; טבלת ההחלטות הטובות/גרועות ביותר; זיהוי תבניות שגיאה; GET /investors/{id}/behavioral-alpha. **Monthly Review**: דוח חודשי דטרמיניסטי לכל חודש עם פעילות — כותרת, DQS עם שינוי vs. חודש קודם, נרטיב איכות החלטה, נרטיב התנהגות, מיקוד שיפור לחודש הבא, הישגים, watch list; GET /investors/{id}/reflection-report?month=YYYY-MM. |
+| v3.27.0 | תיקוני באגים — Decision Intelligence | **עקביות DQS**: `_monthly_dqs` ב-reflection_report השתמש בנוסחה שונה (7.5 קשוח לקורלציית תוצאות) — שניהם משתמשים כעת ב-`compute_monthly_dqs()`. **תיקון return tuple**: `_risk_intelligence_score` החזיר `reconsider_total` כפול במקום `reconsider_with_rationale`. **הגנת מחיר**: נוסף guard ל-`snap.price <= 0` בשתי פונקציות הקורלציה. **פילטר executed_at**: `_get_executed_buys` בבהביוראל אלפא מסנן כעת `executed_at IS NOT NULL`. |
 
 ### AI Intelligence *(דורש `ANTHROPIC_API_KEY`)*
 

@@ -1,6 +1,6 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 3.26.0  
+**Version:** 3.27.0  
 **Last updated:** 2026-05-29
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
@@ -838,6 +838,7 @@ kubectl describe ingress tradeops
 | Behavioral Alpha | `behavioral_alpha/` + `/behavioral-alpha` page | Measures how much decision-making behavior impacts actual returns. Three alpha dimensions (Documentation, Goal Alignment, Risk Compliance) each showing group avg return, win rate, and outperformance delta using price cache vs. entry price. Best/Worst decisions table. Mistake Pattern Detection: blind risk overrides, recurring undocumented losses, large reactive trades, systematic goal drift. `GET /investors/{id}/behavioral-alpha`. Applied v3.26.0. |
 | Monthly Review | `reflection_report/` + `/reflection` page | Deterministic month-in-review narrative report for any month with order activity. Sections: headline, DQS delta vs. prior month, stats bar (decisions/executed/documented/goal-linked/overrides), decision quality narrative, behavioral narrative, improvement focus, achievements, watch list. Month navigation with available month selector. `GET /investors/{id}/reflection-report?month=YYYY-MM`. Applied v3.26.0. |
 | Bug fixes (v3.25.0) | `financial_twin/service.py` + `attribution/service.py` | Financial Twin / Health Radar 500 fixed: `BehavioralMetrics` accessed `short_term_count` etc. directly; fields are nested under `.holding_period_stats`. Performance Attribution 500 fixed: `PriceSnapshot` has no `investor_id` column — filter removed. Applied v3.25.0. |
+| DI Bug fixes (v3.27.0) | `decision_intelligence/service.py` + `behavioral_alpha/service.py` + `reflection_report/service.py` | DQS consistency: `_monthly_dqs` in reflection_report was using a different formula (hardcoded 7.5) from the main DQS engine — both now use `compute_monthly_dqs()`. Risk score return tuple corrected (`reconsider_with_rationale` was returned as duplicate `reconsider_total`). Price guard added (`snap.price <= 0`) in both correlation functions. `executed_at IS NOT NULL` filter added to behavioral alpha order query. Applied v3.27.0. |
 | Paper Trading v2 | `paper_trading/` + migration 0053 + Paper Trading page | **Name field** (`name VARCHAR(200)`) on `paper_portfolios`; PATCH rename endpoint; pencil icon inline rename modal in UI. **Live P&L** per position: `current_price`, `unrealized_pnl`, `unrealized_pnl_pct` returned by `build_enriched_out()` using price cache + FX conversion; P&L badge + "Now: {price}" on each position row. **Entry date** (`created_at`) shown as "Bought: {date}" per position. **Reprice All** button hits `POST /reprice`. **Stage Real Order** button per position calls `POST /positions/{id}/promote` → creates a pending `StagedOrder` in Order Builder at live price. **End Test** replaces "Close" — amber confirmation card with explanation. **Tick history chart** — SVG polyline of simulation ticks in summary card. Applied v3.21.0. |
 
 **Performance Attribution** — `/portfolio/attribution`  

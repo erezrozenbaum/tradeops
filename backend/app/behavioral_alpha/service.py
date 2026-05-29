@@ -37,6 +37,7 @@ def _get_executed_buys(db: Session, investor_id: uuid.UUID) -> list[StagedOrder]
             StagedOrder.action == "buy",
             StagedOrder.ticker.isnot(None),
             StagedOrder.unit_price > 0,
+            StagedOrder.executed_at.isnot(None),
         )
         .order_by(StagedOrder.executed_at.desc())
         .all()
@@ -52,7 +53,7 @@ def _price_orders(
     result = []
     for o in orders:
         snap = get_cached_price(db, o.ticker)
-        if snap is None:
+        if snap is None or snap.price <= 0:
             continue
         ret = round((snap.price - o.unit_price) / o.unit_price * 100, 2)
         result.append((o, ret))
