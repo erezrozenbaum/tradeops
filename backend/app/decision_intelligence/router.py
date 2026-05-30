@@ -16,4 +16,11 @@ def get_decision_intelligence(
     db: Session = Depends(get_db),
 ):
     """Compute the Decision Quality Score and behavioral insights for an investor."""
-    return service.compute_decision_intelligence(db, investor_id)
+    from app.core import cache
+    key = f"di:{investor_id}"
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    report = service.compute_decision_intelligence(db, investor_id)
+    cache.set(key, report.model_dump(), ttl=900)
+    return report

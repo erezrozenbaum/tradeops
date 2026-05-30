@@ -16,4 +16,11 @@ def get_behavioral_alpha(
     db: Session = Depends(get_db),
 ):
     """Return behavioral alpha — how much decision discipline impacts actual returns."""
-    return service.compute_behavioral_alpha(db, investor_id)
+    from app.core import cache
+    key = f"ba:{investor_id}"
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    report = service.compute_behavioral_alpha(db, investor_id)
+    cache.set(key, report.model_dump(), ttl=900)
+    return report

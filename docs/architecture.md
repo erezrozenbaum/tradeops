@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 3.32.0  
+**Version:** 3.33.0  
 **Last updated:** 2026-05-30
 
 ---
@@ -99,6 +99,7 @@ backend/app/
 ├── core/config.py              # Settings from environment variables
 ├── core/tracing.py             # Langfuse AI observability wrapper (trace_ai_call)
 ├── core/telemetry.py           # OpenTelemetry + Prometheus instrumentation
+├── core/cache.py               # Redis cache helper (v3.33.0): get/set/delete/invalidate_investor; graceful degradation; TTL 900s (DI/BA/CAL) / 1800s (reflection); invalidated on order create/execute/cancel
 ├── db/
 │   ├── base.py                 # SQLAlchemy declarative base
 │   └── session.py              # DB session dependency

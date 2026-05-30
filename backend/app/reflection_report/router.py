@@ -18,4 +18,13 @@ def get_reflection_report(
     db: Session = Depends(get_db),
 ):
     """Return the monthly investor reflection report for a given month (defaults to current)."""
-    return service.compute_reflection_report(db, investor_id, month=month)
+    from datetime import datetime, timezone
+    from app.core import cache
+    resolved_month = month or datetime.now(timezone.utc).strftime("%Y-%m")
+    key = f"rr:{investor_id}:{resolved_month}"
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    report = service.compute_reflection_report(db, investor_id, month=month)
+    cache.set(key, report.model_dump(), ttl=1800)
+    return report

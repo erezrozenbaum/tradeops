@@ -193,7 +193,14 @@ def get_outcomes(investor_id: uuid.UUID, db: Session = Depends(get_db)):
 @router.get("/calibration", response_model=CalibrationOut)
 def get_calibration(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     """Aggregate projected vs actual tier allocations at 30/90/180-day milestones."""
-    return service.get_outcome_calibration(db, investor_id)
+    from app.core import cache
+    key = f"cal:{investor_id}"
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    report = service.get_outcome_calibration(db, investor_id)
+    cache.set(key, report.model_dump(), ttl=900)
+    return report
 
 
 # ── Smart Allocation Assistant ────────────────────────────────────────────────

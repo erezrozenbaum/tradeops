@@ -8,6 +8,19 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.33.0] — 2026-05-30
+
+### Added
+- **Redis caching for compute-heavy endpoints** — 15-min TTL (900s) for Decision Intelligence, Behavioral Alpha, and Outcome Calibration; 30-min TTL (1800s) for Reflection Report; cache keys: `di:{id}`, `ba:{id}`, `cal:{id}`, `rr:{id}:{YYYY-MM}`; graceful degradation — all cache operations are wrapped in try/except and silently skip if Redis is unavailable
+- **`app/core/cache.py`** — thin Redis wrapper: `get()`, `set()`, `delete()`, `invalidate_investor()`; uses `redis.from_url(REDIS_URL)` with 2s connect timeout; `invalidate_investor()` deletes all four key families for an investor using `scan_iter` (non-blocking pattern match for reflection report month keys)
+- **Cache invalidation on order mutations** — `create_staged_order()`, `mark_executed()`, and `cancel_order()` each call `cache.invalidate_investor()` after DB commit, ensuring DI / BA / calibration results stay fresh after any order lifecycle change
+
+### Changed
+- **`decision_intelligence/router.py`** — check cache before computing; store result on miss
+- **`behavioral_alpha/router.py`** — check cache before computing; store result on miss
+- **`reflection_report/router.py`** — check cache before computing (month resolved to current if None); store result on miss
+- **`staged_orders/router.py`** — calibration endpoint now cache-aware
+
 ## [3.32.0] — 2026-05-30
 
 ### Added

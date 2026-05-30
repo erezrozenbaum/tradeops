@@ -1,6 +1,6 @@
 # TradeOps AI — Product Roadmap
 
-**Version:** 3.32.0  
+**Version:** 3.33.0  
 **Last updated:** 2026-05-30
 
 > Completed phases: v1–v3.30.0. See `CHANGELOG.md` and `execution_plan.md` for the full history.
@@ -31,6 +31,7 @@
 | v3.30 | Behavioral Confidence Indicator (κ score in pre-flight, read-only advisory) |
 | v3.31 | Portfolio Anti-Correlation Engine (Pearson r in pre-flight, sector clustering warnings) |
 | v3.32 | Thesis Expiry Monitor (stop-loss / take-profit / horizon breach alerts in Morning Brief) |
+| v3.33 | Redis caching for compute-heavy endpoints (DI, BA, Calibration, Reflection Report — 15/30-min TTL) |
 
 ---
 
@@ -43,7 +44,7 @@
 | High | Live broker execution skeleton | IBKR Client Portal Gateway; disabled by default; requires explicit activation |
 | Medium | Behavioral Confidence history | Track κ scores over time per investor; trend chart on Decision Intelligence page |
 | Medium | Family shared goals dashboard | Household-level goal aggregation view |
-| Medium | Redis caching for compute-heavy endpoints | DQS, behavioral alpha, calibration; 15-min TTL |
+| Medium | Behavioral Confidence history | Track κ scores over time per investor; trend chart on Decision Intelligence page |
 | Medium | Audit logging in Decision Intelligence / Behavioral Alpha routers | Currently missing from the three intelligence modules |
 | Low | AI-generated monthly narrative email | Monthly reflection report delivered as email digest |
 | Low | Test coverage for decision_intelligence, behavioral_alpha, reflection_report | Currently no unit tests for these three modules |

@@ -350,6 +350,10 @@ def create_staged_order(
     )
     db.commit()
     db.refresh(order)
+
+    from app.core import cache
+    cache.invalidate_investor(str(investor_id))
+
     return _to_out(order)
 
 
@@ -429,6 +433,10 @@ def mark_executed(db: Session, investor_id: uuid.UUID, order_id: uuid.UUID) -> S
     )
     db.commit()
     db.refresh(order)
+
+    from app.core import cache
+    cache.invalidate_investor(str(investor_id))
+
     return _to_out(order)
 
 
@@ -504,6 +512,10 @@ def cancel_order(db: Session, investor_id: uuid.UUID, order_id: uuid.UUID) -> St
     )
     db.commit()
     db.refresh(order)
+
+    from app.core import cache
+    cache.invalidate_investor(str(investor_id))
+
     return _to_out(order)
 
 
