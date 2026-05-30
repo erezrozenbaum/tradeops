@@ -135,6 +135,15 @@ def get_morning_brief(investor_id: uuid.UUID, db: Session = Depends(get_db)):
         for a in outdated_accounts
     ]
 
+    # Thesis expiry alerts — breached stop-loss, take-profit, or time horizon
+    thesis_alerts: list[dict] = []
+    try:
+        from app.services.thesis_drift import get_thesis_alerts
+        thesis_alerts = get_thesis_alerts(db, investor_id)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).debug("[morning_brief] thesis_alerts skipped: %s", exc)
+
     return {
         "generated_at": now.isoformat(),
         "portfolio": portfolio,
@@ -143,4 +152,5 @@ def get_morning_brief(investor_id: uuid.UUID, db: Session = Depends(get_db)):
         "next_plan": next_plan_data,
         "behavioral_events": behavioral_events,
         "broker_sync_warnings": broker_sync_warnings,
+        "thesis_alerts": thesis_alerts,
     }

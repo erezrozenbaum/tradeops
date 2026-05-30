@@ -8,6 +8,21 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.32.0] — 2026-05-30
+
+### Added
+- **Thesis Expiry Monitor** — advisory system that flags executed buy orders where the investor's documented stop-loss, take-profit, or investment horizon has been breached; results surface as `thesis_alerts[]` in the Morning Brief; three actionable statuses: `RISK_BREACHED` (current price ≤ entry × (1 + stop_loss_pct/100)), `TAKE_PROFIT_REACHED` (current price ≥ entry × (1 + take_profit_pct/100)), `TIMELINE_EXPIRED` (days since execution > horizon_days); `INSUFFICIENT_DATA` when price thresholds are set but no price snapshot exists for the ticker; read-only — never modifies orders or positions
+- **`thesis_params` JSONB on `staged_orders`** — migration 0055; nullable; structure: `{horizon_days?: int, stop_loss_pct?: float (<0), take_profit_pct?: float (>0)}`; all existing rows return `null`; captured at order creation time via optional form fields
+- **`app/services/thesis_drift.py`** — `get_thesis_alerts(db, investor_id)` queries all executed buy orders with `thesis_params`, fetches latest price snapshot per ticker, evaluates all three drift conditions; wrapped in `try/except` in morning brief router — failure never breaks the brief
+- **Thesis alert card in Morning Brief** — new card with `BookOpen` icon; per-alert chips (`Stop-Loss Breached` / `Take-Profit Reached` / `Horizon Expired`) color-coded red/emerald/amber; shows entry vs current price with return %; guidance footer; all-clear condition updated to include `thesis_alerts`
+- **Thesis Parameters form section in Order Builder** — collapsible section below the rationale field (ChevronDown toggle); three optional inputs: Horizon (days), Stop-Loss (%), Take-Profit (%); reset on form submit; only sent if at least one field is filled
+- **Thesis chip on order cards** — sky-colored `ClipboardList` chip shows configured parameters (e.g. `90d · SL -15% · TP +30%`) on any order that has `thesis_params` set
+
+### Changed
+- **`StagedOrderCreate` schema** — new optional `thesis_params: ThesisParams | None` field; `ThesisParams` validates `stop_loss_pct < 0` and `take_profit_pct > 0`; `horizon_days > 0`
+- **`StagedOrderOut` schema** — new `thesis_params: dict | None` field (pass-through from DB)
+- **Morning Brief router** — adds `thesis_alerts` key to response; computation isolated in `try/except`
+
 ## [3.31.0] — 2026-05-30
 
 ### Added

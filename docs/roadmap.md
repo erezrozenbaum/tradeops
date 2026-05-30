@@ -1,6 +1,6 @@
 # TradeOps AI — Product Roadmap
 
-**Version:** 3.31.0  
+**Version:** 3.32.0  
 **Last updated:** 2026-05-30
 
 > Completed phases: v1–v3.30.0. See `CHANGELOG.md` and `execution_plan.md` for the full history.
@@ -30,6 +30,7 @@
 | v3.29 | Smart Assist v2 (DQS+patterns in prompt) + SIP Alert Triggers + Next.js SC cleanup |
 | v3.30 | Behavioral Confidence Indicator (κ score in pre-flight, read-only advisory) |
 | v3.31 | Portfolio Anti-Correlation Engine (Pearson r in pre-flight, sector clustering warnings) |
+| v3.32 | Thesis Expiry Monitor (stop-loss / take-profit / horizon breach alerts in Morning Brief) |
 
 ---
 
@@ -39,7 +40,7 @@
 |----------|---------|-------|
 | High | Live broker execution skeleton | IBKR Client Portal Gateway; disabled by default; requires explicit activation |
 | High | Multi-currency goal progress normalization | Goals denominated in different currencies need FX-adjusted progress |
-| High | Thesis Expiry Monitor | Background worker that flags holdings where stop-loss % or time horizon was breached; requires `thesis_params` JSONB on staged_orders |
+| High | Live broker execution skeleton | IBKR Client Portal Gateway; disabled by default; requires explicit activation |
 | Medium | Behavioral Confidence history | Track κ scores over time per investor; trend chart on Decision Intelligence page |
 | Medium | Family shared goals dashboard | Household-level goal aggregation view |
 | Medium | Redis caching for compute-heavy endpoints | DQS, behavioral alpha, calibration; 15-min TTL |

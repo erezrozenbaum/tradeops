@@ -41,5 +41,6 @@ class StagedOrder(Base, UUIDMixin, TimestampMixin):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
     reflection: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    thesis_params: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     investor: Mapped["InvestorProfile"] = relationship("InvestorProfile")  # type: ignore[name-defined]

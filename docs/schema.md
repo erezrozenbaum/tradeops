@@ -1,8 +1,8 @@
 # TradeOps AI — Database Schema Reference
 
-**Version:** 3.31.0  
+**Version:** 3.32.0  
 **Last updated:** 2026-05-30  
-**Migration head:** 0054
+**Migration head:** 0055
 
 All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete unless noted.
 
@@ -1000,8 +1000,10 @@ Indexes: `investor_id`.
 | 0052 | recurring_investment_plans table (investor_id FK, name VARCHAR(200), frequency VARCHAR(20), day_of_month INT, allocations JSONB, is_active BOOL, next_run_at TIMESTAMPTZ, last_run_at TIMESTAMPTZ, created_at); 2 indexes on investor_id and next_run_at |
 | 0053 | name VARCHAR(200) nullable column on paper_portfolios |
 | 0054 | rationale TEXT + reflection JSONB columns on staged_orders (trade journal: pre-trade rationale + post-execution reflection snapshot) |
+| 0055 | thesis_params JSONB column on staged_orders (optional; structure: `{horizon_days, stop_loss_pct, take_profit_pct}`; enables Thesis Expiry Monitor in Morning Brief) |
 
 **JSONB sub-structure notes (staged_orders):**
+- `thesis_params`: `{horizon_days?: int (>0), stop_loss_pct?: float (<0), take_profit_pct?: float (>0)}` — added v3.32.0; evaluated daily by `thesis_drift.get_thesis_alerts()`; null if not configured
 - `pre_flight_review`: `{reasons_to_proceed: [{label, detail}], risks: [{label, detail}], alternative: str|null, verdict: "proceed"|"caution"|"reconsider", behavioral: {kappa_score: float|null, confidence_tier: str, suggested_action: str, rationale: str}|null, diversification: {status: str, avg_correlation: float|null, risk_tier: str, individual_breakdown: {ticker: float}, insight: str}|null}` — `behavioral` added v3.30.0; `diversification` added v3.31.0; both return `null` on existing rows; `diversification` only populated for buy orders with a ticker
 - `projected_metrics`: `{portfolio_value_base, low_risk_pct, growth_pct, high_risk_pct, goal_progress_pct, goal_name}`
 - `outcome_snapshots`: list of `{days: 30|90|180, snapshot_at, portfolio_value, low_risk_pct, growth_pct, high_risk_pct}` — populated by daily outcome_tracking worker

@@ -6,7 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import {
   Sun, TrendingUp, TrendingDown, Target, Bell, CalendarClock,
-  AlertTriangle, RefreshCw, CheckCircle2, WifiOff,
+  AlertTriangle, RefreshCw, CheckCircle2, WifiOff, BookOpen,
+  ShieldAlert, TrendingDown as StopIcon,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -59,6 +60,24 @@ interface BrokerSyncWarning {
   last_synced_at: string | null;
 }
 
+interface ThesisAlert {
+  order_id: string;
+  ticker: string | null;
+  name: string;
+  status: "RISK_BREACHED" | "TAKE_PROFIT_REACHED" | "TIMELINE_EXPIRED" | "INSUFFICIENT_DATA";
+  insight: string;
+  days_held: number;
+  entry_price: number;
+  current_price: number | null;
+  currency: string;
+  executed_at: string;
+  thesis_params: {
+    horizon_days?: number;
+    stop_loss_pct?: number;
+    take_profit_pct?: number;
+  };
+}
+
 interface MorningBrief {
   generated_at: string;
   portfolio: PortfolioSummary | null;
@@ -67,6 +86,7 @@ interface MorningBrief {
   next_plan: NextPlan | null;
   behavioral_events: BehavioralEvent[];
   broker_sync_warnings: BrokerSyncWarning[];
+  thesis_alerts: ThesisAlert[];
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -300,6 +320,72 @@ export default function MorningBriefPage() {
         </Card>
       )}
 
+      {/* Thesis expiry alerts */}
+      {brief && brief.thesis_alerts && brief.thesis_alerts.length > 0 && (
+        <Card>
+          <div className="px-5 py-4 border-b border-border flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-rose-500" />
+            <p className="text-sm font-medium">Thesis Expiry Alerts</p>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {brief.thesis_alerts.length} alert{brief.thesis_alerts.length > 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="divide-y divide-border">
+            {brief.thesis_alerts.map((a, i) => {
+              const isRisk = a.status === "RISK_BREACHED";
+              const isProfit = a.status === "TAKE_PROFIT_REACHED";
+              const isExpired = a.status === "TIMELINE_EXPIRED";
+              const statusColor = isRisk
+                ? "text-red-500 bg-red-500/10 border-red-500/20"
+                : isProfit
+                ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20"
+                : isExpired
+                ? "text-amber-500 bg-amber-500/10 border-amber-500/20"
+                : "text-muted-foreground bg-muted/10 border-border";
+              const statusLabel = isRisk
+                ? "Stop-Loss Breached"
+                : isProfit
+                ? "Take-Profit Reached"
+                : isExpired
+                ? "Horizon Expired"
+                : "Insufficient Data";
+              return (
+                <div key={i} className="px-5 py-3 space-y-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase border ${statusColor}`}>
+                      {statusLabel}
+                    </span>
+                    {a.ticker && (
+                      <span className="text-sm font-mono font-semibold">{a.ticker}</span>
+                    )}
+                    <span className="text-sm text-muted-foreground">{a.name}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">{a.days_held}d held</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{a.insight}</p>
+                  <div className="flex gap-3 text-[11px] text-muted-foreground/70 flex-wrap">
+                    <span>Entry: {a.currency} {a.entry_price.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
+                    {a.current_price != null && (
+                      <span className={a.current_price >= a.entry_price ? "text-emerald-400" : "text-red-400"}>
+                        Now: {a.currency} {a.current_price.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                        {" "}({a.current_price >= a.entry_price ? "+" : ""}{((a.current_price - a.entry_price) / a.entry_price * 100).toFixed(1)}%)
+                      </span>
+                    )}
+                    {a.thesis_params.horizon_days && (
+                      <span>Target: {a.thesis_params.horizon_days}d</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="px-5 py-3 border-t border-border bg-muted/30">
+            <p className="text-xs text-muted-foreground">
+              These positions have breached their documented thesis parameters. Review each position and either execute the original exit strategy or document an updated rationale.
+            </p>
+          </div>
+        </Card>
+      )}
+
       {/* Behavioral risk events */}
       {brief && brief.behavioral_events.length > 0 && (
         <Card>
@@ -326,7 +412,7 @@ export default function MorningBriefPage() {
       )}
 
       {/* All clear */}
-      {brief && !p && !g && brief.triggered_alerts.length === 0 && brief.behavioral_events.length === 0 && (brief.broker_sync_warnings ?? []).length === 0 && (
+      {brief && !p && !g && brief.triggered_alerts.length === 0 && brief.behavioral_events.length === 0 && (brief.broker_sync_warnings ?? []).length === 0 && (brief.thesis_alerts ?? []).length === 0 && (
         <Card>
           <CardContent className="py-14 text-center">
             <CheckCircle2 className="h-10 w-10 mx-auto text-green-500/40 mb-3" />

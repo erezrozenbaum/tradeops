@@ -10,7 +10,7 @@ import {
   ChevronDown, ChevronUp, AlertTriangle, Zap, ShieldCheck,
   RefreshCw, Trash2, PlayCircle, Info, Target, Leaf,
   BookMarked, BookOpen, Plus, BarChart3, History, Wand2, Sparkles,
-  Square, CheckSquare, Download,
+  Square, CheckSquare, Download, ClipboardList,
 } from "lucide-react";
 import { PreFlightBehavioralShield } from "@/components/PreFlightBehavioralShield";
 import { PreFlightDiversificationCard } from "@/components/PreFlightDiversificationCard";
@@ -70,6 +70,7 @@ interface StagedOrder {
   notes: string | null;
   rationale: string | null;
   reflection: { preflight_verdict: string; preflight_risks: string[]; had_rationale: boolean; note: string } | null;
+  thesis_params: { horizon_days?: number; stop_loss_pct?: number; take_profit_pct?: number } | null;
   created_at: string;
 }
 
@@ -414,8 +415,8 @@ function OrderCard({
         )}
       </div>
 
-      {/* Goal + tax chips */}
-      {(order.goal_name || order.tax_note) && (
+      {/* Goal + tax + thesis chips */}
+      {(order.goal_name || order.tax_note || order.thesis_params) && (
         <div className="flex flex-wrap gap-2">
           {order.goal_name && (
             <div className="flex items-center gap-1 text-[11px] text-purple-400 bg-purple-500/10 border border-purple-500/20 rounded px-2 py-0.5">
@@ -427,6 +428,18 @@ function OrderCard({
             <div className="flex items-center gap-1 text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-0.5 max-w-xs truncate">
               <Leaf className="w-3 h-3 shrink-0" />
               <span className="truncate">{order.tax_note.split("|")[0].trim()}</span>
+            </div>
+          )}
+          {order.thesis_params && (
+            <div className="flex items-center gap-1 text-[11px] text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded px-2 py-0.5">
+              <ClipboardList className="w-3 h-3 shrink-0" />
+              <span>
+                {[
+                  order.thesis_params.horizon_days ? `${order.thesis_params.horizon_days}d` : null,
+                  order.thesis_params.stop_loss_pct != null ? `SL ${order.thesis_params.stop_loss_pct}%` : null,
+                  order.thesis_params.take_profit_pct != null ? `TP +${order.thesis_params.take_profit_pct}%` : null,
+                ].filter(Boolean).join(" · ")}
+              </span>
             </div>
           )}
         </div>
@@ -569,7 +582,11 @@ export default function OrderBuilderPage() {
     goal_id: "",
     notes: "",
     rationale: "",
+    thesis_horizon: "",
+    thesis_stop_loss: "",
+    thesis_take_profit: "",
   });
+  const [showThesis, setShowThesis] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -641,6 +658,11 @@ export default function OrderBuilderPage() {
     }
     setSubmitting(true);
     try {
+      const thesisParams: Record<string, number> = {};
+      if (form.thesis_horizon) thesisParams.horizon_days = parseInt(form.thesis_horizon, 10);
+      if (form.thesis_stop_loss) thesisParams.stop_loss_pct = parseFloat(form.thesis_stop_loss);
+      if (form.thesis_take_profit) thesisParams.take_profit_pct = parseFloat(form.thesis_take_profit);
+
       await apiFetch(`/investors/${investorId}/staged-orders`, {
         method: "POST",
         body: JSON.stringify({
@@ -654,9 +676,11 @@ export default function OrderBuilderPage() {
           goal_id: form.goal_id || null,
           notes: form.notes.trim() || null,
           rationale: form.rationale.trim() || null,
+          thesis_params: Object.keys(thesisParams).length > 0 ? thesisParams : null,
         }),
       });
-      setForm({ ticker: "", name: "", action: "buy", quantity: "", unit_price: "", currency: "ILS", asset_type: "etf", goal_id: "", notes: "", rationale: "" });
+      setForm({ ticker: "", name: "", action: "buy", quantity: "", unit_price: "", currency: "ILS", asset_type: "etf", goal_id: "", notes: "", rationale: "", thesis_horizon: "", thesis_stop_loss: "", thesis_take_profit: "" });
+      setShowThesis(false);
       fetchOrders();
       setActiveTab("pending");
     } catch (err: unknown) {
@@ -1094,6 +1118,65 @@ export default function OrderBuilderPage() {
                     onChange={e => setForm(f => ({ ...f, rationale: e.target.value }))}
                     maxLength={2000}
                   />
+                </div>
+
+                {/* Thesis parameters (collapsible) */}
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowThesis(v => !v)}
+                    className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ClipboardList className="w-3 h-3" />
+                    Thesis parameters
+                    {showThesis ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    <span className="text-muted-foreground/50">(optional — enables expiry monitoring)</span>
+                  </button>
+                  {showThesis && (
+                    <div className="rounded border border-white/10 bg-white/3 p-3 space-y-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wide">Horizon (days)</label>
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            className="w-full px-2 py-1.5 rounded bg-background border border-white/10 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50"
+                            placeholder="e.g. 90"
+                            value={form.thesis_horizon}
+                            onChange={e => setForm(f => ({ ...f, thesis_horizon: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wide">Stop-Loss (%)</label>
+                          <input
+                            type="number"
+                            max="-0.1"
+                            step="0.1"
+                            className="w-full px-2 py-1.5 rounded bg-background border border-white/10 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50"
+                            placeholder="e.g. -15"
+                            value={form.thesis_stop_loss}
+                            onChange={e => setForm(f => ({ ...f, thesis_stop_loss: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wide">Take-Profit (%)</label>
+                          <input
+                            type="number"
+                            min="0.1"
+                            step="0.1"
+                            className="w-full px-2 py-1.5 rounded bg-background border border-white/10 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50"
+                            placeholder="e.g. 30"
+                            value={form.thesis_take_profit}
+                            onChange={e => setForm(f => ({ ...f, thesis_take_profit: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground/60">
+                        When these thresholds are breached, the Morning Brief will flag this position.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Estimated value preview */}

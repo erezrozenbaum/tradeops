@@ -335,6 +335,7 @@ def create_staged_order(
         projected_metrics=projected,
         notes=payload.notes,
         rationale=payload.rationale,
+        thesis_params=payload.thesis_params.model_dump(exclude_none=True) if payload.thesis_params else None,
     )
     db.add(order)
     db.flush()

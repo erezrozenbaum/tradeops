@@ -42,6 +42,12 @@ class ProjectedMetrics(BaseModel):
     goal_name: str | None = None
 
 
+class ThesisParams(BaseModel):
+    horizon_days: int | None = Field(None, gt=0)
+    stop_loss_pct: float | None = Field(None, lt=0)    # negative, e.g. -15.0
+    take_profit_pct: float | None = Field(None, gt=0)  # positive, e.g. 30.0
+
+
 class StagedOrderCreate(BaseModel):
     ticker: str | None = None
     name: str
@@ -53,6 +59,7 @@ class StagedOrderCreate(BaseModel):
     goal_id: uuid.UUID | None = None
     notes: str | None = None
     rationale: str | None = None
+    thesis_params: ThesisParams | None = None
 
 
 class RationaleUpdate(BaseModel):
@@ -81,6 +88,7 @@ class StagedOrderOut(BaseModel):
     notes: str | None
     rationale: str | None
     reflection: dict | None
+    thesis_params: dict | None
     created_at: datetime
     updated_at: datetime
 

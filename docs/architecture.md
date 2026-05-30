@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 3.31.0  
+**Version:** 3.32.0  
 **Last updated:** 2026-05-30
 
 ---
@@ -205,7 +205,8 @@ backend/app/
 │
 ├── services/                   # Cross-cutting shared services (no router)
 │   ├── behavioral_indicator.py # Behavioral Confidence Indicator (v3.30.0): κ score (0-1) advisory; compute_behavioral_metrics() + evaluate_behavioral_confidence(); inputs: DQS, documentation alpha, override ratio, has_thesis, historical_asset_edge; never modifies order sizing
-│   └── correlation_engine.py   # Portfolio Anti-Correlation Engine (v3.31.0): Pearson r between staged ticker and top 5 holdings; compute_portfolio_correlation() → diversification dict embedded in pre_flight_review; MIN_HISTORICAL_DAYS=15; buy-only, ticker-required; deduplicates price_snapshots to one per calendar day
+│   ├── correlation_engine.py   # Portfolio Anti-Correlation Engine (v3.31.0)
+│   └── thesis_drift.py         # Thesis Expiry Monitor (v3.32.0): get_thesis_alerts() checks stop-loss/take-profit/horizon breach on executed buy orders with thesis_params; called by morning brief router: Pearson r between staged ticker and top 5 holdings; compute_portfolio_correlation() → diversification dict embedded in pre_flight_review; MIN_HISTORICAL_DAYS=15; buy-only, ticker-required; deduplicates price_snapshots to one per calendar day
 │
 ├── staged_orders/              # Staged Allocations & Order Builder (v3.13.0)
 │   ├── schemas.py              # StagedOrderCreate/Out/List, PreFlightReview (+ behavioral: BehavioralIndicator), BehavioralIndicator, ProjectedMetrics, GenerateRebalanceResult, OrderTemplateOut, OutcomeComparisonOut, CalibrationOut
