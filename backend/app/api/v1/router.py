@@ -71,6 +71,7 @@ from app.decision_intelligence.router import router as decision_intelligence_rou
 from app.behavioral_alpha.router import router as behavioral_alpha_router
 from app.reflection_report.router import router as reflection_report_router
 from app.investor_dna.router import router as investor_dna_router
+from app.investor_evolution.router import router as investor_evolution_router
 
 api_router = APIRouter()
 
@@ -153,3 +154,4 @@ api_router.include_router(decision_intelligence_router, prefix="/investors/{inve
 api_router.include_router(behavioral_alpha_router, prefix="/investors/{investor_id}/behavioral-alpha", tags=["behavioral-alpha"], dependencies=_own)
 api_router.include_router(reflection_report_router, prefix="/investors/{investor_id}/reflection-report", tags=["reflection-report"], dependencies=_own)
 api_router.include_router(investor_dna_router, prefix="/investors/{investor_id}/investor-dna", tags=["investor-dna"], dependencies=_own)
+api_router.include_router(investor_evolution_router, prefix="/investors/{investor_id}/investor-evolution", tags=["investor-evolution"], dependencies=_own)

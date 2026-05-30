@@ -8,6 +8,18 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.37.0] — 2026-05-30
+
+### Added
+- **Investor Evolution Report** (`/investor-evolution`) — rolling 90-day vs previous 90-day behavioral improvement tracker; answers "am I getting better?" across four metrics: Decision Quality Score, Documentation Rate, Risk Overrides, and Behavioral Alpha; DQS computed using the same `compute_monthly_dqs` formula as Decision Intelligence (no proxy); behavioral alpha = documented vs undocumented return delta within the window
+- **`app/investor_evolution/`** — new module: `schemas.py` (WindowMetrics, MetricDelta, InvestorEvolutionReport), `service.py` (rolling window filter, per-window metric computation, delta direction logic, strengths/concerns derivation), `router.py` (GET with `iev:{investor_id}` cache key, TTL 900s)
+- **Three gate states**: insufficient data (< 3 orders in current window), current baseline only (< 3 orders in previous window), full comparison (both windows valid)
+- **Risk overrides via JSONB parsing** — `pre_flight_review.verdict == "reconsider"` on executed orders; no schema change
+- **Sidebar** — "Investor Evolution" added after "Investor DNA" in Intelligence section with LineChart icon
+
+### Changed
+- **`app/core/cache.py`** — `invalidate_investor()` now also deletes `iev:{investor_id}`; docstring updated to document the new key
+
 ## [3.36.0] — 2026-05-30
 
 ### Added

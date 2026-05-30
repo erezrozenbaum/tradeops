@@ -8,10 +8,11 @@ Keys:
   ba:{investor_id}            Behavioral Alpha report (TTL 900s)
   cal:{investor_id}           Outcome Calibration report (TTL 900s)
   idna:{investor_id}          Investor DNA report (TTL 900s)
+  iev:{investor_id}           Investor Evolution report (TTL 900s)
   rr:{investor_id}:{month}    Reflection Report for YYYY-MM (TTL 1800s)
 
 Invalidation is investor-scoped: mutating any staged order deletes all
-four key families for that investor.
+key families for that investor.
 """
 import json
 import logging
@@ -86,6 +87,7 @@ def invalidate_investor(investor_id: str) -> None:
             f"ba:{investor_id}",
             f"cal:{investor_id}",
             f"idna:{investor_id}",
+            f"iev:{investor_id}",
         ]
         # Reflection report keys have a month suffix — use scan_iter (non-blocking)
         for rr_key in client.scan_iter(f"rr:{investor_id}:*"):
