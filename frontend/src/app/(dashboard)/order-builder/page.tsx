@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useInvestorId } from "@/hooks/useInvestorId";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import {
 import { PreFlightBehavioralShield } from "@/components/PreFlightBehavioralShield";
 import { PreFlightDiversificationCard } from "@/components/PreFlightDiversificationCard";
 import { PreFlightInterceptorPanel } from "@/components/PreFlightInterceptorPanel";
+import { LiveTickerPreviewIndicator } from "@/components/LiveTickerPreviewIndicator";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -594,6 +595,37 @@ export default function OrderBuilderPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [interceptorOrder, setInterceptorOrder] = useState<StagedOrder | null>(null);
 
+  // Live ticker correlation preview
+  interface PreviewData { status: string; correlationRiskTier: string | null; avgCorrelation: number | null; insight: string | null }
+  const [previewData, setPreviewData] = useState<PreviewData | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
+    const ticker = form.ticker.trim();
+    if (!ticker || ticker.length < 2 || form.action !== "buy" || !investorId) {
+      setPreviewData(null);
+      setPreviewLoading(false);
+      return;
+    }
+    setPreviewLoading(true);
+    previewTimerRef.current = setTimeout(async () => {
+      try {
+        const raw = await apiFetch<{ status: string; correlation_risk_tier: string | null; avg_correlation: number | null; insight: string | null }>(
+          `/investors/${investorId}/investor-dna/pre-flight-preview?ticker=${encodeURIComponent(ticker)}`,
+        );
+        setPreviewData({ status: raw.status, correlationRiskTier: raw.correlation_risk_tier, avgCorrelation: raw.avg_correlation, insight: raw.insight });
+      } catch {
+        setPreviewData(null);
+      } finally {
+        setPreviewLoading(false);
+      }
+    }, 300);
+    return () => { if (previewTimerRef.current) clearTimeout(previewTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.ticker, form.action, investorId]);
+
   const fetchOrders = useCallback(async () => {
     if (!investorId) return;
     setLoadingOrders(true);
@@ -1038,6 +1070,7 @@ export default function OrderBuilderPage() {
                       value={form.ticker}
                       onChange={e => setForm(f => ({ ...f, ticker: e.target.value.toUpperCase() }))}
                     />
+                    <LiveTickerPreviewIndicator isLoading={previewLoading} data={previewData} />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[11px] text-muted-foreground uppercase tracking-wide">Asset type</label>

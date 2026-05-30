@@ -8,9 +8,9 @@
 
 This document must be interpreted according to the **current repository state**, not the original early-stage plan.
 
-As of version **3.35.0**, TradeOps AI is a full Personal Financial Intelligence Platform with Decision Intelligence, Behavioral Alpha, and execution tooling. See `CHANGELOG.md` for the complete version history.
+As of version **3.36.0**, TradeOps AI is a full Personal Financial Intelligence Platform with Decision Intelligence, Behavioral Alpha, and execution tooling. See `CHANGELOG.md` for the complete version history.
 
-**Current platform capabilities (v3.35.0):**
+**Current platform capabilities (v3.36.0):**
 
 * FastAPI backend + PostgreSQL + SQLAlchemy + Alembic (migration head: 0054)
 * Next.js 16 App Router + Tailwind CSS + Recharts + PWA (service worker, installable)
@@ -36,6 +36,7 @@ As of version **3.35.0**, TradeOps AI is a full Personal Financial Intelligence 
 * Decision Intelligence: DQS (0–100), Behavioral Alpha, Monthly Reflection Report
 * Pre-flight advisory stack: Risk Engine verdict + Behavioral Confidence κ score + Portfolio Anti-Correlation Shield + Pre-Flight Interceptor Panel (v3.34.0)
 * Investor DNA page: Edge / Risks / Recommendation synthesised from full behavioral history; Capital Leakage Attribution per asset class (v3.35.0)
+* Live Ticker Correlation Preview: 300ms debounced inline chip in Order Builder (buy only); amber HIGH_OVERLAP or emerald HIGHLY_DIVERSIFIED before submission (v3.36.0)
 * Outcome Calibration Dashboard: projected vs actual tier allocation at 30/90/180-day milestones
 * SIP recurring plans with price-alert triggered auto-staging
 

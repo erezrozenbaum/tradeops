@@ -28,6 +28,13 @@ class DnaRecommendation(BaseModel):
     avoid: list[str]
 
 
+class PreFlightPreviewResponse(BaseModel):
+    status: str
+    correlation_risk_tier: str | None
+    avg_correlation: float | None
+    insight: str | None
+
+
 class InvestorDnaReport(BaseModel):
     investor_id: uuid.UUID
     has_sufficient_data: bool

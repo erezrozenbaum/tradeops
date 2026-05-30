@@ -8,6 +8,17 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.36.0] — 2026-05-30
+
+### Added
+- **Live Ticker Correlation Preview** — as a user types a ticker in the Order Builder (buy orders only), a 300ms debounced fetch hits `GET /investors/{id}/investor-dna/pre-flight-preview?ticker=` and shows an inline status chip below the ticker input; amber chip for `HIGH_OVERLAP` (r ≥ 0.70 with existing holdings), emerald chip for `HIGHLY_DIVERSIFIED` (r < 0.30); silent for insufficient data or sell orders
+- **`LiveTickerPreviewIndicator.tsx`** — new stateless component; accepts `isLoading` and `data` props; renders a spinner during fetch and one of two inline chips on result
+- **`GET /investors/{investor_id}/investor-dna/pre-flight-preview`** — read-only advisory endpoint; thin wrapper over the existing `compute_portfolio_correlation` engine; no external calls, backed entirely by local `price_snapshots` and `investment_holdings` tables; returns `PreFlightPreviewResponse` (status, correlation_risk_tier, avg_correlation, insight)
+- **`PreFlightPreviewResponse`** — new Pydantic schema in `investor_dna/schemas.py`
+
+### Changed
+- **`order-builder/page.tsx`** — added `useRef`-based debounce timer, `previewData` and `previewLoading` state, and a `useEffect` that fires on ticker + action changes; `LiveTickerPreviewIndicator` rendered inside the ticker input container
+
 ## [3.35.0] — 2026-05-30
 
 ### Added

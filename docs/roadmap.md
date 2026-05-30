@@ -1,6 +1,6 @@
 # TradeOps AI — Product Roadmap
 
-**Version:** 3.35.0  
+**Version:** 3.36.0  
 **Last updated:** 2026-05-30
 
 > Completed phases: v1–v3.30.0. See `CHANGELOG.md` and `execution_plan.md` for the full history.
@@ -34,6 +34,7 @@
 | v3.33 | Redis caching for compute-heavy endpoints (DI, BA, Calibration, Reflection Report — 15/30-min TTL) |
 | v3.34 | Pre-Flight Interceptor Panel — post-staging synthesis overlay combining Behavioral Shield + Correlation Shield + aggregate risk banner |
 | v3.35 | Investor DNA + Capital Leakage Attribution — Edge / Risks / Recommendation profile synthesising all behavioral signals; dollar leakage per asset class |
+| v3.36 | Live Ticker Correlation Preview — 300ms debounced inline indicator in the Order Builder showing HIGH_OVERLAP (amber) or HIGHLY_DIVERSIFIED (emerald) before submission; read-only, backed by local price_snapshots |
 
 ---
 
