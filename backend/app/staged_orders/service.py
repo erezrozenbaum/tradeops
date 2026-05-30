@@ -19,6 +19,7 @@ from app.portfolio_analysis.rebalance_engine import HoldingInfo
 from app.risk_modeling.service import get_latest as get_latest_risk_model
 from app.staged_orders.schemas import (
     BehavioralIndicator,
+    DiversificationIndicator,
     GenerateRebalanceResult,
     PreFlightReason,
     PreFlightReview,
@@ -220,12 +221,24 @@ def _compute_pre_flight(
         import logging
         logging.getLogger(__name__).debug("[pre_flight] behavioral indicator skipped: %s", exc)
 
+    # Portfolio diversification indicator (read-only advisory — buy + ticker only)
+    diversification: DiversificationIndicator | None = None
+    if action == "buy" and ticker:
+        try:
+            from app.services.correlation_engine import compute_portfolio_correlation
+            d_result = compute_portfolio_correlation(db, investor_id, ticker)
+            diversification = DiversificationIndicator(**d_result)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).debug("[pre_flight] correlation engine skipped: %s", exc)
+
     return PreFlightReview(
         reasons_to_proceed=reasons or [PreFlightReason(label="Order staged", detail="Review complete — no specific alignment concerns detected.")],
         risks=risks,
         alternative=alternative,
         verdict=verdict,
         behavioral=behavioral,
+        diversification=diversification,
     ).model_dump()
 
 

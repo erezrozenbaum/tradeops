@@ -16,12 +16,21 @@ class BehavioralIndicator(BaseModel):
     rationale: str
 
 
+class DiversificationIndicator(BaseModel):
+    status: str  # SUCCESS | INSUFFICIENT_DATA | ISOLATED_ASSET | SKIPPED
+    avg_correlation: float | None = None
+    risk_tier: str  # HIGH_OVERLAP | MODERATE_OVERLAP | HIGHLY_DIVERSIFIED | LOW | UNKNOWN
+    individual_breakdown: dict[str, float]
+    insight: str
+
+
 class PreFlightReview(BaseModel):
     reasons_to_proceed: list[PreFlightReason]
     risks: list[PreFlightReason]
     alternative: str | None = None
     verdict: str  # "proceed" | "caution" | "reconsider"
     behavioral: BehavioralIndicator | None = None
+    diversification: DiversificationIndicator | None = None
 
 
 class ProjectedMetrics(BaseModel):

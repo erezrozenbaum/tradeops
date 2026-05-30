@@ -13,6 +13,7 @@ import {
   Square, CheckSquare, Download,
 } from "lucide-react";
 import { PreFlightBehavioralShield } from "@/components/PreFlightBehavioralShield";
+import { PreFlightDiversificationCard } from "@/components/PreFlightDiversificationCard";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -24,12 +25,21 @@ interface BehavioralIndicator {
   rationale: string;
 }
 
+interface DiversificationIndicator {
+  status: string;
+  avg_correlation: number | null;
+  risk_tier: string;
+  individual_breakdown: Record<string, number>;
+  insight: string;
+}
+
 interface PreFlightReview {
   reasons_to_proceed: PreFlightReason[];
   risks: PreFlightReason[];
   alternative: string | null;
   verdict: "proceed" | "caution" | "reconsider";
   behavioral?: BehavioralIndicator | null;
+  diversification?: DiversificationIndicator | null;
 }
 interface ProjectedMetrics {
   portfolio_value_base: number | null;
@@ -483,6 +493,11 @@ function OrderCard({
           {review.behavioral && (
             <div className="pt-1">
               <PreFlightBehavioralShield {...review.behavioral} />
+            </div>
+          )}
+          {review.diversification && (
+            <div className="pt-1">
+              <PreFlightDiversificationCard {...review.diversification} />
             </div>
           )}
         </div>

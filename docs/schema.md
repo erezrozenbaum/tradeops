@@ -1,6 +1,6 @@
 # TradeOps AI — Database Schema Reference
 
-**Version:** 3.30.0  
+**Version:** 3.31.0  
 **Last updated:** 2026-05-30  
 **Migration head:** 0054
 
@@ -1002,7 +1002,7 @@ Indexes: `investor_id`.
 | 0054 | rationale TEXT + reflection JSONB columns on staged_orders (trade journal: pre-trade rationale + post-execution reflection snapshot) |
 
 **JSONB sub-structure notes (staged_orders):**
-- `pre_flight_review`: `{reasons_to_proceed: [{label, detail}], risks: [{label, detail}], alternative: str|null, verdict: "proceed"|"caution"|"reconsider", behavioral: {kappa_score: float|null, confidence_tier: str, suggested_action: str, rationale: str}|null}` — `behavioral` added in v3.30.0; existing rows return `null`
+- `pre_flight_review`: `{reasons_to_proceed: [{label, detail}], risks: [{label, detail}], alternative: str|null, verdict: "proceed"|"caution"|"reconsider", behavioral: {kappa_score: float|null, confidence_tier: str, suggested_action: str, rationale: str}|null, diversification: {status: str, avg_correlation: float|null, risk_tier: str, individual_breakdown: {ticker: float}, insight: str}|null}` — `behavioral` added v3.30.0; `diversification` added v3.31.0; both return `null` on existing rows; `diversification` only populated for buy orders with a ticker
 - `projected_metrics`: `{portfolio_value_base, low_risk_pct, growth_pct, high_risk_pct, goal_progress_pct, goal_name}`
 - `outcome_snapshots`: list of `{days: 30|90|180, snapshot_at, portfolio_value, low_risk_pct, growth_pct, high_risk_pct}` — populated by daily outcome_tracking worker
 - `allocations` (recurring_plans): list of `{ticker, name, asset_type, amount, currency, goal_id, trigger_on_alert: bool}` — `trigger_on_alert` added in v3.29.0

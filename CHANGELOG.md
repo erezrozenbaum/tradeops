@@ -8,6 +8,17 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.31.0] — 2026-05-30
+
+### Added
+- **Portfolio Anti-Correlation Engine** — read-only pre-flight advisory card showing Pearson correlation between the staged asset and the investor's top 5 holdings by value; embedded in the expanded pre-flight view as "Portfolio Correlation Shield" alongside the existing κ score chip; three risk tiers: `HIGH_OVERLAP` (avg r ≥ 0.70 — amber warning), `MODERATE_OVERLAP` (r 0.30–0.70 — neutral), `HIGHLY_DIVERSIFIED` (r < 0.30 — emerald confirmation); per-ticker correlation breakdown shown as color-coded chips; graceful `INSUFFICIENT_DATA` fallback when fewer than 15 daily price snapshots exist for the staged ticker or any holding; `SKIPPED` when no ticker is provided (non-ticker orders like funds); correlation only runs for `buy` orders — sell orders are not evaluated
+- **`app/services/correlation_engine.py`** — new service with `compute_portfolio_correlation(db, investor_id, staged_ticker)` returning a dict embedded in `pre_flight_review.diversification`; uses `PriceSnapshot` table (deduplicated to one price per calendar day via `strftime` grouping); `_top_holding_tickers()` queries `InvestmentHolding` sorted by estimated value (uses `current_value` if populated, else `quantity × avg_buy_price`); `_fetch_price_series()` deduplicates multiple intra-day snapshots by taking the latest per calendar day; numpy `corrcoef` for Pearson computation; all wrapped in `try/except` in the service — engine failure never crashes order creation; `MIN_HISTORICAL_DAYS = 15`, `TOP_HOLDINGS_COUNT = 5`
+- **`PreFlightDiversificationCard.tsx`** — new frontend component; `Layers` icon header with avg correlation in `font-mono`; per-ticker correlation chips color-coded amber (≥0.70), emerald (≤0.30), muted (in between); status label row (High Clustering Risk / Efficient Frontier Fit / Neutral / Awaiting price history); rendered after `PreFlightBehavioralShield` in the expanded order view
+
+### Changed
+- **`PreFlightReview` schema** — new optional `diversification: DiversificationIndicator | None` field; fully backwards-compatible (existing orders return `null`); `DiversificationIndicator` added to `staged_orders/schemas.py`
+- **`_compute_pre_flight()`** — injects correlation engine after behavioral indicator; isolated in its own `try/except`; only called for `buy` orders with a non-null ticker
+
 ## [3.30.0] — 2026-05-30
 
 ### Added
