@@ -1,6 +1,6 @@
 # TradeOps AI — Product Roadmap
 
-**Version:** 3.34.0  
+**Version:** 3.35.0  
 **Last updated:** 2026-05-30
 
 > Completed phases: v1–v3.30.0. See `CHANGELOG.md` and `execution_plan.md` for the full history.
@@ -33,6 +33,7 @@
 | v3.32 | Thesis Expiry Monitor (stop-loss / take-profit / horizon breach alerts in Morning Brief) |
 | v3.33 | Redis caching for compute-heavy endpoints (DI, BA, Calibration, Reflection Report — 15/30-min TTL) |
 | v3.34 | Pre-Flight Interceptor Panel — post-staging synthesis overlay combining Behavioral Shield + Correlation Shield + aggregate risk banner |
+| v3.35 | Investor DNA + Capital Leakage Attribution — Edge / Risks / Recommendation profile synthesising all behavioral signals; dollar leakage per asset class |
 
 ---
 

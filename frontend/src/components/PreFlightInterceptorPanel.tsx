@@ -1,6 +1,7 @@
 "use client";
 
-import { ShieldAlert, AlertTriangle, CheckCircle2, X, FlaskConical } from "lucide-react";
+import Link from "next/link";
+import { ShieldAlert, AlertTriangle, CheckCircle2, X, FlaskConical, Fingerprint } from "lucide-react";
 import { PreFlightBehavioralShield } from "./PreFlightBehavioralShield";
 import { PreFlightDiversificationCard } from "./PreFlightDiversificationCard";
 
@@ -96,11 +97,20 @@ export function PreFlightInterceptorPanel({ order, onDismiss, onPaperSandbox }: 
       {isHighRisk && (
         <div className="flex items-start gap-2.5 p-3 rounded-lg bg-amber-500/8 border border-amber-500/25 text-xs">
           <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-          <span className="text-foreground">
-            <strong className="text-amber-400">System Alert:</strong> Both behavioral confidence and
-            correlation signals are unfavorable. This order fits your historical profile for elevated
-            execution risk — consider routing to the paper sandbox first.
-          </span>
+          <div className="space-y-1.5">
+            <span className="text-foreground">
+              <strong className="text-amber-400">System Alert:</strong> Both behavioral confidence and
+              correlation signals are unfavorable. This order fits your historical profile for elevated
+              execution risk — consider routing to the paper sandbox first.
+            </span>
+            <Link
+              href="/investor-dna"
+              className="flex items-center gap-1 text-primary hover:underline"
+            >
+              <Fingerprint className="w-3 h-3" />
+              View your Investor DNA for the full pattern breakdown
+            </Link>
+          </div>
         </div>
       )}
 

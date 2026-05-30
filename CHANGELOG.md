@@ -8,6 +8,19 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.35.0] — 2026-05-30
+
+### Added
+- **Capital Leakage Attribution Engine** — per asset class, executed buy orders are split into documented (have `rationale` OR `thesis_params`) vs undocumented; leakage % = documented avg return − undocumented avg return; dollar impact = leakage % × total undocumented estimated value; aggregated across all asset classes as `total_leakage_dollar`; surfaced in the Investor DNA page and as a Risk signal
+- **Investor DNA page** (`/investor-dna`) — synthesises all behavioral signals into a single profile: DQS score chip, documentation rate, leakage dollar, Edge signals (documented outperformance, goal linkage alpha, optimal holding period, strongest asset class), Risk signals (capital leakage, override loss rate, undocumented recurring losses, goal drift), Capital Leakage Attribution table by asset class, TradeOps Recommendation (Continue / Reduce / Avoid derived from pattern history)
+- **`app/investor_dna/`** — new module: `schemas.py` (DnaSignal, LeakageByClass, DnaRecommendation, InvestorDnaReport), `service.py` (get_investor_dna), `router.py` (GET with `idna:{investor_id}` cache key, TTL 900s)
+- **Pre-Flight Interceptor DNA link** — when aggregate risk is high, the amber System Alert banner now includes a "View your Investor DNA" link navigating to `/investor-dna` for the full pattern breakdown
+- **Sidebar** — "Investor DNA" added as the first item in the Intelligence section with Fingerprint icon
+
+### Changed
+- **`app/core/cache.py`** — `invalidate_investor()` now also deletes `idna:{investor_id}` on every order mutation
+- **`app/api/v1/router.py`** — registered `investor_dna_router` at `/investors/{investor_id}/investor-dna`
+
 ## [3.34.0] — 2026-05-30
 
 ### Added

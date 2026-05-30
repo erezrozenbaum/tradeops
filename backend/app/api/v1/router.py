@@ -70,6 +70,7 @@ from app.morning_brief.router import router as morning_brief_router
 from app.decision_intelligence.router import router as decision_intelligence_router
 from app.behavioral_alpha.router import router as behavioral_alpha_router
 from app.reflection_report.router import router as reflection_report_router
+from app.investor_dna.router import router as investor_dna_router
 
 api_router = APIRouter()
 
@@ -151,3 +152,4 @@ api_router.include_router(morning_brief_router, prefix="/investors/{investor_id}
 api_router.include_router(decision_intelligence_router, prefix="/investors/{investor_id}/decision-intelligence", tags=["decision-intelligence"], dependencies=_own)
 api_router.include_router(behavioral_alpha_router, prefix="/investors/{investor_id}/behavioral-alpha", tags=["behavioral-alpha"], dependencies=_own)
 api_router.include_router(reflection_report_router, prefix="/investors/{investor_id}/reflection-report", tags=["reflection-report"], dependencies=_own)
+api_router.include_router(investor_dna_router, prefix="/investors/{investor_id}/investor-dna", tags=["investor-dna"], dependencies=_own)
