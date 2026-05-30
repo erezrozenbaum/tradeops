@@ -4,6 +4,7 @@ Jobs:
   - price_refresh        : daily at 20:00 UTC (after US market close)
   - snapshot_writer      : daily at 21:00 UTC (end-of-day portfolio snapshots)
   - price_alert_checker  : daily at 20:30 UTC (check price alerts after price refresh)
+  - price_alert_sip      : daily at 20:45 UTC (auto-stage SIP orders on triggered alerts)
   - goal_evaluation      : daily at 07:00 UTC (morning status sweep)
   - proactive_insights   : daily at 07:30 UTC (drift detection + AI insights + email)
   - notification_alerts  : daily at 08:30 UTC (email digest)
@@ -51,6 +52,7 @@ def _register_jobs() -> None:
     from app.workers.jobs.command_center_checkpoint import write_command_center_checkpoints
     from app.workers.jobs.outcome_tracking import populate_outcome_snapshots
     from app.workers.jobs.recurring_plans import run_due_recurring_plans
+    from app.workers.jobs.price_alert_sip_trigger import trigger_sip_on_price_alerts
 
     _scheduler.add_job(
         refresh_all_prices,
@@ -208,6 +210,13 @@ def _register_jobs() -> None:
         replace_existing=True,
         misfire_grace_time=3600,
     )
+    _scheduler.add_job(
+        trigger_sip_on_price_alerts,
+        CronTrigger(hour=20, minute=45),  # 15 min after price_alert_checker (20:30)
+        id="price_alert_sip",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
 
 
 def start() -> None:
@@ -219,10 +228,10 @@ def start() -> None:
     _started = True
     log.info(
         "Workers scheduler started (jobs: price_refresh, snapshot_writer, price_alert_checker, "
-        "goal_evaluation, proactive_insights, notification_alerts, broker_auto_sync, weekly_digest, "
-        "market_prewarm, research_prewarm, sentiment_signals, fx_history_sync, net_worth_snapshot, "
-        "coach_refresh, data_quality_check, maturity_weekly, twin_daily, behavioral_risk_daily, "
-        "command_center_nightly, command_center_checkpoint, outcome_tracking)"
+        "price_alert_sip, goal_evaluation, proactive_insights, notification_alerts, broker_auto_sync, "
+        "weekly_digest, market_prewarm, research_prewarm, sentiment_signals, fx_history_sync, "
+        "net_worth_snapshot, coach_refresh, data_quality_check, maturity_weekly, twin_daily, "
+        "behavioral_risk_daily, command_center_nightly, command_center_checkpoint, outcome_tracking)"
     )
 
 

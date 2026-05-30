@@ -10,6 +10,7 @@ class PlanAllocation(BaseModel):
     amount: float
     currency: str = "USD"
     goal_id: uuid.UUID | None = None
+    trigger_on_alert: bool = False
 
 
 class RecurringPlanCreate(BaseModel):

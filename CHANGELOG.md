@@ -8,6 +8,19 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.29.0] — 2026-05-30
+
+### Added
+- **Smart Assist — DQS + Behavioral Alpha context** — `_build_context()` in `smart_suggest.py` now injects `dqs_score` (all-time DQS from `compute_monthly_dqs()` on executed orders) and `mistake_patterns` (list of active `pattern_key` values from `compute_behavioral_alpha()`); both are wrapped in `try/except` to not degrade suggestions if the modules have no data; the AI prompt rules section now directs Claude to address low DQS, conservative position sizing for `reactive_large_trade`, risk compliance for `blind_override`, and portfolio review for `undocumented_loss`; the deterministic fallback adds DQS-driven discipline nudges and pattern-specific suggestions
+- **SIP Price-Alert Triggered Auto-Staging** — `trigger_on_alert: bool = False` field added to `PlanAllocation` schema (JSONB-backed, no migration); when checked in the Recurring Plans UI, the allocation's ticker is linked to any price alert for that ticker; new `price_alert_sip_trigger.py` worker (daily 20:45 UTC, 15 min after `price_alert_checker`) scans alerts triggered today, finds matching plan allocations with `trigger_on_alert=True`, stages a buy order per match; deduplication via `[alert_trigger:{alert_id}]` marker in order notes prevents re-staging on scheduler restarts; Bell icon badge shown on trigger-linked allocations in read-only plan view
+
+### Changed
+- **Smart Assist — prompt updated** — rules now explicitly reference `dqs_score` and `mistake_patterns` context keys; narrative must reference detected behavioral patterns if present; removed unused `current_high` variable (ruff F841)
+- **`help/page.tsx` — converted to Server Component** — page had `"use client"` despite using no client APIs (no hooks, no browser globals, no event handlers other than `<Link>`); removing the directive makes it a true Next.js App Router Server Component, reducing the JS bundle for that route
+
+### Infrastructure
+- **Scheduler**: `price_alert_sip` job registered at 20:45 UTC; scheduler log updated to include new job name
+
 ## [3.28.0] — 2026-05-30
 
 ### Added

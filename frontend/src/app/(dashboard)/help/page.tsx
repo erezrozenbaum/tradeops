@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import {
   LayoutDashboard, User, Wallet, Target, Shield, Lightbulb,

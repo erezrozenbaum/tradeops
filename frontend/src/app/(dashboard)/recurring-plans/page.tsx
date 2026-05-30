@@ -15,6 +15,7 @@ import {
   Edit2,
   X,
   Clock,
+  Bell,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -26,6 +27,7 @@ interface PlanAllocation {
   amount: number;
   currency: string;
   goal_id?: string | null;
+  trigger_on_alert?: boolean;
 }
 
 interface RecurringPlan {
@@ -80,6 +82,7 @@ interface AllocRowProps {
 
 function AllocRow({ alloc, onChange, onRemove }: AllocRowProps) {
   return (
+    <div className="space-y-1.5">
     <div className="flex items-center gap-2 flex-wrap">
       <input
         className="w-20 rounded border border-cyber-rule/60 bg-transparent px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-cyber-cyan/50"
@@ -127,12 +130,26 @@ function AllocRow({ alloc, onChange, onRemove }: AllocRowProps) {
         <X className="h-3.5 w-3.5" />
       </button>
     </div>
+    {alloc.ticker && (
+      <label className="flex items-center gap-1.5 cursor-pointer select-none pl-0.5">
+        <input
+          type="checkbox"
+          className="h-3 w-3 rounded accent-primary"
+          checked={!!alloc.trigger_on_alert}
+          onChange={e => onChange({ ...alloc, trigger_on_alert: e.target.checked })}
+        />
+        <span className="text-[10px] text-muted-foreground">
+          Auto-stage when price alert fires for <span className="font-mono font-semibold">{alloc.ticker}</span>
+        </span>
+      </label>
+    )}
+    </div>
   );
 }
 
 // ── Create/Edit form ──────────────────────────────────────────────────────────
 
-const EMPTY_ALLOC: PlanAllocation = { ticker: null, name: "", asset_type: "stock", amount: 0, currency: "USD" };
+const EMPTY_ALLOC: PlanAllocation = { ticker: null, name: "", asset_type: "stock", amount: 0, currency: "USD", trigger_on_alert: false };
 
 function PlanForm({ onSave, onCancel, initial }: {
   onSave: (data: PlanSaveData) => void;
@@ -482,6 +499,9 @@ export default function RecurringPlansPage() {
                         {a.ticker && <span className="font-medium">{a.ticker}</span>}
                         <span className="text-muted-foreground">{a.name}</span>
                         <span className="font-medium">{a.currency} {a.amount.toLocaleString()}</span>
+                        {a.trigger_on_alert && (
+                          <Bell className="h-2.5 w-2.5 text-amber-500" aria-label="Auto-stages on price alert" />
+                        )}
                       </div>
                     ))}
                   </div>

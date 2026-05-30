@@ -101,6 +101,29 @@ def _build_context(db: Session, investor_id: uuid.UUID) -> dict:
     if maturity:
         ctx["maturity_stage"] = maturity.stage
 
+    # Decision Quality Score — all-time DQS using executed orders
+    try:
+        from app.models.staged_order import StagedOrder as _SO
+        from app.decision_intelligence.service import compute_monthly_dqs
+        executed = db.query(_SO).filter(
+            _SO.investor_id == investor_id,
+            _SO.status == "executed",
+        ).all()
+        dqs = compute_monthly_dqs(db, executed)
+        if dqs is not None:
+            ctx["dqs_score"] = dqs
+    except Exception:
+        pass
+
+    # Behavioral Alpha — active mistake patterns
+    try:
+        from app.behavioral_alpha.service import compute_behavioral_alpha
+        ba = compute_behavioral_alpha(db, investor_id)
+        if ba and ba.mistake_patterns:
+            ctx["mistake_patterns"] = [p.pattern_key for p in ba.mistake_patterns]
+    except Exception:
+        pass
+
     return ctx
 
 
@@ -111,10 +134,11 @@ def _deterministic_suggestions(ctx: dict) -> list[dict]:
     currency = ctx.get("financial_profile", {}).get("base_currency", "USD")
     aa = portfolio.get("asset_allocation", {})
     total = portfolio.get("total_value", 0)
+    dqs = ctx.get("dqs_score")
+    patterns = set(ctx.get("mistake_patterns") or [])
 
     current_low = sum(v for k, v in aa.items() if _TIER_MAP.get(k) == "low_risk")
     current_growth = sum(v for k, v in aa.items() if _TIER_MAP.get(k) == "growth")
-    current_high = sum(v for k, v in aa.items() if _TIER_MAP.get(k) == "high_risk")
 
     target_low = rm.get("low_risk_pct", 0) or 0
     target_growth = rm.get("growth_pct", 0) or 0
@@ -164,6 +188,41 @@ def _deterministic_suggestions(ctx: dict) -> list[dict]:
             })
             break
 
+    # DQS-driven discipline nudge
+    if dqs is not None and dqs < 50:
+        suggestions.insert(0, {
+            "action": "buy", "asset_type": "fund", "ticker": None,
+            "name": "Improve Decision Discipline",
+            "rationale": (
+                f"Your Decision Quality Score is {dqs:.0f}/100 — below average. "
+                "Write a one-sentence rationale before staging your next 3 orders to improve documentation discipline."
+            ),
+            "estimated_value": 0.0,
+            "currency": currency, "priority": "high",
+            "goal_name": None, "tax_note": None,
+        })
+
+    # Mistake-pattern-driven nudges
+    if "reactive_large_trade" in patterns and total > 0:
+        suggestions.append({
+            "action": "buy", "asset_type": "etf", "ticker": "VWRA.L",
+            "name": "Disciplined DCA — Small Position",
+            "rationale": "Detected large reactive trades. Keep this order under 3% of portfolio to reinforce position-sizing discipline.",
+            "estimated_value": min(round(total * 0.03, 0), 2000.0),
+            "currency": currency, "priority": "medium",
+            "goal_name": None, "tax_note": None,
+        })
+
+    if "undocumented_loss" in patterns:
+        suggestions.append({
+            "action": "sell", "asset_type": "stock", "ticker": None,
+            "name": "Review Undocumented Losers",
+            "rationale": "Recurring undocumented losses detected. Identify your worst-performing position without a rationale and decide to hold or exit with documentation.",
+            "estimated_value": 0.0,
+            "currency": currency, "priority": "high",
+            "goal_name": None, "tax_note": None,
+        })
+
     if not suggestions:
         suggestions.append({
             "action": "buy", "asset_type": "etf", "ticker": "VWRA.L",
@@ -205,7 +264,8 @@ def smart_suggest(db: Session, investor_id: uuid.UUID) -> dict:
 
         system = (
             "You are a financial allocation assistant. Generate structured, actionable allocation suggestions "
-            "based on the investor's portfolio and risk model. Never guarantee returns. "
+            "based on the investor's portfolio, risk model, and detected behavioral patterns. "
+            "Never guarantee returns. "
             "Respond with valid JSON only — no markdown fences, no explanation outside the JSON."
         )
         user = (
@@ -216,8 +276,17 @@ def smart_suggest(db: Session, investor_id: uuid.UUID) -> dict:
             "- Prioritise at_risk goals\n"
             "- If behavioral_risks contains panic_selling or overtrading, be conservative\n"
             "- If emergency_fund_months < 3, first suggestion must be to build emergency fund\n"
-            "- Suggest realistic tickers when appropriate (ETFs: VWRA.L, QQQ, SPY; bonds: AGG, BND)\n\n"
-            f'Respond with this JSON:\n{{"narrative":"2-3 sentence strategy overview","suggestions":[{{"action":"buy|sell","asset_type":"etf|stock|bond|fund|crypto","ticker":"TICKER or null","name":"Human name","rationale":"1 sentence","estimated_value":5000.0,"currency":"{currency}","priority":"high|medium|low","goal_name":null,"tax_note":null}}]}}'
+            "- Suggest realistic tickers when appropriate (ETFs: VWRA.L, QQQ, SPY; bonds: AGG, BND)\n"
+            "- If dqs_score is present and < 50, at least one suggestion must address the investor's "
+            "  low decision discipline (e.g., 'Document rationale before your next trade'); set priority to high\n"
+            "- If mistake_patterns contains reactive_large_trade, keep all suggested estimated_value amounts "
+            "  below 5% of total portfolio value and note the position sizing risk\n"
+            "- If mistake_patterns contains blind_override, explicitly address risk compliance in at least "
+            "  one suggestion's rationale\n"
+            "- If mistake_patterns contains undocumented_loss, recommend reviewing or trimming the "
+            "  worst-performing undocumented positions\n"
+            "- If mistake_patterns contains goal_drift, link at least one suggestion to an existing goal\n\n"
+            f'Respond with this JSON:\n{{"narrative":"2-3 sentence strategy overview referencing DQS and patterns if present","suggestions":[{{"action":"buy|sell","asset_type":"etf|stock|bond|fund|crypto","ticker":"TICKER or null","name":"Human name","rationale":"1 sentence","estimated_value":5000.0,"currency":"{currency}","priority":"high|medium|low","goal_name":null,"tax_note":null}}]}}'
         )
 
         response = client.messages.create(
