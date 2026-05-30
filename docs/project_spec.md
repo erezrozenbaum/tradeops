@@ -8,12 +8,12 @@
 
 This document must be interpreted according to the **current repository state**, not the original early-stage plan.
 
-As of version **0.63.0**, TradeOps AI has a full working platform (not just an MVP). See `CHANGELOG.md` for the complete version history.
+As of version **3.30.0**, TradeOps AI is a full Personal Financial Intelligence Platform with Decision Intelligence, Behavioral Alpha, and execution tooling. See `CHANGELOG.md` for the complete version history.
 
-**Current platform capabilities (v0.63.0):**
+**Current platform capabilities (v3.30.0):**
 
-* FastAPI backend + PostgreSQL + SQLAlchemy + Alembic (migration head: 0028)
-* Next.js 14 App Router + Tailwind CSS + Recharts + PWA (service worker, installable)
+* FastAPI backend + PostgreSQL + SQLAlchemy + Alembic (migration head: 0054)
+* Next.js 16 App Router + Tailwind CSS + Recharts + PWA (service worker, installable)
 * Docker Compose dev stack; GitHub Actions CI/CD
 * Investor profiles, family profiles, financial profiles, goals
 * Financial stability scoring + percentage-based risk modeling

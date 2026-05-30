@@ -12,15 +12,24 @@ import {
   BookMarked, BookOpen, Plus, BarChart3, History, Wand2, Sparkles,
   Square, CheckSquare, Download,
 } from "lucide-react";
+import { PreFlightBehavioralShield } from "@/components/PreFlightBehavioralShield";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface PreFlightReason { label: string; detail: string }
+interface BehavioralIndicator {
+  kappa_score: number | null;
+  confidence_tier: string;
+  suggested_action: string;
+  rationale: string;
+}
+
 interface PreFlightReview {
   reasons_to_proceed: PreFlightReason[];
   risks: PreFlightReason[];
   alternative: string | null;
   verdict: "proceed" | "caution" | "reconsider";
+  behavioral?: BehavioralIndicator | null;
 }
 interface ProjectedMetrics {
   portfolio_value_base: number | null;
@@ -470,6 +479,11 @@ function OrderCard({
           )}
           {review.alternative && (
             <div className="text-muted-foreground italic">{review.alternative}</div>
+          )}
+          {review.behavioral && (
+            <div className="pt-1">
+              <PreFlightBehavioralShield {...review.behavioral} />
+            </div>
           )}
         </div>
       )}

@@ -1,7 +1,7 @@
 # TradeOps AI — Architecture
 
-**Version:** 3.14.0  
-**Last updated:** 2026-05-27
+**Version:** 3.30.0  
+**Last updated:** 2026-05-30
 
 ---
 
@@ -10,7 +10,7 @@
 TradeOps AI is a personal financial intelligence platform. It is not a trading bot. It helps users understand their financial position, model risk, select validated strategies, and simulate outcomes before committing real capital.
 
 ```
-Browser (Next.js 14)
+Browser (Next.js 16)
       │  REST/JSON + SSE
       │  HttpOnly cookie (tradeops_token)
       ▼
@@ -30,7 +30,7 @@ CI (GitHub Actions) runs backend tests and builds both Docker images on every pu
 ```mermaid
 flowchart TD
     subgraph Client["Browser / PWA"]
-        UI["Next.js 14 App Router\n(Tailwind + Recharts)"]
+        UI["Next.js 16 App Router\n(Tailwind + Recharts)"]
     end
 
     subgraph Gateway["Next.js API Layer"]
@@ -43,11 +43,11 @@ flowchart TD
         AUTH["auth/\n(JWT httpOnly cookie, JTI blacklist)"]
         ENG["Domain engines\n(pure functions, no DB)"]
         SVC["Services\n(DB + engine + FX)"]
-        WRK["APScheduler workers\n(14 background jobs)"]
+        WRK["APScheduler workers\n(22 background jobs)"]
     end
 
     subgraph Data["Data layer"]
-        PG["PostgreSQL 16\n(Alembic migrations 0001–0048)"]
+        PG["PostgreSQL 16\n(Alembic migrations 0001–0054)"]
         RD["Redis 7\n(rate limit + JTI blacklist)"]
         PS["price_snapshots\n(24h TTL)"]
         FX["currency_rates\n(4h TTL)"]
@@ -203,11 +203,15 @@ backend/app/
 │   ├── service.py              # build_staking_report, enable/disable staking
 │   └── router.py               # GET/POST/DELETE /investors/{id}/crypto-staking
 │
+├── services/                   # Cross-cutting shared services (no router)
+│   └── behavioral_indicator.py # Behavioral Confidence Indicator (v3.30.0): κ score (0-1) advisory; compute_behavioral_metrics() + evaluate_behavioral_confidence(); inputs: DQS, documentation alpha, override ratio, has_thesis, historical_asset_edge; never modifies order sizing
+│
 ├── staged_orders/              # Staged Allocations & Order Builder (v3.13.0)
-│   ├── schemas.py              # StagedOrderCreate/Out/List, PreFlightReview, ProjectedMetrics, GenerateRebalanceResult, OrderTemplateOut, OutcomeComparisonOut
-│   ├── service.py              # create/list/execute/cancel, pre-flight review, tax analysis, minimum-trade rebalancing, outcome comparisons
+│   ├── schemas.py              # StagedOrderCreate/Out/List, PreFlightReview (+ behavioral: BehavioralIndicator), BehavioralIndicator, ProjectedMetrics, GenerateRebalanceResult, OrderTemplateOut, OutcomeComparisonOut, CalibrationOut
+│   ├── service.py              # create/list/execute/cancel, pre-flight review (now includes behavioral indicator), tax analysis, minimum-trade rebalancing, outcome comparisons, calibration
+│   ├── smart_suggest.py        # AI Smart Allocation Assistant; DQS + behavioral patterns injected into context (v3.29.0)
 │   ├── templates.py            # save/apply/delete named order templates (v3.14.0)
-│   └── router.py               # GET/POST /staged-orders, POST /generate-rebalance, POST /{id}/execute, DELETE /{id}, GET/POST/DELETE /templates, POST /templates/{id}/apply, GET /outcomes
+│   └── router.py               # GET/POST /staged-orders, POST /generate-rebalance, POST /{id}/execute, DELETE /{id}, GET/POST/DELETE /templates, POST /templates/{id}/apply, GET /outcomes, GET /calibration
 │
 ├── action_feed/                # Daily action feed — morning briefing (TASK 84)
 │   ├── engine.py               # Aggregates 5 signal sources; priority 1/2/3; dedup; cap 12

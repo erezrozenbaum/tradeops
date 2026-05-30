@@ -8,6 +8,17 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.30.0] — 2026-05-30
+
+### Added
+- **Behavioral Confidence Indicator** — read-only pre-flight advisory chip embedded in every staged order; computes a κ score (0.0–1.0) from the investor's historical decision quality and surfaces it alongside the existing pre-flight verdict without affecting it; four tiers: `HIGH_ALPHA` (κ≥0.75 + written thesis), `STANDARD` (κ≥0.65), `CAUTION_IMPULSE` (κ≥0.50), `HIGH_RISK_OVERRIDE` (κ<0.50) + `INSUFFICIENT_DATA` (<5 executed orders); `INSUFFICIENT_DATA` shows when the investor has fewer than 5 executed orders; `RECOMMEND_PAPER_TRADING` action surfaced at HIGH_RISK_OVERRIDE tier
+- **`app/services/behavioral_indicator.py`** — new service with `compute_behavioral_metrics()` (gathers DQS, documentation alpha, override ratio, historical asset edge) and `evaluate_behavioral_confidence()` (deterministic κ formula); all external calls wrapped in `try/except` — behavioral chip never crashes the order creation flow; formula: `κ = (DQS/100) + (clamped_alpha/25 × 0.125) − (override_ratio × 0.25) − thesis_penalty − asset_penalty`; `historical_asset_edge` requires ≥5 executed buys of same asset_type with positive avg unrealized return
+- **`PreFlightBehavioralShield.tsx`** — new frontend component; ShieldCheck (high confidence), ShieldAlert (caution/risk), ShieldQuestion (insufficient data); color-coded border/background per tier (emerald/amber/rose); rendered in expanded order view in Order Builder below existing pre-flight reasons
+
+### Changed
+- **`PreFlightReview` schema** — new optional `behavioral: BehavioralIndicator | None` field; fully backwards-compatible (existing orders return `null` for this field)
+- **`_compute_pre_flight()`** — accepts new `rationale: str | None = None` param to determine `has_thesis` for the behavioral indicator; behavioral computation isolated in `try/except` so any failure is silent
+
 ## [3.29.0] — 2026-05-30
 
 ### Added

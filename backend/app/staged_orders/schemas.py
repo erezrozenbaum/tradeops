@@ -9,11 +9,19 @@ class PreFlightReason(BaseModel):
     detail: str
 
 
+class BehavioralIndicator(BaseModel):
+    kappa_score: float | None = None
+    confidence_tier: str  # INSUFFICIENT_DATA | HIGH_ALPHA | STANDARD | CAUTION_IMPULSE | HIGH_RISK_OVERRIDE
+    suggested_action: str  # NO_ACTION | CONSIDER_REDUCING_SIZE | RECOMMEND_PAPER_TRADING
+    rationale: str
+
+
 class PreFlightReview(BaseModel):
     reasons_to_proceed: list[PreFlightReason]
     risks: list[PreFlightReason]
     alternative: str | None = None
     verdict: str  # "proceed" | "caution" | "reconsider"
+    behavioral: BehavioralIndicator | None = None
 
 
 class ProjectedMetrics(BaseModel):

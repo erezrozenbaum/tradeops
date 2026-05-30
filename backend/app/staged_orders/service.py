@@ -18,6 +18,7 @@ from app.portfolio_analysis import rebalance_engine, service as portfolio_svc
 from app.portfolio_analysis.rebalance_engine import HoldingInfo
 from app.risk_modeling.service import get_latest as get_latest_risk_model
 from app.staged_orders.schemas import (
+    BehavioralIndicator,
     GenerateRebalanceResult,
     PreFlightReason,
     PreFlightReview,
@@ -106,6 +107,7 @@ def _compute_pre_flight(
     asset_type: str | None,
     estimated_value: float,
     currency: str,
+    rationale: str | None = None,
 ) -> dict[str, Any]:
     reasons: list[PreFlightReason] = []
     risks: list[PreFlightReason] = []
@@ -202,11 +204,28 @@ def _compute_pre_flight(
 
     verdict = "reconsider" if (len(risks) >= 2 or not risk_model) else ("caution" if risks else "proceed")
 
+    # Behavioral confidence indicator (read-only advisory — does not affect verdict)
+    behavioral: BehavioralIndicator | None = None
+    try:
+        from app.services.behavioral_indicator import (
+            compute_behavioral_metrics,
+            evaluate_behavioral_confidence,
+        )
+        b_metrics = compute_behavioral_metrics(
+            db, investor_id, asset_type, has_thesis=bool(rationale and rationale.strip()),
+        )
+        b_result = evaluate_behavioral_confidence(b_metrics)
+        behavioral = BehavioralIndicator(**b_result)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).debug("[pre_flight] behavioral indicator skipped: %s", exc)
+
     return PreFlightReview(
         reasons_to_proceed=reasons or [PreFlightReason(label="Order staged", detail="Review complete — no specific alignment concerns detected.")],
         risks=risks,
         alternative=alternative,
         verdict=verdict,
+        behavioral=behavioral,
     ).model_dump()
 
 
@@ -275,6 +294,7 @@ def create_staged_order(
     pre_flight = _compute_pre_flight(
         db, investor_id, payload.action, payload.ticker,
         payload.asset_type, estimated_value, payload.currency,
+        rationale=payload.rationale,
     )
     tax_note = _compute_tax_note(
         db, investor_id, payload.ticker, payload.action, payload.unit_price,

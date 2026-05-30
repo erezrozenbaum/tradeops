@@ -1,8 +1,8 @@
 # TradeOps AI — Database Schema Reference
 
-**Version:** 2.7.0  
-**Last updated:** 2026-05-23  
-**Migration head:** 0045
+**Version:** 3.30.0  
+**Last updated:** 2026-05-30  
+**Migration head:** 0054
 
 All tables use PostgreSQL. Primary keys are UUID v4. Foreign keys cascade-delete unless noted.
 
@@ -991,3 +991,18 @@ Indexes: `investor_id`.
 | 0043 | financial_twin_snapshots (8 FLOAT dimension columns + overall_score) and financial_health_scores (9 FLOAT dimension columns + overall_score); 2 indexes each on investor_id and computed_at |
 | 0044 | behavioral_risk_events table — event_type VARCHAR(50), severity VARCHAR(20), status VARCHAR(20) default active, detected_at TIMESTAMPTZ, resolved_at nullable, description TEXT, evidence JSONB, recommendation TEXT, decision_id nullable FK → recommendation_decisions SET NULL; 3 indexes |
 | 0045 | simulation_runs (scenario_type, parameters, data_snapshot, results JSONB, random_seed, is_saved, disclaimer; 3 indexes) + simulation_comparison_sets (simulation_ids JSONB array) |
+| 0046 | command_center_checkpoints table — weekly AI-generated portfolio health checkpoint snapshots (checkpoint_data JSONB, summary TEXT, generated_at TIMESTAMPTZ); investor_id FK |
+| 0047 | ai_memory_entries table — persistent AI memory per investor (memory_type VARCHAR(30), content TEXT, embedding_key VARCHAR(200), is_active, created_at); index on investor_id + memory_type |
+| 0048 | households table (name, description, created_at) + investor_profiles.household_id FK → households SET NULL; enables household financial aggregation |
+| 0049 | advisor_share_tokens table — read-only advisor share links (token VARCHAR(64) UNIQUE, investor_id FK, permissions JSONB, expires_at TIMESTAMPTZ nullable, last_used_at, is_active); index on token |
+| 0050 | staged_orders table — investor_id FK, ticker VARCHAR(20), name VARCHAR(200), action VARCHAR(10) (buy/sell), quantity FLOAT, unit_price FLOAT, currency VARCHAR(10), estimated_value FLOAT, asset_type VARCHAR(30), status VARCHAR(20) (pending/executed/cancelled), goal_id FK nullable, goal_name VARCHAR(200), tax_note TEXT, pre_flight_review JSONB, projected_metrics JSONB, executed_at TIMESTAMPTZ, actual_outcome JSONB, outcome_snapshots JSONB, notes TEXT, created_at/updated_at; 3 indexes |
+| 0051 | order_templates table (investor_id FK, name VARCHAR(100), description TEXT, orders JSONB, times_applied INT default 0, last_applied_at TIMESTAMPTZ) + outcome_snapshots JSONB column on staged_orders |
+| 0052 | recurring_investment_plans table (investor_id FK, name VARCHAR(200), frequency VARCHAR(20), day_of_month INT, allocations JSONB, is_active BOOL, next_run_at TIMESTAMPTZ, last_run_at TIMESTAMPTZ, created_at); 2 indexes on investor_id and next_run_at |
+| 0053 | name VARCHAR(200) nullable column on paper_portfolios |
+| 0054 | rationale TEXT + reflection JSONB columns on staged_orders (trade journal: pre-trade rationale + post-execution reflection snapshot) |
+
+**JSONB sub-structure notes (staged_orders):**
+- `pre_flight_review`: `{reasons_to_proceed: [{label, detail}], risks: [{label, detail}], alternative: str|null, verdict: "proceed"|"caution"|"reconsider", behavioral: {kappa_score: float|null, confidence_tier: str, suggested_action: str, rationale: str}|null}` — `behavioral` added in v3.30.0; existing rows return `null`
+- `projected_metrics`: `{portfolio_value_base, low_risk_pct, growth_pct, high_risk_pct, goal_progress_pct, goal_name}`
+- `outcome_snapshots`: list of `{days: 30|90|180, snapshot_at, portfolio_value, low_risk_pct, growth_pct, high_risk_pct}` — populated by daily outcome_tracking worker
+- `allocations` (recurring_plans): list of `{ticker, name, asset_type, amount, currency, goal_id, trigger_on_alert: bool}` — `trigger_on_alert` added in v3.29.0
