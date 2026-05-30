@@ -1,6 +1,6 @@
 # TradeOps AI — Product Roadmap
 
-**Version:** 3.33.0  
+**Version:** 3.34.0  
 **Last updated:** 2026-05-30
 
 > Completed phases: v1–v3.30.0. See `CHANGELOG.md` and `execution_plan.md` for the full history.
@@ -32,6 +32,7 @@
 | v3.31 | Portfolio Anti-Correlation Engine (Pearson r in pre-flight, sector clustering warnings) |
 | v3.32 | Thesis Expiry Monitor (stop-loss / take-profit / horizon breach alerts in Morning Brief) |
 | v3.33 | Redis caching for compute-heavy endpoints (DI, BA, Calibration, Reflection Report — 15/30-min TTL) |
+| v3.34 | Pre-Flight Interceptor Panel — post-staging synthesis overlay combining Behavioral Shield + Correlation Shield + aggregate risk banner |
 
 ---
 

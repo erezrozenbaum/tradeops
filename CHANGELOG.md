@@ -8,6 +8,15 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.34.0] — 2026-05-30
+
+### Added
+- **Pre-Flight Interceptor Panel** — after every order is staged, a synthesis panel surfaces immediately in the left column, replacing the form while visible; aggregates Behavioral Shield (v3.30) and Portfolio Correlation Shield (v3.31) into a 2-column grid layout; shows an amber aggregate risk banner when κ < 0.50 OR correlation risk tier is `HIGH_OVERLAP`; shows an emerald confirmation when both signals are within acceptable parameters; "Route to Paper Sandbox" CTA navigates directly to the paper trading page; primary CTA reads "Proceed Anyway" on high risk or "Continue to Queue" on clean signals; form is dimmed and non-interactive while the panel is visible
+- **`PreFlightInterceptorPanel.tsx`** — new composite component; reuses `PreFlightBehavioralShield` and `PreFlightDiversificationCard` unchanged; dismissed on X / CTA click; no backend changes — pure UI synthesis over existing `pre_flight_review` JSONB returned by the staging endpoint
+
+### Changed
+- **`order-builder/page.tsx`** — `handleCreate` now captures the `StagedOrder` response from the POST; if `pre_flight_review` contains behavioral or diversification data, sets `interceptorOrder` state and renders the interceptor panel above the dimmed form; `useRouter` added for paper sandbox navigation
+
 ## [3.33.0] — 2026-05-30
 
 ### Added

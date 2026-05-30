@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useInvestorId } from "@/hooks/useInvestorId";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { PreFlightBehavioralShield } from "@/components/PreFlightBehavioralShield";
 import { PreFlightDiversificationCard } from "@/components/PreFlightDiversificationCard";
+import { PreFlightInterceptorPanel } from "@/components/PreFlightInterceptorPanel";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -548,6 +550,7 @@ function OrderCard({
 
 export default function OrderBuilderPage() {
   const investorId = useInvestorId();
+  const router = useRouter();
 
   // Data state
   const [orderList, setOrderList] = useState<OrderList | null>(null);
@@ -589,6 +592,7 @@ export default function OrderBuilderPage() {
   const [showThesis, setShowThesis] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [interceptorOrder, setInterceptorOrder] = useState<StagedOrder | null>(null);
 
   const fetchOrders = useCallback(async () => {
     if (!investorId) return;
@@ -663,7 +667,7 @@ export default function OrderBuilderPage() {
       if (form.thesis_stop_loss) thesisParams.stop_loss_pct = parseFloat(form.thesis_stop_loss);
       if (form.thesis_take_profit) thesisParams.take_profit_pct = parseFloat(form.thesis_take_profit);
 
-      await apiFetch(`/investors/${investorId}/staged-orders`, {
+      const newOrder = await apiFetch<StagedOrder>(`/investors/${investorId}/staged-orders`, {
         method: "POST",
         body: JSON.stringify({
           ticker: form.ticker.trim() || null,
@@ -683,6 +687,9 @@ export default function OrderBuilderPage() {
       setShowThesis(false);
       fetchOrders();
       setActiveTab("pending");
+      if (newOrder.pre_flight_review?.behavioral || newOrder.pre_flight_review?.diversification) {
+        setInterceptorOrder(newOrder);
+      }
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : "Failed to create order");
     } finally {
@@ -985,8 +992,17 @@ export default function OrderBuilderPage() {
             />
           )}
 
+          {/* Pre-Flight Interceptor Panel — shown immediately after staging */}
+          {interceptorOrder && (
+            <PreFlightInterceptorPanel
+              order={interceptorOrder}
+              onDismiss={() => setInterceptorOrder(null)}
+              onPaperSandbox={() => { setInterceptorOrder(null); router.push("/paper-trading"); }}
+            />
+          )}
+
           {/* Create Order Form */}
-          <Card>
+          <Card className={interceptorOrder ? "opacity-40 pointer-events-none select-none" : ""}>
             <CardContent className="p-5 space-y-4">
               <h2 className="font-semibold text-sm flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-emerald-400" />
