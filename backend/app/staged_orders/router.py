@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.staged_orders import service, templates as tmpl_svc
 from app.staged_orders.schemas import (
+    CalibrationOut,
     GenerateRebalanceResult,
     JournalEntryOut,
     OrderTemplateOut,
@@ -187,6 +188,12 @@ def bulk_cancel(
 def get_outcomes(investor_id: uuid.UUID, db: Session = Depends(get_db)):
     """Return executed orders with their projected vs actual outcome snapshots."""
     return service.list_outcome_comparisons(db, investor_id)
+
+
+@router.get("/calibration", response_model=CalibrationOut)
+def get_calibration(investor_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Aggregate projected vs actual tier allocations at 30/90/180-day milestones."""
+    return service.get_outcome_calibration(db, investor_id)
 
 
 # ── Smart Allocation Assistant ────────────────────────────────────────────────

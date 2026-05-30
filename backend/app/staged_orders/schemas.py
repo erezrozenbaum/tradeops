@@ -173,6 +173,44 @@ class OutcomeComparisonOut(BaseModel):
     snapshots: list[OutcomeSnapshot]
 
 
+# ── Outcome Calibration schemas ───────────────────────────────────────────────
+
+class CalibrationMilestone(BaseModel):
+    days: int
+    order_count: int
+    avg_projected_low_risk: float | None = None
+    avg_actual_low_risk: float | None = None
+    avg_projected_growth: float | None = None
+    avg_actual_growth: float | None = None
+    avg_projected_high_risk: float | None = None
+    avg_actual_high_risk: float | None = None
+    avg_accuracy_score: float | None = None
+
+
+class CalibrationOrderRow(BaseModel):
+    order_id: uuid.UUID
+    ticker: str | None
+    name: str
+    action: str
+    executed_at: str | None
+    milestone_days: int
+    proj_low_risk: float | None = None
+    act_low_risk: float | None = None
+    proj_growth: float | None = None
+    act_growth: float | None = None
+    proj_high_risk: float | None = None
+    act_high_risk: float | None = None
+    accuracy_score: float | None = None
+
+
+class CalibrationOut(BaseModel):
+    investor_id: uuid.UUID
+    milestones: list[CalibrationMilestone]
+    orders: list[CalibrationOrderRow]
+    has_data: bool
+    generated_at: str
+
+
 # ── Smart Allocation Assistant schemas ────────────────────────────────────────
 
 class SmartSuggestion(BaseModel):

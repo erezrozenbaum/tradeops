@@ -122,3 +122,29 @@ def _sync_status_label(last_synced: datetime | None) -> str:
     if hours < 72:
         return "stale"
     return "outdated"
+
+
+def get_outdated_accounts(db: Session, investor_id: uuid.UUID) -> list[dict]:
+    """Return accounts with stale or outdated sync status for pre-flight and morning brief checks."""
+    from app.models.investment_account import InvestmentAccount
+
+    accounts = (
+        db.query(InvestmentAccount)
+        .filter(InvestmentAccount.investor_id == investor_id)
+        .all()
+    )
+    result = []
+    for acc in accounts:
+        last_synced = acc.last_synced_at
+        if last_synced and last_synced.tzinfo is None:
+            last_synced = last_synced.replace(tzinfo=timezone.utc)
+        status = _sync_status_label(last_synced)
+        if status in ("stale", "outdated"):
+            result.append({
+                "id": str(acc.id),
+                "name": acc.account_name or acc.provider_name or "Unnamed Account",
+                "provider": acc.provider_name,
+                "sync_status": status,
+                "last_synced_at": last_synced.isoformat() if last_synced else None,
+            })
+    return result

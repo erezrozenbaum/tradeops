@@ -1,9 +1,10 @@
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.broker_sync.status import get_outdated_accounts
 from app.db.session import get_db
 from app.goals_analysis import service as goals_analysis_service
 from app.models.behavioral_risk_event import BehavioralRiskEvent
@@ -122,6 +123,18 @@ def get_morning_brief(investor_id: uuid.UUID, db: Session = Depends(get_db)):
         for e in events
     ]
 
+    # Broker sync warnings — accounts not synced in 25h+ (stale) or 72h+ (outdated)
+    outdated_accounts = get_outdated_accounts(db, investor_id)
+    broker_sync_warnings = [
+        {
+            "account_name": a["name"],
+            "provider": a["provider"],
+            "sync_status": a["sync_status"],
+            "last_synced_at": a["last_synced_at"],
+        }
+        for a in outdated_accounts
+    ]
+
     return {
         "generated_at": now.isoformat(),
         "portfolio": portfolio,
@@ -129,4 +142,5 @@ def get_morning_brief(investor_id: uuid.UUID, db: Session = Depends(get_db)):
         "triggered_alerts": triggered_alerts,
         "next_plan": next_plan_data,
         "behavioral_events": behavioral_events,
+        "broker_sync_warnings": broker_sync_warnings,
     }

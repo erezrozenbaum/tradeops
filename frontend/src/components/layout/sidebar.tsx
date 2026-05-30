@@ -133,6 +133,7 @@ const sections: NavSection[] = [
       { label: "Decision Intelligence", href: "/decision-intelligence", icon: BrainCircuit },
       { label: "Behavioral Alpha", href: "/behavioral-alpha", icon: Activity },
       { label: "Monthly Review", href: "/reflection", icon: CalendarDays },
+      { label: "Outcome Calibration", href: "/outcome-calibration", icon: Crosshair },
       { label: "Trade Journal", href: "/journal", icon: BookOpen },
       { label: "AI Coach", href: "/insights", icon: Brain },
       { label: "Market Research", href: "/market-research", icon: Microscope },

@@ -188,6 +188,18 @@ def _compute_pre_flight(
                 detail=f"No current holding for {ticker} detected — verify you own this asset before selling.",
             ))
 
+    # Risk: any account with outdated broker sync (≥72h) — data may not reflect current positions
+    from app.broker_sync.status import get_outdated_accounts
+    outdated = [a for a in get_outdated_accounts(db, investor_id) if a["sync_status"] == "outdated"]
+    if outdated:
+        names = ", ".join(a["name"] for a in outdated[:2])
+        suffix = f" (+{len(outdated) - 2} more)" if len(outdated) > 2 else ""
+        risks.append(PreFlightReason(
+            label="Stale broker data",
+            detail=f"Account(s) not synced in 72+ hours: {names}{suffix}. "
+                   "Portfolio data may be outdated — sync before executing.",
+        ))
+
     verdict = "reconsider" if (len(risks) >= 2 or not risk_model) else ("caution" if risks else "proceed")
 
     return PreFlightReview(
@@ -462,6 +474,98 @@ def cancel_order(db: Session, investor_id: uuid.UUID, order_id: uuid.UUID) -> St
 
 
 # ── outcome comparisons ───────────────────────────────────────────────────────
+
+def get_outcome_calibration(
+    db: Session,
+    investor_id: uuid.UUID,
+) -> Any:
+    """Aggregate outcome_snapshots across all executed orders to compare projected vs actual
+    tier allocations at the 30 / 90 / 180-day milestones."""
+    from app.staged_orders.schemas import CalibrationMilestone, CalibrationOrderRow, CalibrationOut
+
+    orders = (
+        db.query(StagedOrder)
+        .filter(
+            StagedOrder.investor_id == investor_id,
+            StagedOrder.status == "executed",
+            StagedOrder.outcome_snapshots.isnot(None),
+            StagedOrder.projected_metrics.isnot(None),
+        )
+        .order_by(StagedOrder.executed_at.desc())
+        .all()
+    )
+
+    rows: list[CalibrationOrderRow] = []
+    milestone_buckets: dict[int, list[CalibrationOrderRow]] = {30: [], 90: [], 180: []}
+
+    for order in orders:
+        proj = order.projected_metrics or {}
+        for snap in (order.outcome_snapshots or []):
+            days = snap.get("days")
+            if days not in milestone_buckets:
+                continue
+
+            proj_lr = proj.get("low_risk_pct")
+            proj_g = proj.get("growth_pct")
+            proj_hr = proj.get("high_risk_pct")
+            act_lr = snap.get("low_risk_pct")
+            act_g = snap.get("growth_pct")
+            act_hr = snap.get("high_risk_pct")
+
+            diffs = []
+            if proj_lr is not None and act_lr is not None:
+                diffs.append(abs(proj_lr - act_lr))
+            if proj_g is not None and act_g is not None:
+                diffs.append(abs(proj_g - act_g))
+            if proj_hr is not None and act_hr is not None:
+                diffs.append(abs(proj_hr - act_hr))
+            accuracy = round(max(0.0, 100.0 - sum(diffs) / len(diffs)), 1) if diffs else None
+
+            row = CalibrationOrderRow(
+                order_id=order.id,
+                ticker=order.ticker,
+                name=order.name,
+                action=order.action,
+                executed_at=order.executed_at.isoformat() if order.executed_at else None,
+                milestone_days=days,
+                proj_low_risk=proj_lr,
+                act_low_risk=act_lr,
+                proj_growth=proj_g,
+                act_growth=act_g,
+                proj_high_risk=proj_hr,
+                act_high_risk=act_hr,
+                accuracy_score=accuracy,
+            )
+            rows.append(row)
+            milestone_buckets[days].append(row)
+
+    def _avg(vals: list) -> float | None:
+        filtered = [v for v in vals if v is not None]
+        return round(sum(filtered) / len(filtered), 1) if filtered else None
+
+    milestones: list[CalibrationMilestone] = []
+    for days in [30, 90, 180]:
+        bucket = milestone_buckets[days]
+        milestones.append(CalibrationMilestone(
+            days=days,
+            order_count=len(bucket),
+            avg_projected_low_risk=_avg([r.proj_low_risk for r in bucket]),
+            avg_actual_low_risk=_avg([r.act_low_risk for r in bucket]),
+            avg_projected_growth=_avg([r.proj_growth for r in bucket]),
+            avg_actual_growth=_avg([r.act_growth for r in bucket]),
+            avg_projected_high_risk=_avg([r.proj_high_risk for r in bucket]),
+            avg_actual_high_risk=_avg([r.act_high_risk for r in bucket]),
+            avg_accuracy_score=_avg([r.accuracy_score for r in bucket]),
+        ))
+
+    return CalibrationOut(
+        investor_id=investor_id,
+        milestones=milestones,
+        orders=rows,
+        has_data=len(rows) > 0,
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
 
 def list_outcome_comparisons(
     db: Session,

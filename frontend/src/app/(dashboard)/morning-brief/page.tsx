@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import {
   Sun, TrendingUp, TrendingDown, Target, Bell, CalendarClock,
-  AlertTriangle, RefreshCw, CheckCircle2,
+  AlertTriangle, RefreshCw, CheckCircle2, WifiOff,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -52,6 +52,13 @@ interface BehavioralEvent {
   detected_at: string;
 }
 
+interface BrokerSyncWarning {
+  account_name: string;
+  provider: string | null;
+  sync_status: "stale" | "outdated";
+  last_synced_at: string | null;
+}
+
 interface MorningBrief {
   generated_at: string;
   portfolio: PortfolioSummary | null;
@@ -59,6 +66,7 @@ interface MorningBrief {
   triggered_alerts: TriggeredAlert[];
   next_plan: NextPlan | null;
   behavioral_events: BehavioralEvent[];
+  broker_sync_warnings: BrokerSyncWarning[];
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -245,6 +253,53 @@ export default function MorningBriefPage() {
         </Card>
       )}
 
+      {/* Broker sync warnings */}
+      {brief && brief.broker_sync_warnings && brief.broker_sync_warnings.length > 0 && (
+        <Card>
+          <div className="px-5 py-4 border-b border-border flex items-center gap-2">
+            <WifiOff className="h-4 w-4 text-amber-500" />
+            <p className="text-sm font-medium">Broker Sync Warnings</p>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {brief.broker_sync_warnings.length} account{brief.broker_sync_warnings.length > 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="divide-y divide-border">
+            {brief.broker_sync_warnings.map((w, i) => (
+              <div key={i} className="px-5 py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <span className="text-sm font-medium truncate block">{w.account_name}</span>
+                  {w.provider && (
+                    <span className="text-xs text-muted-foreground">{w.provider}</span>
+                  )}
+                </div>
+                <div className="flex flex-col items-end gap-0.5 shrink-0">
+                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase border ${
+                    w.sync_status === "outdated"
+                      ? "text-red-500 bg-red-500/10 border-red-500/20"
+                      : "text-amber-500 bg-amber-500/10 border-amber-500/20"
+                  }`}>
+                    {w.sync_status}
+                  </span>
+                  {w.last_synced_at && (
+                    <span className="text-[10px] text-muted-foreground">
+                      Last: {fmtDate(w.last_synced_at)}
+                    </span>
+                  )}
+                  {!w.last_synced_at && (
+                    <span className="text-[10px] text-muted-foreground">Never synced</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="px-5 py-3 border-t border-border bg-muted/30">
+            <p className="text-xs text-muted-foreground">
+              Sync your accounts before staging new orders to ensure portfolio data is current.
+            </p>
+          </div>
+        </Card>
+      )}
+
       {/* Behavioral risk events */}
       {brief && brief.behavioral_events.length > 0 && (
         <Card>
@@ -271,7 +326,7 @@ export default function MorningBriefPage() {
       )}
 
       {/* All clear */}
-      {brief && !p && !g && brief.triggered_alerts.length === 0 && brief.behavioral_events.length === 0 && (
+      {brief && !p && !g && brief.triggered_alerts.length === 0 && brief.behavioral_events.length === 0 && (brief.broker_sync_warnings ?? []).length === 0 && (
         <Card>
           <CardContent className="py-14 text-center">
             <CheckCircle2 className="h-10 w-10 mx-auto text-green-500/40 mb-3" />

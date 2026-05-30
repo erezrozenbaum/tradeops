@@ -8,6 +8,12 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.28.0] — 2026-05-30
+
+### Added
+- **Active Broker Sync Drift Warnings** — broker sync drift is now a first-class signal surfaced in two places: (1) Morning Brief includes a `broker_sync_warnings` section listing all accounts with stale (25h+) or outdated (72h+) sync status; (2) Pre-flight review on new staged orders adds a "Stale broker data" risk entry for any account outdated ≥72h, pushing the verdict toward `caution`/`reconsider`; new `get_outdated_accounts(db, investor_id)` helper extracted from `broker_sync/status.py` for reuse
+- **Outcome Calibration Dashboard** — `/outcome-calibration` page in the Intelligence sidebar section; aggregates executed orders' `outcome_snapshots` (populated by the daily outcome tracking worker) to compare projected vs actual tier allocations at 30, 90, and 180-day milestones; per-milestone summary cards with average accuracy score (0–100), tier comparison bars (projected → actual with delta), and a filterable per-order detail table; `GET /investors/{id}/staged-orders/calibration` endpoint returning `CalibrationOut` with milestone aggregates and individual order rows; accuracy score formula: `100 − avg(|proj_tier_pct − act_tier_pct|)` across the three risk tiers
+
 ## [3.27.0] — 2026-05-29
 
 ### Fixed
