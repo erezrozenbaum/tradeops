@@ -8,6 +8,15 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.38.0] — 2026-06-04
+
+### Added
+- **Behavioral Confidence (κ) Trend Chart** on the Decision Intelligence page — time-series of per-order κ scores extracted from `pre_flight_review.behavioral.kappa_score` JSONB on executed orders; shows the last 20 data points with threshold lines at κ=0.65 (blue dashed) and κ=0.50 (amber dashed); dots colored by confidence tier (emerald=HIGH_ALPHA, blue=STANDARD, amber=CAUTION_IMPULSE, red=HIGH_RISK_OVERRIDE); only rendered when ≥ 2 kappa data points exist
+- **`KappaHistoryPoint`** — new Pydantic schema in `decision_intelligence/schemas.py` (`date`, `kappa_score`, `confidence_tier`)
+- **`_kappa_history()`** — new service function in `decision_intelligence/service.py`; extracts and sorts per-order κ from JSONB, capped to last 20 executed orders with a valid score; no schema migration or external calls
+- **`kappa_history`** field added to `DecisionIntelligenceReport` schema and both return sites in `compute_decision_intelligence()`
+- **`KappaHistoryChart`** — new SVG component in `decision-intelligence/page.tsx`; placed inline below the DQS monthly history in the right column card
+
 ## [3.37.0] — 2026-05-30
 
 ### Added

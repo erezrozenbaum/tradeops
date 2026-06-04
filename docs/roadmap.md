@@ -1,7 +1,7 @@
 # TradeOps AI — Product Roadmap
 
-**Version:** 3.37.0  
-**Last updated:** 2026-05-30
+**Version:** 3.38.0  
+**Last updated:** 2026-06-04
 
 > Completed phases: v1–v3.30.0. See `CHANGELOG.md` and `execution_plan.md` for the full history.
 
@@ -36,6 +36,7 @@
 | v3.35 | Investor DNA + Capital Leakage Attribution — Edge / Risks / Recommendation profile synthesising all behavioral signals; dollar leakage per asset class |
 | v3.36 | Live Ticker Correlation Preview — 300ms debounced inline indicator in the Order Builder showing HIGH_OVERLAP (amber) or HIGHLY_DIVERSIFIED (emerald) before submission; read-only, backed by local price_snapshots |
 | v3.37 | Investor Evolution Report — rolling 90-day vs previous 90-day behavioral tracker; DQS, documentation rate, risk overrides, behavioral alpha; strengths/concerns derivation; three gate states; no schema migration |
+| v3.38 | Behavioral Confidence (κ) Trend Chart — per-order κ history extracted from pre_flight_review JSONB; threshold lines at κ=0.65 and κ=0.50; tier-colored dots; rendered on Decision Intelligence page |
 
 ---
 
@@ -45,10 +46,8 @@
 |----------|---------|-------|
 | High | Live broker execution skeleton | IBKR Client Portal Gateway; disabled by default; requires explicit activation |
 | High | Multi-currency goal progress normalization | Goals denominated in different currencies need FX-adjusted progress |
-| High | Live broker execution skeleton | IBKR Client Portal Gateway; disabled by default; requires explicit activation |
-| Medium | Behavioral Confidence history | Track κ scores over time per investor; trend chart on Decision Intelligence page |
+| Medium | Override drill-down from Evolution Report | Clicking "Risk Overrides: N" shows the actual N override orders |
 | Medium | Family shared goals dashboard | Household-level goal aggregation view |
-| Medium | Behavioral Confidence history | Track κ scores over time per investor; trend chart on Decision Intelligence page |
 | Medium | Audit logging in Decision Intelligence / Behavioral Alpha routers | Currently missing from the three intelligence modules |
 | Low | AI-generated monthly narrative email | Monthly reflection report delivered as email digest |
 | Low | Test coverage for decision_intelligence, behavioral_alpha, reflection_report | Currently no unit tests for these three modules |

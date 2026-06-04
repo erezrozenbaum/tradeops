@@ -25,6 +25,7 @@ from app.decision_intelligence.schemas import (
     DecisionIntelligenceReport,
     DQSComponents,
     DQSHistoryPoint,
+    KappaHistoryPoint,
     OutcomeComparison,
 )
 from app.models.staged_order import StagedOrder
@@ -436,6 +437,24 @@ def _dqs_history(
     return history[-12:]
 
 
+def _kappa_history(orders: list[StagedOrder]) -> list[KappaHistoryPoint]:
+    """Extract per-order κ scores from pre_flight_review JSONB on executed orders."""
+    points: list[KappaHistoryPoint] = []
+    for o in sorted(orders, key=lambda x: x.created_at):
+        if o.status != "executed":
+            continue
+        behavioral = (o.pre_flight_review or {}).get("behavioral") or {}
+        kappa = behavioral.get("kappa_score")
+        if kappa is None:
+            continue
+        points.append(KappaHistoryPoint(
+            date=o.created_at.strftime("%Y-%m-%d"),
+            kappa_score=kappa,
+            confidence_tier=behavioral.get("confidence_tier", "UNKNOWN"),
+        ))
+    return points[-20:]
+
+
 def _compute_trend(history: list[DQSHistoryPoint]) -> tuple[str, float | None]:
     if len(history) < 2:
         return "insufficient_data", None
@@ -530,6 +549,7 @@ def compute_decision_intelligence(
             trend="insufficient_data",
             trend_delta=None,
             dqs_history=[],
+            kappa_history=[],
             insights=[],
             outcome_comparison=None,
             coach_notes=[
@@ -553,6 +573,7 @@ def compute_decision_intelligence(
 
     history = _dqs_history(db, orders)
     trend, trend_delta = _compute_trend(history)
+    kappa_hist = _kappa_history(orders)
 
     insights = _generate_insights(
         orders, doc_rate, goal_rate, reconsider_overrides,
@@ -576,6 +597,7 @@ def compute_decision_intelligence(
         trend=trend,
         trend_delta=trend_delta,
         dqs_history=history,
+        kappa_history=kappa_hist,
         insights=insights,
         outcome_comparison=oc,
         coach_notes=coach_notes,

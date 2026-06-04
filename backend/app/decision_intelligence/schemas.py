@@ -34,6 +34,12 @@ class DQSHistoryPoint(BaseModel):
     order_count: int
 
 
+class KappaHistoryPoint(BaseModel):
+    date: str          # "2026-01-15"
+    kappa_score: float
+    confidence_tier: str
+
+
 class DecisionIntelligenceReport(BaseModel):
     investor_id: uuid.UUID
     dqs: float
@@ -42,6 +48,7 @@ class DecisionIntelligenceReport(BaseModel):
     trend: str   # "improving" | "stable" | "declining" | "insufficient_data"
     trend_delta: float | None
     dqs_history: list[DQSHistoryPoint]
+    kappa_history: list[KappaHistoryPoint]
     insights: list[BehavioralInsight]
     outcome_comparison: OutcomeComparison | None
     coach_notes: list[str]

@@ -1,7 +1,7 @@
 # TradeOps AI — Admin Guide
 
-**Version:** 3.37.0  
-**Last updated:** 2026-05-30
+**Version:** 3.38.0  
+**Last updated:** 2026-06-04
 
 This guide covers installation, configuration, database management, Kubernetes deployment, and day-to-day operations for TradeOps AI.
 

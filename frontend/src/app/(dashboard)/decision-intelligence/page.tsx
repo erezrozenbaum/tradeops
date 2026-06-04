@@ -55,6 +55,12 @@ interface DQSHistoryPoint {
   order_count: number;
 }
 
+interface KappaHistoryPoint {
+  date: string;
+  kappa_score: number;
+  confidence_tier: string;
+}
+
 interface Report {
   dqs: number;
   dqs_label: string;
@@ -62,6 +68,7 @@ interface Report {
   trend: string;
   trend_delta: number | null;
   dqs_history: DQSHistoryPoint[];
+  kappa_history: KappaHistoryPoint[];
   insights: BehavioralInsight[];
   outcome_comparison: OutcomeComparison | null;
   coach_notes: string[];
@@ -261,6 +268,78 @@ function DQSHistoryChart({ history }: { history: DQSHistoryPoint[] }) {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Kappa history chart ──────────────────────────────────────────────────────
+
+function KappaHistoryChart({ history }: { history: KappaHistoryPoint[] }) {
+  if (history.length < 2) return null;
+
+  const W = 340;
+  const H = 72;
+  const pad = 6;
+  const innerH = H - pad * 2;
+
+  const toY = (k: number) => H - pad - k * innerH;
+  const toX = (i: number) => pad + (i / (history.length - 1)) * (W - pad * 2);
+
+  const points = history.map((p, i) => `${toX(i)},${toY(p.kappa_score)}`).join(" ");
+
+  const tierColor = (tier: string): string => {
+    if (tier === "HIGH_ALPHA") return "#10b981";
+    if (tier === "STANDARD") return "#3b82f6";
+    if (tier === "CAUTION_IMPULSE") return "#f59e0b";
+    if (tier === "HIGH_RISK_OVERRIDE") return "#ef4444";
+    return "#94a3b8";
+  };
+
+  const threshold50Y = toY(0.50);
+  const threshold65Y = toY(0.65);
+
+  const last = history[history.length - 1];
+  const first = history[0];
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">Behavioral confidence (κ) trend</p>
+        <span className="text-[10px] text-muted-foreground/60">{history.length} orders</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-16">
+        {/* threshold lines */}
+        <line x1={pad} y1={threshold65Y} x2={W - pad} y2={threshold65Y}
+          stroke="#3b82f6" strokeWidth="0.75" strokeDasharray="3 3" opacity="0.4" />
+        <line x1={pad} y1={threshold50Y} x2={W - pad} y2={threshold50Y}
+          stroke="#f59e0b" strokeWidth="0.75" strokeDasharray="3 3" opacity="0.4" />
+        {/* path */}
+        <polyline points={points} fill="none" stroke="#64748b" strokeWidth="1.5" strokeLinejoin="round" />
+        {/* dots */}
+        {history.map((p, i) => (
+          <circle
+            key={i}
+            cx={toX(i)}
+            cy={toY(p.kappa_score)}
+            r="3"
+            fill={tierColor(p.confidence_tier)}
+          />
+        ))}
+      </svg>
+      <div className="flex justify-between text-[10px] text-muted-foreground/60">
+        <span>{first.date.slice(0, 7)}</span>
+        <div className="flex gap-3 items-center">
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-2 h-px bg-blue-500 opacity-50" style={{borderTop: "1px dashed"}} />
+            0.65
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-2 h-px bg-amber-500 opacity-50" />
+            0.50
+          </span>
+        </div>
+        <span>{last.date.slice(0, 7)}</span>
       </div>
     </div>
   );
@@ -482,6 +561,9 @@ export default function DecisionIntelligencePage() {
                 </div>
                 {report.dqs_history.length > 1 && (
                   <DQSHistoryChart history={report.dqs_history} />
+                )}
+                {report.kappa_history.length >= 2 && (
+                  <KappaHistoryChart history={report.kappa_history} />
                 )}
               </CardContent>
             </Card>
