@@ -8,6 +8,18 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.39.0] — 2026-06-04
+
+### Added
+- **Override Drill-down** on Investor Evolution page — Risk Overrides metric card is now clickable when count > 0; opens a modal listing each executed order that overrode a pre-flight "Reconsider" verdict within the current 90-day window; each entry shows ticker, action, quantity × price, date, and rationale (or "blind override" if missing)
+- **`GET /investors/{investor_id}/investor-evolution/overrides`** — returns executed orders with `pre_flight_review.verdict == "reconsider"` in the current 90-day window; response model `OverrideOrderOut` added to `investor_evolution/schemas.py`
+- **`OverrideOrderOut`** Pydantic schema (`id`, `ticker`, `name`, `action`, `quantity`, `unit_price`, `currency`, `rationale`, `created_at`)
+- **`test_decision_intelligence.py`** — 30 unit tests covering `_dqs_label`, `_documentation_score`, `_risk_intelligence_score`, `_goal_alignment_score`, `_kappa_history`, `_compute_trend`; pure helpers, no DB; uses `SimpleNamespace` order mocks
+- **`test_investor_evolution.py`** — 27 unit tests covering `_delta_direction`, `_risk_overrides`, `_doc_rate`, `_filter_window`, `_behavioral_alpha` (including alpha calculation via `patch`); pure helpers, no DB
+
+### Changed
+- **`investor-evolution/page.tsx`** — `MetricCard` accepts optional `onClick`; Risk Overrides card shows a `ShieldAlert` icon when clickable; override modal added at page root
+
 ## [3.38.0] — 2026-06-04
 
 ### Added

@@ -4,6 +4,20 @@ from datetime import date, datetime
 from pydantic import BaseModel
 
 
+class OverrideOrderOut(BaseModel):
+    id: uuid.UUID
+    ticker: str | None
+    name: str | None
+    action: str
+    quantity: float | None
+    unit_price: float | None
+    currency: str
+    rationale: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class WindowMetrics(BaseModel):
     dqs: float | None
     doc_rate_pct: float | None

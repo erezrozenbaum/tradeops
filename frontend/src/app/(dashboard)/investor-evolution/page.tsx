@@ -5,7 +5,7 @@ import { useInvestorId } from "@/hooks/useInvestorId";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   TrendingUp, TrendingDown, Minus, RefreshCw, LineChart,
-  CheckCircle2, AlertTriangle, Clock,
+  CheckCircle2, AlertTriangle, Clock, X, ShieldAlert,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -42,6 +42,18 @@ interface InvestorEvolutionReport {
   strengths: string[];
   concerns: string[];
   generated_at: string;
+}
+
+interface OverrideOrder {
+  id: string;
+  ticker: string | null;
+  name: string | null;
+  action: string;
+  quantity: number | null;
+  unit_price: number | null;
+  currency: string;
+  rationale: string | null;
+  created_at: string;
 }
 
 // ── API ────────────────────────────────────────────────────────────────────────
@@ -97,15 +109,31 @@ function formatDate(d: string) {
 
 // ── Metric Card ────────────────────────────────────────────────────────────────
 
-function MetricCard({ delta, hasComparison }: { delta: MetricDelta; hasComparison: boolean }) {
+function MetricCard({
+  delta,
+  hasComparison,
+  onClick,
+}: {
+  delta: MetricDelta;
+  hasComparison: boolean;
+  onClick?: () => void;
+}) {
   const { text, bg } = directionColors(delta.direction);
   const isOverride = delta.key === "risk_overrides";
+  const isClickable = isOverride && delta.current !== null && delta.current > 0 && onClick;
 
   return (
-    <div className={`rounded-lg border p-4 space-y-3 ${bg}`}>
+    <div
+      className={`rounded-lg border p-4 space-y-3 ${bg} ${isClickable ? "cursor-pointer hover:brightness-110 transition-all" : ""}`}
+      onClick={isClickable ? onClick : undefined}
+      title={isClickable ? "Click to see override orders" : undefined}
+    >
       <div className="flex items-center justify-between">
         <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">{delta.title}</span>
-        <DirectionIcon direction={delta.direction} />
+        <div className="flex items-center gap-1.5">
+          {isClickable && <ShieldAlert className="w-3 h-3 text-amber-400 opacity-70" />}
+          <DirectionIcon direction={delta.direction} />
+        </div>
       </div>
 
       {hasComparison ? (
@@ -150,6 +178,24 @@ export default function InvestorEvolutionPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [overrides, setOverrides] = useState<OverrideOrder[] | null>(null);
+  const [overridesLoading, setOverridesLoading] = useState(false);
+  const [showOverrides, setShowOverrides] = useState(false);
+
+  async function fetchOverrides() {
+    if (!investorId) return;
+    setOverridesLoading(true);
+    setShowOverrides(true);
+    try {
+      const data = await apiFetch<OverrideOrder[]>(`/investors/${investorId}/investor-evolution/overrides`);
+      setOverrides(data);
+    } catch {
+      setOverrides([]);
+    } finally {
+      setOverridesLoading(false);
+    }
+  }
+
   const fetchReport = useCallback(async () => {
     if (!investorId) return;
     setLoading(true);
@@ -168,6 +214,66 @@ export default function InvestorEvolutionPage() {
 
   return (
     <div className="p-4 lg:p-8 space-y-6 max-w-5xl mx-auto">
+      {/* Override drill-down modal */}
+      {showOverrides && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm font-semibold">Risk Overrides — Current 90-day Window</h3>
+              </div>
+              <button onClick={() => setShowOverrides(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
+              {overridesLoading && (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              {!overridesLoading && overrides && overrides.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-6">No override orders in the current window.</p>
+              )}
+              {!overridesLoading && overrides && overrides.map(o => (
+                <div key={o.id} className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold">{o.ticker ?? "—"}</span>
+                      {o.name && <span className="text-xs text-muted-foreground truncate max-w-32">{o.name}</span>}
+                      <span className={`text-[10px] font-medium uppercase px-1.5 py-0.5 rounded ${o.action === "buy" ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"}`}>
+                        {o.action}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">
+                      {new Date(o.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {o.quantity != null && o.unit_price != null
+                      ? `${o.quantity} × ${o.unit_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} ${o.currency}`
+                      : o.currency}
+                  </div>
+                  {o.rationale ? (
+                    <p className="text-[12px] text-foreground/80 leading-relaxed border-l-2 border-amber-500/30 pl-2">
+                      {o.rationale}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground/50 italic">No rationale documented — blind override.</p>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="px-5 py-3 border-t border-border shrink-0">
+              <p className="text-[11px] text-muted-foreground/50">
+                These orders were executed despite a pre-flight "Reconsider" verdict within the current 90-day window.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -242,7 +348,12 @@ export default function InvestorEvolutionPage() {
           {report.deltas.length > 0 && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {report.deltas.map(delta => (
-                <MetricCard key={delta.key} delta={delta} hasComparison={report.has_comparison} />
+                <MetricCard
+                  key={delta.key}
+                  delta={delta}
+                  hasComparison={report.has_comparison}
+                  onClick={delta.key === "risk_overrides" ? fetchOverrides : undefined}
+                />
               ))}
             </div>
           )}
