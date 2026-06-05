@@ -187,10 +187,6 @@ The system derives three lists from your actual history — what to continue doi
   <img src="docs/screenshots/pre-flight.png" width="48%" alt="Pre-flight Interceptor — risk engine verdict before execution">
   <img src="docs/screenshots/decision-intelligence.png" width="48%" alt="Decision Intelligence — DQS components, behavioral insights, κ trend">
 </div>
-<div align="center">
-  <img src="docs/screenshots/investor-dna.png" width="48%" alt="Investor DNA — behavioral edge, capital leakage attribution, detected patterns">
-  <img src="docs/screenshots/investor-evolution.png" width="48%" alt="Investor Evolution — 90-day behavioral tracker with detected pattern cards">
-</div>
 
 ---
 
