@@ -8,6 +8,11 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.44.2] — 2026-06-05
+
+### Fixed
+- **`NEXT_PUBLIC_API_URL` changed to `http://localhost:3000/api/v1`** — all client-side API calls now go through the Next.js proxy (port 3000) instead of directly to the backend (port 8000); eliminates cross-port auth cookie mismatch that caused "Not authenticated" in Order Builder and 401-triggered logouts when changing investor settings
+
 ## [3.44.1] — 2026-06-05
 
 ### Fixed

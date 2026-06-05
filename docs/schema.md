@@ -1,6 +1,6 @@
 # TradeOps AI — Database Schema Reference
 
-**Version:** 3.44.1  
+**Version:** 3.44.2  
 **Last updated:** 2026-06-05  
 **Migration head:** 0055
 
