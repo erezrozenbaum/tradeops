@@ -8,6 +8,13 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.44.0] — 2026-06-05
+
+### Fixed
+- **`NEXT_PUBLIC_API_URL` baked as internal Docker hostname** — `http://backend:8000` is not reachable from the browser; changed to `http://localhost:8000/api/v1` so all 7 client-side pages (investor-dna, investor-evolution, decision-intelligence, behavioral-alpha, order-builder, reflection, journal) fetch correctly
+- **`API_URL: http://backend:8000`** added to Docker Compose environment for server-side Next.js route handlers (agent, ai-report, market-research, recommendations) that proxy to the backend internally
+- **`backend/app/paper_trading/router.py`** — staged but not committed in v3.21.0; included in this release
+
 ## [3.43.0] — 2026-06-05
 
 ### Added

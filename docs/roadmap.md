@@ -1,6 +1,6 @@
 # TradeOps AI — Product Roadmap
 
-**Version:** 3.43.0  
+**Version:** 3.44.0  
 **Last updated:** 2026-06-05
 
 > Completed phases: v1–v3.30.0. See `CHANGELOG.md` and `execution_plan.md` for the full history.
@@ -42,6 +42,7 @@
 | v3.41 | Behavioral Pattern Detection — 5 named anti-patterns auto-detected from order history (Blind Override Habit, Confidence Collapse, Override Acceleration, Documentation Decay, Thesis-Absent Execution); surfaces on Evolution + DNA pages; 27 unit tests |
 | v3.42 | README Product Positioning — "Why TradeOps is different" comparison table (vs portfolio trackers, robo-advisors, trading journals, AI stock pickers); "The Demo" 8-step flow section with behavioral intelligence screenshot placeholders |
 | v3.43 | Test Coverage: Behavioral Alpha + Investor DNA — 24 tests for BA service pure helpers (_alpha_dimension, _build_highlight, _detect_patterns); 39 tests for DNA service pure helpers (_build_leakage, _build_edge, _build_risks, _build_recommendation); 622 total tests |
+| v3.44 | Docker NEXT_PUBLIC_API_URL fix — changed from internal `http://backend:8000` to browser-accessible `http://localhost:8000/api/v1`; added server-side `API_URL` for Next.js route handlers; fixes 7 pages that showed "Failed to fetch" |
 
 ---
 
