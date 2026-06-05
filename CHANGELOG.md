@@ -8,6 +8,18 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.43.0] — 2026-06-05
+
+### Added
+- **Test coverage: Behavioral Alpha service** (`tests/test_behavioral_alpha_service.py`) — 24 unit tests covering `_verdict`, `_alpha_dimension` (positive/negative alpha, win rate, has_data threshold), `_build_highlight` (snippet truncation, field mapping), and `_detect_patterns` (all 4 patterns: blind_override, undocumented_loss, reactive_large_trade, goal_drift; fire/suppress branches; capped at 4)
+- **Test coverage: Investor DNA service** (`tests/test_investor_dna_service.py`) — 39 unit tests covering `_is_documented`, `_verdict`, `_dqs_label` (all 4 branches), `_build_leakage` (leakage calculation, multi-class grouping, total aggregation), `_build_edge` (documentation/goal/holding/class signals), `_build_risks` (capital leakage, override loss rate, undoc losses, goal drift), `_build_recommendation` (continue/reduce/avoid derivation and caps)
+
+## [3.42.0] — 2026-06-05
+
+### Added
+- **"Why TradeOps is different" comparison table** in README — side-by-side positioning against portfolio trackers, robo-advisors, trading journals, and AI stock pickers across 8 decision-quality dimensions
+- **"The Demo" section** in README — 8-step end-to-end flow (Idea → Stage → Pre-flight → Override → Execute → Outcome → Investor DNA → Pattern → Recommendation) with screenshot placeholders for the four behavioral intelligence screens
+
 ## [3.41.0] — 2026-06-05
 
 ### Added

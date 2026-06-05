@@ -4,7 +4,7 @@
 
 **Decision Intelligence for Investors**
 
-[![Version](https://img.shields.io/badge/version-3.41.0-blue?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-3.43.0-blue?style=flat-square)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org)
@@ -46,8 +46,10 @@
 ## Table of Contents
 
 - [The Core Insight](#the-core-insight)
+- [Why TradeOps is different](#why-tradeops-is-different)
 - [The Decision Loop](#the-decision-loop)
 - [How it works](#how-it-works)
+- [The Demo](#the-demo)
 - [Highlights](#highlights)
 - [Decision Intelligence](#decision-intelligence)
 - [Full Feature Reference](#full-feature-reference)
@@ -82,6 +84,24 @@ TradeOps does not compete with portfolio trackers, robo-advisors, or AI stock pi
 | Whether your discipline actually improves returns | Guarantee outcomes |
 | Risk alignment between decisions and your model | Override deterministic risk controls |
 | Decision quality month-over-month, independent of markets | Operate in place of a financial professional |
+
+---
+
+## Why TradeOps is different
+
+Most investing tools are built around portfolios. TradeOps is built around decisions.
+
+| | Portfolio Tracker | Robo-Advisor | Trading Journal | AI Stock Picker | **TradeOps** |
+|--|:--:|:--:|:--:|:--:|:--:|
+| Tracks portfolio value | ✓ | ✓ | ✗ | ✓ | ✓ |
+| Pre-trade behavioral check | ✗ | ✗ | ✗ | ✗ | ✓ |
+| Enforces written thesis before execution | ✗ | ✗ | Manual | ✗ | ✓ |
+| Measures decision quality (DQS) | ✗ | ✗ | ✗ | ✗ | ✓ |
+| Detects behavioral anti-patterns | ✗ | ✗ | ✗ | ✗ | ✓ |
+| Shows whether discipline pays off | ✗ | ✗ | ✗ | ✗ | ✓ |
+| Correlates outcomes to decision quality | ✗ | ✗ | ✗ | ✗ | ✓ |
+| Risk engine runs before every order | ✗ | Partial | ✗ | ✗ | ✓ |
+| **Core question answered** | "What happened?" | "Where to put money?" | "What did I do?" | "What to buy?" | **"Why do I keep making the same mistakes?"** |
 
 ---
 
@@ -132,6 +152,45 @@ Strategy backtesting, paper trading, and pre-flight review gate every order. The
 The layer that makes TradeOps different. Every staged order accumulates decision data — rationale, pre-flight verdict, outcome. Over time that data feeds the DQS, Behavioral Alpha, Monthly Review, and Coach. The longer you use it, the sharper your behavioral mirror becomes.
 
 The progression is not separate products. It is the same investor growing.
+
+---
+
+## The Demo
+
+The complete TradeOps loop from idea to behavioral insight:
+
+**1 — Idea → Stage**
+Open the Order Builder. Enter a ticker, size, and your written thesis. The system captures your rationale before you see any price movement.
+
+**2 — Pre-flight review**
+Before staging, the deterministic Risk Engine evaluates the order against your risk model, goal alignment, correlation with existing holdings, and behavioral history. It may issue a *Reconsider* verdict if the order breaches a limit.
+
+**3 — Override warning**
+If you disagree with the verdict and proceed anyway, the order is flagged as an override. The system logs the decision and marks it for behavioral tracking — it does not block you.
+
+**4 — Execute**
+The staged order moves to *Executed*. The system captures the entry price and thesis at that exact moment.
+
+**5 — Outcome tracking**
+At 30, 90, and 180 days, actual returns are compared to the projected metrics you committed to at staging time. Your thesis is on record.
+
+**6 — Investor DNA**
+Over time, all executed decisions are synthesised into your behavioral profile: where you have a measurable edge, where undocumented trades leak capital, what your documented decisions return versus undocumented ones.
+
+**7 — Pattern detected**
+The behavioral engine scans your order history for named anti-patterns: *Blind Override Habit*, *Confidence Collapse*, *Override Acceleration*, *Documentation Decay*, *Thesis-Absent Execution*. Patterns surface on the Evolution and DNA pages with evidence and implication.
+
+**8 — Recommendation**
+The system derives three lists from your actual history — what to continue doing, what to reduce, what to avoid. All evidence-based. No generic advice.
+
+<div align="center">
+  <img src="docs/screenshots/pre-flight.png" width="48%" alt="Pre-flight Interceptor — risk engine verdict before execution">
+  <img src="docs/screenshots/decision-intelligence.png" width="48%" alt="Decision Intelligence — DQS components, behavioral insights, κ trend">
+</div>
+<div align="center">
+  <img src="docs/screenshots/investor-dna.png" width="48%" alt="Investor DNA — behavioral edge, capital leakage attribution, detected patterns">
+  <img src="docs/screenshots/investor-evolution.png" width="48%" alt="Investor Evolution — 90-day behavioral tracker with detected pattern cards">
+</div>
 
 ---
 
