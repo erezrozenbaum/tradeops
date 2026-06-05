@@ -1,6 +1,6 @@
 # TradeOps AI — Architecture
 
-**Version:** 3.44.0  
+**Version:** 3.44.1  
 **Last updated:** 2026-06-05
 
 ---

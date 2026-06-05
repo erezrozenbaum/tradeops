@@ -8,6 +8,11 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.44.1] — 2026-06-05
+
+### Fixed
+- **Catch-all API proxy** (`frontend/src/app/api/v1/[...path]/route.ts`) — server-side Next.js route handler that forwards all unmatched `/api/v1/` requests to the backend via internal Docker network; fixes login, `/auth/me`, `/investors`, and all relative-URL fetches that previously hit a Next.js 404 instead of the backend; forwards all headers including `Set-Cookie` for auth cookie passthrough
+
 ## [3.44.0] — 2026-06-05
 
 ### Fixed
