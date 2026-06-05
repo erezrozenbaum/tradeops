@@ -12,10 +12,10 @@ import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
 from statistics import mean
-from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.pattern_detector import detect_patterns
 from app.investor_dna.schemas import (
     DnaRecommendation,
     DnaSignal,
@@ -33,6 +33,18 @@ def _is_documented(o: StagedOrder) -> bool:
 
 def _verdict(o: StagedOrder) -> str | None:
     return (o.pre_flight_review or {}).get("verdict")
+
+
+def _get_all_executed(db: Session, investor_id: uuid.UUID) -> list[StagedOrder]:
+    return (
+        db.query(StagedOrder)
+        .filter(
+            StagedOrder.investor_id == investor_id,
+            StagedOrder.status == "executed",
+        )
+        .order_by(StagedOrder.created_at.asc())
+        .all()
+    )
 
 
 def _get_executed_buys(db: Session, investor_id: uuid.UUID) -> list[StagedOrder]:
@@ -367,6 +379,7 @@ def _build_recommendation(
 
 def get_investor_dna(db: Session, investor_id: uuid.UUID) -> InvestorDnaReport:
     now = datetime.now(timezone.utc)
+    all_executed = _get_all_executed(db, investor_id)
     executed_buys = _get_executed_buys(db, investor_id)
     priced = _price_orders(db, executed_buys)
 
@@ -386,7 +399,7 @@ def get_investor_dna(db: Session, investor_id: uuid.UUID) -> InvestorDnaReport:
             di = compute_decision_intelligence(db, investor_id)
             dqs = di.dqs
             dqs_label_val = di.dqs_label
-    except Exception:
+    except Exception:  # nosec B110 — DQS is optional enrichment; DNA must not fail if DI unavailable
         pass
 
     if not priced:
@@ -405,6 +418,7 @@ def get_investor_dna(db: Session, investor_id: uuid.UUID) -> InvestorDnaReport:
             leakage_by_class=[],
             total_leakage_dollar=None,
             total_leakage_currency=None,
+            patterns=detect_patterns(all_executed),
             generated_at=now,
         )
 
@@ -442,5 +456,6 @@ def get_investor_dna(db: Session, investor_id: uuid.UUID) -> InvestorDnaReport:
         leakage_by_class=leakage_by_class,
         total_leakage_dollar=total_leakage_dollar,
         total_leakage_currency=total_leakage_currency,
+        patterns=detect_patterns(all_executed),
         generated_at=now,
     )

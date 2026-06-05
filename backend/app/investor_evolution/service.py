@@ -7,11 +7,12 @@ No schema migration.  All computation runs on existing staged_orders data
 using the same scorer functions as Decision Intelligence and Behavioral Alpha.
 """
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from statistics import mean
 
 from sqlalchemy.orm import Session
 
+from app.pattern_detector import detect_patterns
 from app.investor_evolution.schemas import (
     InvestorEvolutionReport,
     MetricDelta,
@@ -221,6 +222,7 @@ def get_investor_evolution(db: Session, investor_id: uuid.UUID) -> InvestorEvolu
             deltas=[],
             strengths=[],
             concerns=[],
+            patterns=[],
             generated_at=now,
         )
 
@@ -229,6 +231,7 @@ def get_investor_evolution(db: Session, investor_id: uuid.UUID) -> InvestorEvolu
 
     deltas = _build_deltas(current_metrics, previous_metrics)
     strengths, concerns = _build_strengths_concerns(deltas, current_metrics)
+    patterns = detect_patterns(curr_orders)
 
     return InvestorEvolutionReport(
         investor_id=investor_id,
@@ -243,5 +246,6 @@ def get_investor_evolution(db: Session, investor_id: uuid.UUID) -> InvestorEvolu
         deltas=deltas,
         strengths=strengths,
         concerns=concerns,
+        patterns=patterns,
         generated_at=now,
     )

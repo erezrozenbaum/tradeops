@@ -8,6 +8,21 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.41.0] — 2026-06-05
+
+### Added
+- **Behavioral Pattern Detection** (`app/pattern_detector.py`) — new pure-function module that auto-detects 5 named behavioral anti-patterns from order history: Blind Override Habit (high), Confidence Collapse (high), Override Acceleration (medium), Documentation Decay (medium), Thesis-Absent Execution (low)
+- **`DetectedPattern`** Pydantic model — `key`, `name`, `severity`, `description`, `implication`, `metric`; severity-sorted output
+- **`patterns`** field added to `InvestorEvolutionReport` (current 90-day window analysis) and `InvestorDnaReport` (all-time analysis); wired into both services via `detect_patterns()`
+- **`_get_all_executed()`** helper in `investor_dna/service.py` — fetches all executed orders (not just buy orders) for pattern detection
+- **Detected Patterns section** on Investor Evolution page — amber `Zap` icon header, two-column pattern cards showing severity badge, metric chip, description, and implication
+- **Detected Behavioral Patterns section** on Investor DNA page — appears after Recommendation; same `PatternCard` component, styled by severity (rose=high, amber=medium, blue=low)
+- **`tests/test_behavioral_patterns.py`** — 27 unit tests covering all 5 detectors and the `detect_patterns()` integration function; no DB dependency
+
+### Changed
+- `investor_evolution/schemas.py` — `InvestorEvolutionReport` gains `patterns: list[DetectedPattern]`
+- `investor_dna/schemas.py` — `InvestorDnaReport` gains `patterns: list[DetectedPattern]`
+
 ## [3.40.0] — 2026-06-05
 
 ### Added

@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import {
   Fingerprint, CheckCircle2, XCircle, ArrowRight, RefreshCw,
-  TrendingUp, AlertTriangle, Lightbulb, BarChart3, Minus,
+  TrendingUp, AlertTriangle, Lightbulb, BarChart3, Minus, Zap,
 } from "lucide-react";
 import { MetricTooltip } from "@/components/ui/metric-tooltip";
 
@@ -21,6 +21,15 @@ async function apiFetch<T>(path: string): Promise<T> {
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────────
+
+interface BehavioralPattern {
+  key: string;
+  name: string;
+  severity: "high" | "medium" | "low";
+  description: string;
+  implication: string;
+  metric: string | null;
+}
 
 interface DnaSignal {
   key: string;
@@ -60,6 +69,7 @@ interface InvestorDnaReport {
   leakage_by_class: LeakageByClass[];
   total_leakage_dollar: number | null;
   total_leakage_currency: string | null;
+  patterns: BehavioralPattern[];
   generated_at: string;
 }
 
@@ -191,6 +201,51 @@ function LeakageTable({ rows, total, currency }: {
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+// ── Behavioral Patterns ────────────────────────────────────────────────────────
+
+const SEVERITY_STYLE = {
+  high: {
+    card: "border-rose-500/25 bg-rose-500/5",
+    badge: "bg-rose-500/15 text-rose-400",
+    metric: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+  },
+  medium: {
+    card: "border-amber-500/25 bg-amber-500/5",
+    badge: "bg-amber-500/15 text-amber-400",
+    metric: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+  },
+  low: {
+    card: "border-blue-500/25 bg-blue-500/5",
+    badge: "bg-blue-500/15 text-blue-400",
+    metric: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+  },
+};
+
+function PatternCard({ pattern }: { pattern: BehavioralPattern }) {
+  const s = SEVERITY_STYLE[pattern.severity] ?? SEVERITY_STYLE.low;
+  return (
+    <div className={`rounded-lg border p-4 space-y-2.5 ${s.card}`}>
+      <div className="flex items-start justify-between gap-2 flex-wrap">
+        <span className="text-sm font-semibold text-foreground">{pattern.name}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          {pattern.metric && (
+            <span className={`text-[10px] font-mono font-medium px-2 py-0.5 rounded ${s.metric}`}>
+              {pattern.metric}
+            </span>
+          )}
+          <span className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded ${s.badge}`}>
+            {pattern.severity}
+          </span>
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground leading-relaxed">{pattern.description}</p>
+      <p className="text-[11px] text-foreground/60 leading-relaxed border-l-2 border-current/15 pl-2.5 italic">
+        {pattern.implication}
+      </p>
+    </div>
   );
 }
 
@@ -419,6 +474,26 @@ export default function InvestorDnaPage() {
                       Insufficient pattern data for a recommendation. Stage and execute more orders with rationale.
                     </div>
                   )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Behavioral Patterns */}
+          {report.patterns.length > 0 && (
+            <Card>
+              <CardContent className="p-5 space-y-4">
+                <div>
+                  <h2 className="font-semibold text-sm flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-400" />
+                    Detected Behavioral Patterns
+                  </h2>
+                  <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                    Named anti-patterns auto-detected from your all-time execution history.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  {report.patterns.map(p => <PatternCard key={p.key} pattern={p} />)}
                 </div>
               </CardContent>
             </Card>

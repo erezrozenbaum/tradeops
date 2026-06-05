@@ -1,6 +1,6 @@
 # TradeOps AI — Product Roadmap
 
-**Version:** 3.40.0  
+**Version:** 3.41.0  
 **Last updated:** 2026-06-05
 
 > Completed phases: v1–v3.30.0. See `CHANGELOG.md` and `execution_plan.md` for the full history.
@@ -39,6 +39,7 @@
 | v3.38 | Behavioral Confidence (κ) Trend Chart — per-order κ history extracted from pre_flight_review JSONB; threshold lines at κ=0.65 and κ=0.50; tier-colored dots; rendered on Decision Intelligence page |
 | v3.39 | Override Drill-down + Behavioral Engine Test Coverage — clickable Risk Overrides card on Evolution page opens modal with override order list; 57 new unit tests for DI and Evolution pure helpers |
 | v3.40 | Contextual Guidance sweep — inline ⓘ tooltips and section subtitles across Decision Intelligence, Investor Evolution, and Investor DNA pages; all technical metrics now self-explanatory |
+| v3.41 | Behavioral Pattern Detection — 5 named anti-patterns auto-detected from order history (Blind Override Habit, Confidence Collapse, Override Acceleration, Documentation Decay, Thesis-Absent Execution); surfaces on Evolution + DNA pages; 27 unit tests |
 
 ---
 

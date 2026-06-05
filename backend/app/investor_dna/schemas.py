@@ -3,6 +3,8 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.pattern_detector import DetectedPattern
+
 
 class DnaSignal(BaseModel):
     key: str
@@ -50,4 +52,5 @@ class InvestorDnaReport(BaseModel):
     leakage_by_class: list[LeakageByClass]
     total_leakage_dollar: float | None
     total_leakage_currency: str | None
+    patterns: list[DetectedPattern]
     generated_at: datetime

@@ -3,6 +3,8 @@ from datetime import date, datetime
 
 from pydantic import BaseModel
 
+from app.pattern_detector import DetectedPattern
+
 
 class OverrideOrderOut(BaseModel):
     id: uuid.UUID
@@ -49,4 +51,5 @@ class InvestorEvolutionReport(BaseModel):
     deltas: list[MetricDelta]
     strengths: list[str]
     concerns: list[str]
+    patterns: list[DetectedPattern]
     generated_at: datetime
