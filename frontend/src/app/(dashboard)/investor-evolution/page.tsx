@@ -7,6 +7,7 @@ import {
   TrendingUp, TrendingDown, Minus, RefreshCw, LineChart,
   CheckCircle2, AlertTriangle, Clock, X, ShieldAlert,
 } from "lucide-react";
+import { MetricTooltip } from "@/components/ui/metric-tooltip";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -107,6 +108,15 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+// ── Metric tooltips ────────────────────────────────────────────────────────────
+
+const METRIC_TOOLTIPS: Record<string, string> = {
+  dqs: "Decision Quality Score (0–100) — average decision discipline across documentation, risk handling, goal alignment, and outcome tracking. Same formula as the Decision Intelligence page.",
+  doc_rate: "Percentage of executed orders that included a written rationale before execution. Higher rates correlate with better long-term performance — documented trades tend to outperform undocumented ones.",
+  risk_overrides: "Orders executed despite the pre-flight engine issuing a 'Reconsider' verdict. Lower is better. Click to see the full list when count > 0.",
+  behavioral_alpha: "Estimated return gap between your documented and undocumented trades in this 90-day window, based on live price data. Positive = your documentation discipline generated measurable alpha.",
+};
+
 // ── Metric Card ────────────────────────────────────────────────────────────────
 
 function MetricCard({
@@ -129,7 +139,11 @@ function MetricCard({
       title={isClickable ? "Click to see override orders" : undefined}
     >
       <div className="flex items-center justify-between">
-        <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">{delta.title}</span>
+        <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+          {METRIC_TOOLTIPS[delta.key]
+            ? <MetricTooltip content={METRIC_TOOLTIPS[delta.key]}>{delta.title}</MetricTooltip>
+            : delta.title}
+        </span>
         <div className="flex items-center gap-1.5">
           {isClickable && <ShieldAlert className="w-3 h-3 text-amber-400 opacity-70" />}
           <DirectionIcon direction={delta.direction} />

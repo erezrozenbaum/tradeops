@@ -9,6 +9,7 @@ import {
   ShieldCheck, BookOpen, Target, BarChart2,
   RefreshCw, AlertTriangle, CheckCircle2, Lightbulb, Sparkles,
 } from "lucide-react";
+import { MetricTooltip } from "@/components/ui/metric-tooltip";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -172,11 +173,13 @@ function ComponentBar({
   value,
   max,
   icon,
+  tooltip,
 }: {
   label: string;
   value: number;
   max: number;
   icon: React.ReactNode;
+  tooltip?: string;
 }) {
   const pct = Math.min(100, (value / max) * 100);
   const color =
@@ -190,7 +193,7 @@ function ComponentBar({
       <div className="flex items-center justify-between text-xs">
         <span className="flex items-center gap-1.5 text-muted-foreground">
           {icon}
-          {label}
+          {tooltip ? <MetricTooltip content={tooltip}>{label}</MetricTooltip> : label}
         </span>
         <span className="tabular-nums font-medium text-foreground">
           {value.toFixed(1)} / {max}
@@ -245,7 +248,11 @@ function DQSHistoryChart({ history }: { history: DQSHistoryPoint[] }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">Monthly DQS trend</p>
+      <p className="text-xs text-muted-foreground">
+        <MetricTooltip content="Monthly aggregate of your Decision Quality Score. Rising bars = improving decision discipline. Colors: emerald ≥80, blue 65–79, amber 45–64, red <45.">
+          Monthly DQS trend
+        </MetricTooltip>
+      </p>
       <div className="flex items-end gap-1 h-16">
         {history.map((point) => {
           const heightPct = (point.score / maxScore) * 100;
@@ -305,7 +312,11 @@ function KappaHistoryChart({ history }: { history: KappaHistoryPoint[] }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">Behavioral confidence (κ) trend</p>
+        <p className="text-xs text-muted-foreground">
+          <MetricTooltip content="κ (kappa) is the per-order behavioral confidence score computed at pre-flight time. Combines your behavioral pattern alignment, thesis strength, and override history. Tiers: HIGH_ALPHA ≥0.75, STANDARD 0.65–0.74, CAUTION_IMPULSE 0.50–0.64, HIGH_RISK_OVERRIDE <0.50. Dots above the blue line are healthy.">
+            Behavioral confidence (κ) trend
+          </MetricTooltip>
+        </p>
         <span className="text-[10px] text-muted-foreground/60">{history.length} orders</span>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-16">
@@ -539,24 +550,28 @@ export default function DecisionIntelligencePage() {
                     value={report.components.documentation}
                     max={35}
                     icon={<BookOpen className="w-3.5 h-3.5" />}
+                    tooltip="Do you write down why before executing? Scored on how many orders include a written rationale. 35 pts max — the single strongest predictor of better outcomes."
                   />
                   <ComponentBar
                     label="Risk Intelligence"
                     value={report.components.risk_intelligence}
                     max={30}
                     icon={<ShieldCheck className="w-3.5 h-3.5" />}
+                    tooltip="How often you respect pre-flight risk warnings vs overriding them. 30 pts max. Higher score = fewer impulsive executions against the behavioral engine's guidance."
                   />
                   <ComponentBar
                     label="Goal Alignment"
                     value={report.components.goal_alignment}
                     max={20}
                     icon={<Target className="w-3.5 h-3.5" />}
+                    tooltip="What fraction of your executed orders are linked to a defined financial goal. 20 pts max. Goal-linked trades tend to be more deliberate and less reactive."
                   />
                   <ComponentBar
                     label="Outcome Correlation"
                     value={report.components.outcome_correlation}
                     max={15}
                     icon={<BarChart2 className="w-3.5 h-3.5" />}
+                    tooltip="Whether your documented trades outperform undocumented ones, based on actual price data. 15 pts max — unlocks after 3+ executed buy orders with live pricing."
                   />
                 </div>
                 {report.dqs_history.length > 1 && (
@@ -575,9 +590,14 @@ export default function DecisionIntelligencePage() {
           {/* ─── Behavioral Insights ─── */}
           {report.insights.length > 0 && (
             <div className="space-y-2">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-0.5">
-                Behavioral Insights
-              </h2>
+              <div className="px-0.5">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Behavioral Insights
+                </h2>
+                <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                  Patterns and anomalies detected in your decision history — strengths to reinforce and warnings to address.
+                </p>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {report.insights.map((ins, i) => (
                   <InsightCard key={i} insight={ins} />

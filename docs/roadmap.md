@@ -1,7 +1,7 @@
 # TradeOps AI — Product Roadmap
 
-**Version:** 3.39.0  
-**Last updated:** 2026-06-04
+**Version:** 3.40.0  
+**Last updated:** 2026-06-05
 
 > Completed phases: v1–v3.30.0. See `CHANGELOG.md` and `execution_plan.md` for the full history.
 
@@ -38,6 +38,7 @@
 | v3.37 | Investor Evolution Report — rolling 90-day vs previous 90-day behavioral tracker; DQS, documentation rate, risk overrides, behavioral alpha; strengths/concerns derivation; three gate states; no schema migration |
 | v3.38 | Behavioral Confidence (κ) Trend Chart — per-order κ history extracted from pre_flight_review JSONB; threshold lines at κ=0.65 and κ=0.50; tier-colored dots; rendered on Decision Intelligence page |
 | v3.39 | Override Drill-down + Behavioral Engine Test Coverage — clickable Risk Overrides card on Evolution page opens modal with override order list; 57 new unit tests for DI and Evolution pure helpers |
+| v3.40 | Contextual Guidance sweep — inline ⓘ tooltips and section subtitles across Decision Intelligence, Investor Evolution, and Investor DNA pages; all technical metrics now self-explanatory |
 
 ---
 
@@ -47,7 +48,7 @@
 |----------|---------|-------|
 | High | Live broker execution skeleton | IBKR Client Portal Gateway; disabled by default; requires explicit activation |
 | High | Multi-currency goal progress normalization | Goals denominated in different currencies need FX-adjusted progress |
-| Medium | Test coverage for behavioral_alpha, investor_dna | DI and Evolution covered; BA and DNA service helpers still untested |
+| Medium | Test coverage for behavioral_alpha, investor_dna | DI and Evolution covered (v3.39); BA and DNA service helpers still untested |
 | Medium | Family shared goals dashboard | Household-level goal aggregation view |
 | Medium | Audit logging in Decision Intelligence / Behavioral Alpha routers | Currently missing from the three intelligence modules |
 | Low | AI-generated monthly narrative email | Monthly reflection report delivered as email digest |

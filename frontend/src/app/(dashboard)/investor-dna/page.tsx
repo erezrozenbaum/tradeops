@@ -8,6 +8,7 @@ import {
   Fingerprint, CheckCircle2, XCircle, ArrowRight, RefreshCw,
   TrendingUp, AlertTriangle, Lightbulb, BarChart3, Minus,
 } from "lucide-react";
+import { MetricTooltip } from "@/components/ui/metric-tooltip";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -123,7 +124,9 @@ function LeakageTable({ rows, total, currency }: {
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-sm flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-amber-400" />
-            Capital Leakage Attribution
+            <MetricTooltip content="Breaks down the documented vs undocumented return gap by asset class. Positive gap = documented trades outperformed in that class. Dollar impact estimated from live price data.">
+              Capital Leakage Attribution
+            </MetricTooltip>
           </h2>
           {total != null && currency && total > 0 && (
             <div className="text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded px-2.5 py-1">
@@ -260,7 +263,9 @@ export default function InvestorDnaPage() {
                 <div className={`text-2xl font-bold tabular-nums ${dqsColor(report.dqs)}`}>
                   {report.dqs.toFixed(0)}
                 </div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">DQS</div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">
+                  <MetricTooltip content="Decision Quality Score (0–100) — composite measure of your decision discipline across documentation, risk handling, goal alignment, and outcome correlation.">DQS</MetricTooltip>
+                </div>
                 {report.dqs_label && (
                   <div className={`text-[10px] font-medium mt-0.5 ${dqsColor(report.dqs)}`}>{report.dqs_label}</div>
                 )}
@@ -275,7 +280,9 @@ export default function InvestorDnaPage() {
                 <div className={`text-2xl font-bold tabular-nums ${report.doc_rate >= 0.65 ? "text-emerald-400" : report.doc_rate >= 0.35 ? "text-amber-400" : "text-rose-400"}`}>
                   {(report.doc_rate * 100).toFixed(0)}%
                 </div>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">Documented</div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">
+                <MetricTooltip content="Percentage of executed orders with a written rationale. Strong predictor of better performance — documented trades outperform undocumented ones on average.">Documented</MetricTooltip>
+              </div>
               </div>
             )}
             {report.total_leakage_dollar != null && report.total_leakage_dollar > 0 && report.total_leakage_currency && (
@@ -284,7 +291,9 @@ export default function InvestorDnaPage() {
                   -{report.total_leakage_dollar.toLocaleString()}
                 </div>
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">
-                  Leakage ({report.total_leakage_currency})
+                  <MetricTooltip content="Estimated dollar cost of undocumented execution — the return gap between your documented and undocumented trades, scaled to your actual position sizes.">
+                    Leakage ({report.total_leakage_currency})
+                  </MetricTooltip>
                 </div>
               </div>
             )}
@@ -304,7 +313,9 @@ export default function InvestorDnaPage() {
                 <CardContent className="p-5 space-y-3">
                   <h2 className="font-semibold text-sm flex items-center gap-2 text-emerald-400">
                     <TrendingUp className="w-4 h-4" />
-                    Your Edge
+                    <MetricTooltip content="Behavioral patterns where your documented, deliberate approach consistently outperforms your undocumented trades. Computed from your actual returns — not predictions.">
+                      Your Edge
+                    </MetricTooltip>
                   </h2>
                   {report.edge.length === 0 ? (
                     <p className="text-sm text-muted-foreground py-4 text-center">
@@ -323,7 +334,9 @@ export default function InvestorDnaPage() {
                 <CardContent className="p-5 space-y-3">
                   <h2 className="font-semibold text-sm flex items-center gap-2 text-rose-400">
                     <AlertTriangle className="w-4 h-4" />
-                    Your Risks
+                    <MetricTooltip content="Behavioral anti-patterns visible in your execution history that cost you performance. Computed from your actual returns — these are facts about your past decisions, not opinions.">
+                      Your Risks
+                    </MetricTooltip>
                   </h2>
                   {report.risks.length === 0 ? (
                     <p className="text-sm text-muted-foreground py-4 text-center">

@@ -8,6 +8,16 @@ Versions are assigned retroactively to match the git commit history.
 
 ## [Unreleased]
 
+## [3.40.0] — 2026-06-05
+
+### Added
+- **Contextual Guidance** across all three intelligence pages — inline `ⓘ` tooltips (using the existing `MetricTooltip` component) and descriptive section subtitles to make every metric self-explanatory without leaving the page
+
+### Changed
+- **`decision-intelligence/page.tsx`** — tooltips on all four DQS component bars (Documentation Discipline, Risk Intelligence, Goal Alignment, Outcome Correlation), DQS monthly history header, and κ trend header; "Behavioral Insights" section now has a one-line subtitle
+- **`investor-evolution/page.tsx`** — `METRIC_TOOLTIPS` map wired into `MetricCard`; each of the four metric card titles (DQS, Doc Rate, Risk Overrides, Behavioral Alpha) shows a tooltip explaining what is measured and why it matters
+- **`investor-dna/page.tsx`** — tooltips on DQS, Documented, and Leakage stat items; section header tooltips on Your Edge, Your Risks, and Capital Leakage Attribution
+
 ## [3.39.0] — 2026-06-04
 
 ### Added
